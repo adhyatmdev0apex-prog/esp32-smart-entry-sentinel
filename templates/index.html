@@ -1,0 +1,3707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏠 Smart Door Entry — Facial Identity & Monitoring</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        :root {
+            --bg-main: #0b0f19;
+            --bg-card: #111827;
+            --bg-elevated: #1e293b;
+            --bg-input: #0f172a;
+            --border-subtle: #1f2937;
+            --border-highlight: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-primary: #6366f1;
+            --accent-secondary: #38bdf8;
+            --accent-success: #10b981;
+            --accent-warning: #f59e0b;
+            --accent-danger: #ef4444;
+            --accent-purple: #a855f7;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: radial-gradient(circle at top right, #1e1b4b 0%, var(--bg-main) 45%, #090d16 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 24px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Header & Top Bar */
+        .header {
+            background: rgba(17, 24, 39, 0.88);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-highlight);
+            padding: 28px 32px;
+            border-radius: 16px;
+            margin-bottom: 28px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 22px;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, #f8fafc 0%, #38bdf8 50%, #818cf8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.02em;
+        }
+
+        .header-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.92rem;
+            margin-top: 4px;
+        }
+
+        .action-toolbar {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 1px solid transparent;
+            font-weight: 600;
+            font-size: 0.92rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text-primary);
+            background: var(--bg-elevated);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+            color: #0b0f19;
+            box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.15);
+            color: #fca5a5;
+            border-color: rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-danger:hover {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--bg-elevated);
+            border-color: var(--border-highlight);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent-secondary);
+        }
+
+        .btn-sm {
+            padding: 6px 13px;
+            font-size: 0.82rem;
+            border-radius: 8px;
+        }
+
+        .badge-count {
+            background: #0b0f19;
+            color: #fbbf24;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .stat-box {
+            background: rgba(30, 41, 59, 0.65);
+            border: 1px solid var(--border-highlight);
+            padding: 18px 20px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .stat-box h3 {
+            font-size: 1.65rem;
+            font-weight: 700;
+            color: var(--accent-secondary);
+        }
+
+        .stat-box p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        /* Live Stream + Telemetry Grid */
+        .live-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 24px;
+            margin-bottom: 28px;
+        }
+
+        @media (max-width: 1024px) {
+            .live-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-highlight);
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 14px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .card-header h2 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .stream-container {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-highlight);
+            background: #050811;
+        }
+
+        .stream-container img {
+            width: 100%;
+            display: block;
+            aspect-ratio: 4 / 3;
+            object-fit: cover;
+        }
+
+        /* Status Badge */
+        .status-badge-live {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 15px;
+            border-radius: 999px;
+            font-size: 0.86rem;
+            font-weight: 600;
+        }
+
+        .status-badge-live.online {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.4);
+        }
+
+        .status-badge-live.offline {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+        }
+
+        .status-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-badge-live.online .status-dot {
+            background: #10b981;
+            box-shadow: 0 0 8px #10b981;
+            animation: pulse-green 2s infinite;
+        }
+
+        .status-badge-live.offline .status-dot {
+            background: #ef4444;
+            box-shadow: 0 0 8px #ef4444;
+            animation: pulse-red 1.2s infinite;
+        }
+
+        @keyframes pulse-green {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.45; transform: scale(1.25); }
+        }
+
+        @keyframes pulse-red {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.35; transform: scale(1.3); }
+        }
+
+        .offline-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(11, 15, 25, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(6px);
+            z-index: 10;
+        }
+
+        .offline-badge-box {
+            text-align: center;
+            padding: 24px;
+        }
+
+        .offline-icon {
+            font-size: 2.8rem;
+            margin-bottom: 10px;
+        }
+
+        .offline-badge-box h3 {
+            color: #f87171;
+            margin-bottom: 6px;
+            font-size: 1.4rem;
+        }
+
+        .offline-badge-box p {
+            color: var(--text-secondary);
+            font-size: 0.92rem;
+        }
+
+        /* Telemetry Panel */
+        .telemetry-counters {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .telemetry-pill {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-highlight);
+            padding: 10px 14px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+        }
+
+        .telemetry-pill strong {
+            font-size: 1.05rem;
+        }
+
+        .telemetry-status-banner {
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            color: #bae6fd;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 0.86rem;
+            margin-bottom: 14px;
+        }
+
+        .events-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 270px;
+            overflow-y: auto;
+        }
+
+        .event-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 12px;
+            background: var(--bg-elevated);
+            border-radius: 9px;
+            border-left: 3px solid var(--border-highlight);
+            font-size: 0.83rem;
+        }
+
+        .event-item.recognized { border-left-color: var(--accent-success); }
+        .event-item.inconclusive { border-left-color: var(--accent-warning); }
+        .event-item.unknown_pending { border-left-color: var(--accent-secondary); }
+        .event-item.unusable_quality { border-left-color: var(--accent-danger); }
+
+        .event-item img {
+            width: 38px;
+            height: 38px;
+            border-radius: 6px;
+            object-fit: cover;
+            background: #0b0f19;
+        }
+
+        .event-meta {
+            flex: 1;
+        }
+
+        .event-meta .event-title {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .event-meta .event-sub {
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+        }
+
+        /* Collapsible Panels (Duplicate Review & Manual Merge) */
+        .collapsible-panel {
+            display: none;
+            margin-bottom: 28px;
+        }
+
+        .collapsible-panel.active {
+            display: block;
+        }
+
+        .dup-card {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-highlight);
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 18px;
+        }
+
+        .dup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 14px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .dup-compare-grid {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 20px;
+            align-items: stretch;
+        }
+
+        @media (max-width: 900px) {
+            .dup-compare-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .dup-side {
+            background: var(--bg-card);
+            border: 2px solid var(--border-highlight);
+            border-radius: 12px;
+            padding: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .dup-side.canonical-selected {
+            border-color: var(--accent-success);
+            box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.3);
+        }
+
+        .dup-thumbs {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin: 12px 0;
+        }
+
+        .dup-thumbs img {
+            width: 100%;
+            height: 70px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid var(--border-highlight);
+        }
+
+        .evidence-list {
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin: 14px 0;
+            font-size: 0.86rem;
+            color: #c7d2fe;
+        }
+
+        /* Person Cards */
+        .person-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-highlight);
+            padding: 24px;
+            margin-bottom: 24px;
+            border-radius: 16px;
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+        }
+
+        .person-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+            gap: 14px;
+        }
+
+        .person-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .person-title h2 {
+            color: var(--text-primary);
+            font-size: 1.55rem;
+            font-weight: 700;
+        }
+
+        .person-label-tag {
+            background: rgba(56, 189, 248, 0.15);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            padding: 3px 12px;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .person-id-badge {
+            background: rgba(148, 163, 184, 0.12);
+            color: var(--text-secondary);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            padding: 2px 10px;
+            border-radius: 999px;
+            font-size: 0.82rem;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+        }
+
+        .upload-preview-chip {
+            position: relative;
+            width: 58px;
+            height: 58px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-highlight);
+            background: #000;
+            flex-shrink: 0;
+        }
+
+        .upload-preview-chip img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .upload-preview-chip .chip-remove {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: rgba(0, 0, 0, 0.75);
+            color: #f87171;
+            border: none;
+            border-radius: 50%;
+            width: 17px;
+            height: 17px;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .upload-preview-chip .chip-remove:hover {
+            background: #ef4444;
+            color: #fff;
+        }
+
+        .unenrolled-tag {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.4);
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+
+        .person-stats {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .stat-badge {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-highlight);
+            padding: 6px 13px;
+            border-radius: 999px;
+            font-size: 0.83rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .stat-badge.primary {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: rgba(99, 102, 241, 0.45);
+            color: #a5b4fc;
+        }
+
+        .stat-badge.quality {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: rgba(16, 185, 129, 0.35);
+            color: #6ee7b7;
+        }
+
+        .last-seen {
+            color: var(--text-secondary);
+            font-size: 0.88rem;
+            margin-bottom: 16px;
+        }
+
+        .images-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .images-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .image-container {
+            position: relative;
+            overflow: hidden;
+            border-radius: 10px;
+            border: 1px solid var(--border-highlight);
+            background: #070a12;
+        }
+
+        .image-container img {
+            width: 100%;
+            height: 155px;
+            object-fit: cover;
+            display: block;
+            transition: transform 0.25s ease;
+        }
+
+        .image-container:hover img {
+            transform: scale(1.06);
+        }
+
+        .image-quality-chip {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(15, 23, 42, 0.85);
+            color: #34d399;
+            border: 1px solid rgba(52, 211, 153, 0.4);
+            padding: 2px 7px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 700;
+        }
+
+        .image-time {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(11, 15, 25, 0.82);
+            color: var(--text-primary);
+            padding: 5px;
+            text-align: center;
+            font-size: 0.78rem;
+        }
+
+        .placeholder {
+            background: rgba(30, 41, 59, 0.4);
+            border: 1px dashed var(--border-highlight);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 155px;
+            color: var(--text-muted);
+            border-radius: 10px;
+            font-size: 0.85rem;
+        }
+
+        .chart-container {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid var(--border-subtle);
+            padding: 18px;
+            border-radius: 12px;
+        }
+
+        .chart-controls {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .chart-btn {
+            padding: 6px 16px;
+            border: 1px solid var(--border-highlight);
+            border-radius: 999px;
+            background: var(--bg-elevated);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.82rem;
+            transition: all 0.2s ease;
+        }
+
+        .chart-btn:hover, .chart-btn.active {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+            color: white;
+        }
+
+        canvas {
+            max-height: 260px;
+        }
+
+        /* Manual Merge Selector */
+        .merge-selector {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 20px;
+            align-items: start;
+            margin-top: 16px;
+        }
+
+        .person-select {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 340px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .person-option {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            background: var(--bg-elevated);
+            border: 2px solid var(--border-highlight);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .person-option:hover {
+            border-color: var(--accent-secondary);
+        }
+
+        .person-option.selected {
+            border-color: var(--accent-primary);
+            background: rgba(99, 102, 241, 0.2);
+        }
+
+        .person-option img {
+            width: 54px;
+            height: 54px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .merge-preview-box {
+            margin-top: 16px;
+            padding: 16px;
+            border-radius: 12px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-highlight);
+            display: none;
+        }
+
+        /* Modals (Delete Person & Inspect Samples) */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(5, 8, 17, 0.82);
+            backdrop-filter: blur(6px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal-backdrop.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border-highlight);
+            border-radius: 16px;
+            max-width: 720px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 28px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.65);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .delete-option-card {
+            background: var(--bg-elevated);
+            border: 2px solid var(--border-highlight);
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .delete-option-card.selected {
+            border-color: var(--accent-danger);
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .delete-option-card h4 {
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .delete-option-card p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .delete-impact-box {
+            background: #0b0f19;
+            border: 1px solid var(--border-highlight);
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin: 16px 0;
+            font-size: 0.88rem;
+        }
+
+        .samples-modal-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+            gap: 12px;
+            margin-top: 14px;
+        }
+
+        .sample-card {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-highlight);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .sample-card:hover {
+            border-color: rgba(56, 189, 248, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .sample-card.selected {
+            border: 2px solid #38bdf8 !important;
+            box-shadow: 0 0 14px rgba(56, 189, 248, 0.45);
+        }
+
+        .sample-checkbox {
+            position: absolute;
+            top: 7px;
+            left: 7px;
+            width: 22px;
+            height: 22px;
+            border-radius: 6px;
+            background: rgba(15, 23, 42, 0.65);
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: 700;
+            z-index: 5;
+            transition: all 0.12s ease;
+        }
+
+        .sample-card:hover .sample-checkbox {
+            display: flex;
+        }
+
+        .selection-mode .sample-checkbox {
+            display: flex !important;
+        }
+
+        .sample-card.selected .sample-checkbox {
+            display: flex !important;
+            background: #0284c7;
+            border-color: #38bdf8;
+        }
+
+        .sample-badge-top-right {
+            position: absolute;
+            top: 7px;
+            right: 7px;
+            padding: 2px 6px;
+            border-radius: 5px;
+            font-size: 0.68rem;
+            font-weight: 600;
+            backdrop-filter: blur(4px);
+            z-index: 4;
+            letter-spacing: 0.02em;
+        }
+
+        .sample-badge-gallery {
+            background: rgba(5, 150, 105, 0.9);
+            color: #ffffff;
+            border: 1px solid rgba(52, 211, 153, 0.4);
+        }
+
+        .sample-badge-archived {
+            background: rgba(30, 41, 59, 0.85);
+            color: #94a3b8;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+        }
+
+        .samples-menu-item:hover {
+            background: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        .sample-card img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .sample-card-footer {
+            padding: 6px 8px;
+            font-size: 0.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .no-persons {
+            background: var(--bg-card);
+            border: 1px solid var(--border-highlight);
+            padding: 50px;
+            border-radius: 16px;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 1.15rem;
+        }
+
+        /* Camera Settings Panel */
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+            gap: 20px;
+            margin-top: 14px;
+        }
+
+        .settings-group {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-highlight);
+            border-radius: 12px;
+            padding: 18px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .settings-group h3 {
+            font-size: 1.05rem;
+            color: var(--accent-secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 2px;
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .setting-label {
+            font-size: 0.88rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .setting-desc {
+            font-size: 0.76rem;
+            color: var(--text-muted);
+            display: block;
+        }
+
+        .slider-wrap {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            max-width: 220px;
+        }
+
+        .slider-wrap input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #1e293b;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .slider-wrap input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent-secondary);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+            transition: transform 0.15s ease;
+        }
+
+        .slider-wrap input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .slider-val-badge {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #38bdf8;
+            min-width: 40px;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .select-dark {
+            background: var(--bg-input);
+            border: 1px solid var(--border-highlight);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.86rem;
+            outline: none;
+            cursor: pointer;
+            transition: border-color 0.2s ease;
+        }
+
+        .select-dark:focus {
+            border-color: var(--accent-primary);
+        }
+
+        /* Modern Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background-color: #334155;
+            transition: .25s;
+            border-radius: 24px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .25s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: var(--accent-primary);
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(20px);
+        }
+
+        .preset-btns {
+            display: flex;
+            gap: 6px;
+            margin-top: 6px;
+            flex-wrap: wrap;
+        }
+
+        .preset-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border-highlight);
+            color: var(--text-secondary);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.15s ease;
+        }
+
+        .preset-btn:hover {
+            background: var(--accent-primary);
+            color: white;
+            border-color: var(--accent-primary);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <div class="header">
+            <div class="header-top">
+                <div>
+                    <h1>🏠 Smart Door Entry — Identity & Monitoring</h1>
+                    <div class="header-subtitle">
+                        Dual AI Architecture: 👤 Face Recognition Engine • 🌐 Universal Scene Recognition Engine (DirectML GPU)
+                    </div>
+                </div>
+                <div class="action-toolbar">
+                    <button class="btn btn-primary recog-toggle-btn" onclick="toggleRecognitionPipeline()" id="topRecogToggleBtn" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); font-weight: 600; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);">
+                        👤 Face Engine: ON
+                    </button>
+                    <button class="btn btn-primary vlm-toggle-btn" onclick="toggleVlmPipeline()" id="topVlmToggleBtn" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); font-weight: 600; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.25);">
+                        🌐 Universal VLM: ON
+                    </button>
+                    <button class="btn btn-secondary" onclick="triggerVlmDescribe()" id="topVlmDescribeBtn" title="Invoke VLM to describe current scene on AMD Radeon 840M GPU">
+                        🔍 Describe Scene
+                    </button>
+                    <button class="btn btn-secondary" onclick="toggleCameraSettings()" id="settingsToggleBtn">
+                        ⚙️ Camera Controls
+                    </button>
+                    <button class="btn btn-warning" onclick="toggleDuplicateReview()">
+                        🔍 Duplicates
+                        <span class="badge-count" id="dupCountBadge">{{ duplicate_count }}</span>
+                    </button>
+                    <button class="btn btn-primary" onclick="toggleMergeMode()">
+                        🔀 Merge
+                    </button>
+                    <button class="btn btn-primary" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);" onclick="openAddPersonModal()">
+                        ➕ Enroll Person
+                    </button>
+                </div>
+            </div>
+
+            <div class="stats">
+                <div class="stat-box">
+                    <h3 id="statTotalPersons">{{ total_persons }}</h3>
+                    <p>Enrolled Identities</p>
+                </div>
+                <div class="stat-box">
+                    <h3 id="statTotalImages">{{ total_images }}</h3>
+                    <p>Full Event Frames</p>
+                </div>
+                <div class="stat-box">
+                    <h3 style="font-size: 1.05rem; color: #34d399;">👤 YuNet + MobileFaceNet</h3>
+                    <p>Face Engine (Threshold: {{ tolerance }})</p>
+                </div>
+                <div class="stat-box">
+                    <h3 style="font-size: 1.05rem; color: #a5b4fc;">🌐 DirectML Radeon 840M</h3>
+                    <p>Universal VLM (&le; 30% Load)</p>
+                </div>
+                <div class="stat-box">
+                    <h3 id="statChipTemp" style="font-size: 1.25rem; color: #f59e0b;">-- °C</h3>
+                    <p>ESP32 Die Temp</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- DUAL AI RECOGNITION ENGINES HUB -->
+        <div class="card" style="margin-bottom: 24px; border: 1px solid rgba(99, 102, 241, 0.35); background: linear-gradient(180deg, rgba(30, 27, 75, 0.45) 0%, rgba(17, 24, 39, 0.85) 100%); box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+            <div class="card-header" style="border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 14px;">
+                <div>
+                    <h2 style="display: flex; align-items: center; gap: 10px; margin: 0; font-size: 1.25rem;">
+                        <span>⚡ Dual AI Recognition Architecture</span>
+                        <span class="badge" style="background: rgba(99, 102, 241, 0.2); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.4); font-size: 0.75rem; padding: 3px 10px; border-radius: 9999px;">
+                            Active Dual-Engine Hub
+                        </span>
+                    </h2>
+                    <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">
+                        Simultaneous operation of lightweight facial identity matching alongside deep vision-language scene comprehension.
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <button class="btn btn-primary btn-sm recog-toggle-btn" id="hubRecogToggleBtn" onclick="toggleRecognitionPipeline()" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
+                        👤 Face Engine: ON
+                    </button>
+                    <button class="btn btn-primary btn-sm vlm-toggle-btn" id="hubVlmToggleBtn" onclick="toggleVlmPipeline()" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);">
+                        🌐 Universal VLM: ON
+                    </button>
+                    <button class="btn btn-secondary btn-sm" id="hubVlmDescribeBtn" onclick="triggerVlmDescribe()">
+                        🔍 Describe Scene Now
+                    </button>
+                </div>
+            </div>
+
+            <!-- Two Engine Grid -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-top: 16px;">
+                <!-- Engine 1: Face Recognition -->
+                <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <div style="font-weight: 700; color: #34d399; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
+                            <span>👤 Engine 1: Face Recognition</span>
+                        </div>
+                        <span id="faceEngineBadge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.78rem; padding: 2px 8px; border-radius: 6px;">
+                            ● Active (YuNet + MobileFaceNet)
+                        </span>
+                    </div>
+                    <div style="font-size: 0.85rem; color: #94a3b8; line-height: 1.45; margin-bottom: 12px;">
+                        <strong>Model:</strong> OpenCV YuNet (36px min detection) + InsightFace MobileFaceNet 512-D ArcFace embedding.<br>
+                        <strong>Function:</strong> Fast 1:N identity verification, candidate track accumulator, anti-fragmentation gallery.
+                    </div>
+                    <div style="display: flex; gap: 12px; font-size: 0.82rem;">
+                        <div style="background: rgba(255, 255, 255, 0.04); padding: 6px 12px; border-radius: 8px; flex: 1;">
+                            <span style="color: #64748b;">Match Threshold:</span> <strong style="color: #34d399;">0.33 Cosine</strong>
+                        </div>
+                        <div style="background: rgba(255, 255, 255, 0.04); padding: 6px 12px; border-radius: 8px; flex: 1;">
+                            <span style="color: #64748b;">Pending Tracks:</span> <strong id="hubPendingCount" style="color: #38bdf8;">0</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Engine 2: Live Object Detection (DirectML GPU) -->
+                <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(129, 140, 248, 0.3); border-radius: 12px; padding: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <div style="font-weight: 700; color: #a5b4fc; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
+                            <span>📦 Engine 2: Object Detection (YOLOv8n)</span>
+                        </div>
+                        <span id="vlmEngineBadge" style="background: rgba(99, 102, 241, 0.15); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.3); font-size: 0.78rem; padding: 2px 8px; border-radius: 6px;">
+                            ● DirectML • AMD Radeon 840M
+                        </span>
+                    </div>
+                    <div style="font-size: 0.85rem; color: #94a3b8; line-height: 1.45; margin-bottom: 12px;">
+                        <strong>Hardware Compute:</strong> DirectML DirectX 12 GPU inference (&le; 40% total CPU cap).<br>
+                        <strong>Function:</strong> Real-time bounding boxes &amp; class names (80 COCO objects) overlaid on live video.
+                    </div>
+                    <div style="display: flex; gap: 12px; font-size: 0.82rem;">
+                        <div style="background: rgba(255, 255, 255, 0.04); padding: 6px 12px; border-radius: 8px; flex: 1;">
+                            <span style="color: #64748b;">Model:</span> <strong style="color: #a5b4fc;">YOLOv8n-320 ONNX (12.1 MB)</strong>
+                        </div>
+                        <div style="background: rgba(255, 255, 255, 0.04); padding: 6px 12px; border-radius: 8px; flex: 1;">
+                            <span style="color: #64748b;">CPU Guard:</span> <strong style="color: #fbbf24;">0.45s Pace (&le; 40% CPU)</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Real-Time Object Detection Output Banner -->
+            <div style="margin-top: 14px; background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(129, 140, 248, 0.25); border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                    <span style="font-size: 1.3rem;">📦</span>
+                    <div>
+                        <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #818cf8; font-weight: 600;">
+                            Detected Objects &amp; Bounding Boxes (DirectML GPU)
+                        </div>
+                        <div id="vlmLatestCaption" style="font-size: 0.95rem; color: #f1f5f9; font-weight: 500; margin-top: 2px;">
+                            Scanning for objects...
+                        </div>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span id="vlmProviderTag" style="font-size: 0.75rem; color: #38bdf8; background: rgba(56, 189, 248, 0.1); padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.2);">
+                        DirectML GPU (Radeon 840M)
+                    </span>
+                    <button class="btn btn-secondary btn-sm" onclick="triggerVlmDescribe()" title="Scan current view now" style="padding: 4px 10px; font-size: 0.8rem;">
+                        🔄 Scan
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- CAMERA HARDWARE SETTINGS & ONBOARD FLASH -->
+        <div class="card collapsible-panel" id="cameraSettingsPanel">
+            <div class="card-header">
+                <h2>⚙️ Camera Hardware Controls & Onboard Flash (GPIO 4)</h2>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <span id="settingsSaveStatus" style="font-size: 0.82rem; color: #34d399; font-weight: 600; display: none;">✔ Synced</span>
+                    <button class="btn btn-secondary btn-sm" onclick="toggleCameraSettings()">✖ Close</button>
+                </div>
+            </div>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 14px;">
+                Direct hardware register adjustments applied in real-time to the ESP32-CAM (AI-Thinker OV2640). Controls resolution, JPEG compression, onboard illumination LED, and sensor digital signal processing.
+            </p>
+
+            <div class="settings-grid">
+                <!-- Group 1: Flashlight LED -->
+                <div class="settings-group">
+                    <h3>💡 Onboard Flashlight (GPIO 4)</h3>
+                    <div>
+                        <div class="setting-row">
+                            <div>
+                                <span class="setting-label">Flash Power</span>
+                                <span class="setting-desc">Toggle onboard high-power LED</span>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="setting_flash_toggle" onchange="onFlashToggleChange(this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="setting-row">
+                            <div>
+                                <span class="setting-label">PWM Brightness</span>
+                                <span class="setting-desc">8-bit hardware timer (0-255)</span>
+                            </div>
+                            <div class="slider-wrap">
+                                <input type="range" id="setting_flash_slider" min="0" max="255" value="0"
+                                       oninput="onSettingSliderInput('flash', this.value, '%')"
+                                       onchange="applyCameraSetting('flash', this.value)">
+                                <span class="slider-val-badge" id="val_badge_flash">0%</span>
+                            </div>
+                        </div>
+                        <div class="preset-btns">
+                            <button class="preset-btn" onclick="setFlashPreset(0)">Off (0%)</button>
+                            <button class="preset-btn" onclick="setFlashPreset(32)">Low (12%)</button>
+                            <button class="preset-btn" onclick="setFlashPreset(128)">Mid (50%)</button>
+                            <button class="preset-btn" onclick="setFlashPreset(255)">Max (100%)</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Group 2: Resolution & Compression -->
+                <div class="settings-group">
+                    <h3>📐 Resolution & Stream Quality</h3>
+                    <div class="setting-row">
+                        <div>
+                            <span class="setting-label">Frame Size / Resolution</span>
+                            <span class="setting-desc">OV2640 sensor windowing</span>
+                        </div>
+                        <select class="select-dark" id="setting_framesize" onchange="applyCameraSetting('framesize', this.value)">
+                            <option value="8">VGA (640x480) — ⭐ Recommended (Fast & Cool, ~15-20 FPS)</option>
+                            <option value="9">SVGA (800x600) — ⭐ Best Quality/Speed (~12-15 FPS)</option>
+                            <option value="10">XGA (1024x768) — High Detail (~8-10 FPS)</option>
+                            <option value="5">QVGA (320x240) — Ultra Fast / Low Heat (~25 FPS)</option>
+                            <option value="6">CIF (400x296) — Lightweight (~20 FPS)</option>
+                            <option value="11">HD (1280x720) — Heavy Load / Laggy (~5-7 FPS)</option>
+                            <option value="12">SXGA (1280x1024) — Very Heavy (~3-5 FPS, Hot)</option>
+                            <option value="13">UXGA (1600x1200) — Max Sensor (~2-4 FPS, High Heat)</option>
+                        </select>
+                    </div>
+
+                    <div class="setting-row">
+                        <div>
+                            <span class="setting-label">JPEG Quality</span>
+                            <span class="setting-desc">10 = High Quality, 63 = Low</span>
+                        </div>
+                        <div class="slider-wrap">
+                            <input type="range" id="setting_quality" min="10" max="63" value="12"
+                                   oninput="onSettingSliderInput('quality', this.value)"
+                                   onchange="applyCameraSetting('quality', this.value)">
+                            <span class="slider-val-badge" id="val_badge_quality">12</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Group 3: Image Sensor Adjustments -->
+                <div class="settings-group">
+                    <h3>🎨 Image Sensor Adjustments</h3>
+                    <div class="setting-row">
+                        <span class="setting-label">Brightness</span>
+                        <div class="slider-wrap">
+                            <input type="range" id="setting_brightness" min="-2" max="2" value="0"
+                                   oninput="onSettingSliderInput('brightness', this.value)"
+                                   onchange="applyCameraSetting('brightness', this.value)">
+                            <span class="slider-val-badge" id="val_badge_brightness">0</span>
+                        </div>
+                    </div>
+
+                    <div class="setting-row">
+                        <span class="setting-label">Contrast</span>
+                        <div class="slider-wrap">
+                            <input type="range" id="setting_contrast" min="-2" max="2" value="0"
+                                   oninput="onSettingSliderInput('contrast', this.value)"
+                                   onchange="applyCameraSetting('contrast', this.value)">
+                            <span class="slider-val-badge" id="val_badge_contrast">0</span>
+                        </div>
+                    </div>
+
+                    <div class="setting-row">
+                        <span class="setting-label">Saturation</span>
+                        <div class="slider-wrap">
+                            <input type="range" id="setting_saturation" min="-2" max="2" value="0"
+                                   oninput="onSettingSliderInput('saturation', this.value)"
+                                   onchange="applyCameraSetting('saturation', this.value)">
+                            <span class="slider-val-badge" id="val_badge_saturation">0</span>
+                        </div>
+                    </div>
+
+                    <div class="setting-row">
+                        <span class="setting-label">Special Effect</span>
+                        <select class="select-dark" id="setting_special_effect" onchange="applyCameraSetting('special_effect', this.value)">
+                            <option value="0">No Effect (Normal)</option>
+                            <option value="1">Negative</option>
+                            <option value="2">Grayscale</option>
+                            <option value="3">Red Tint</option>
+                            <option value="4">Green Tint</option>
+                            <option value="5">Blue Tint</option>
+                            <option value="6">Sepia</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Group 4: Orientation & Auto Correction -->
+                <div class="settings-group">
+                    <h3>🔄 Sensor Modes & Orientation</h3>
+                    <div class="setting-row">
+                        <div>
+                            <span class="setting-label">Vertical Flip (V-Flip)</span>
+                            <span class="setting-desc">Flip frame upside down</span>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="setting_vflip" onchange="applyCameraSetting('vflip', this.checked ? 1 : 0)">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="setting-row">
+                        <div>
+                            <span class="setting-label">Horizontal Mirror (H-Mirror)</span>
+                            <span class="setting-desc">Mirror image horizontally</span>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="setting_hmirror" onchange="applyCameraSetting('hmirror', this.checked ? 1 : 0)">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="setting-row">
+                        <div>
+                            <span class="setting-label">Auto White Balance (AWB)</span>
+                            <span class="setting-desc">Automatic color temperature</span>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="setting_awb" onchange="applyCameraSetting('awb', this.checked ? 1 : 0)">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="setting-row">
+                        <div>
+                            <span class="setting-label">Auto Exposure (AEC)</span>
+                            <span class="setting-desc">Sensor automatic exposure control</span>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="setting_aec" onchange="applyCameraSetting('aec', this.checked ? 1 : 0)">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- System & Device Reboot Controls -->
+                <div style="margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(148, 163, 184, 0.2);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <span class="setting-label">🔄 System &amp; Device Reboot Controls</span>
+                            <span class="setting-desc" id="rebootStatusMsg">Reboot ESP32-CAM (192.168.29.10), ESP32-WROOM (192.168.29.20), or run a Full System Reboot</span>
+                        </div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button class="btn btn-secondary btn-sm" id="btnRebootCam" onclick="rebootCamDevice()">
+                                📷 Reboot CAM
+                            </button>
+                            <button class="btn btn-secondary btn-sm" id="btnRebootWroom" onclick="rebootWroomDevice()">
+                                📡 Reboot WROOM
+                            </button>
+                            <button class="btn btn-danger btn-sm" id="btnFullReboot" onclick="fullSystemReboot()" style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); color: #fff;">
+                                ⚡ Full Reboot (All + Models + Refresh)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PHASE 3: DUPLICATE IDENTITY REVIEW WORKFLOW -->
+        <div class="card collapsible-panel" id="duplicateReviewPanel">
+            <div class="card-header">
+                <h2>🔍 Potential Duplicate Identities — Side-by-Side Human Review</h2>
+                <button class="btn btn-secondary btn-sm" onclick="toggleDuplicateReview()">✖ Close</button>
+            </div>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 18px;">
+                Candidates below are identified strictly from 128-D facial embeddings and landmark-aligned similarity metrics (never clothing or timestamps). Choose which profile should be kept as the <strong>Canonical Identity</strong> and preview changes before merging.
+            </p>
+            <div id="duplicateCandidatesContainer">
+                <p style="color: var(--text-secondary);">Analyzing facial embeddings across profiles...</p>
+            </div>
+        </div>
+
+        <!-- MANUAL MERGE SELECTOR -->
+        <div class="card collapsible-panel" id="mergeControls">
+            <div class="card-header">
+                <h2>🔀 Manual Profile Merge</h2>
+                <button class="btn btn-secondary btn-sm" onclick="toggleMergeMode()">✖ Cancel</button>
+            </div>
+            <p style="color: var(--text-secondary); font-size: 0.9rem;">
+                Select the duplicate profile to retire (<strong>Merge FROM</strong>) and the canonical profile to preserve (<strong>Merge INTO</strong>).
+            </p>
+
+            <div class="merge-selector">
+                <div>
+                    <strong style="color: #fca5a5; display: block; margin-bottom: 8px;">Retire Profile (Merge FROM):</strong>
+                    <div class="person-select" id="sourcePersons"></div>
+                </div>
+                <div style="font-size: 2rem; color: var(--accent-secondary); align-self: center; padding-top: 20px;">➔</div>
+                <div>
+                    <strong style="color: #6ee7b7; display: block; margin-bottom: 8px;">Canonical Profile (Merge INTO):</strong>
+                    <div class="person-select" id="targetPersons"></div>
+                </div>
+            </div>
+
+            <div class="merge-preview-box" id="manualMergePreview"></div>
+
+            <div style="display: flex; gap: 12px; margin-top: 18px;">
+                <button class="btn btn-primary" id="mergeExecuteBtn" onclick="executeMerge()" disabled style="flex: 1; justify-content: center;">
+                    ✅ Confirm & Merge Selected Profiles
+                </button>
+                <button class="btn btn-secondary" onclick="toggleMergeMode()">Cancel</button>
+            </div>
+        </div>
+
+        <!-- LIVE CAMERA STREAM + REAL-TIME RECOGNITION TELEMETRY -->
+        <div class="live-grid">
+            <div class="card">
+                <div class="card-header">
+                    <h2>📹 Live ESP32-CAM Feed</h2>
+                    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                        <button class="btn btn-primary btn-sm recog-toggle-btn" id="toggleRecognitionBtn" onclick="toggleRecognitionPipeline()" title="Toggle Face Recognition Pipeline" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
+                            🧠 Recognition: ON
+                        </button>
+                        <button class="btn btn-primary btn-sm vlm-toggle-btn" id="liveObjToggleBtn" onclick="toggleVlmPipeline()" title="Toggle Object Identification Pipeline" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);">
+                            📦 Objects: ON
+                        </button>
+                        <button class="btn btn-secondary btn-sm" id="toggleOverlayBtn" onclick="toggleFaceOverlay()" title="Toggle live face &amp; object bounding boxes">
+                            🔲 Boxes: ON
+                        </button>
+                        <button class="btn btn-secondary btn-sm" id="quickFlashBtn" onclick="toggleQuickFlash()" title="Toggle onboard LED flashlight">
+                            💡 Flash: Off
+                        </button>
+                        <button class="btn btn-secondary btn-sm" onclick="toggleCameraSettings()" title="Open camera controls">
+                            ⚙️ Settings
+                        </button>
+                        <span id="cameraStatusBadge" class="status-badge-live offline">
+                            <span class="status-dot"></span>
+                            <span id="cameraStatusText">ESP-CAM Connecting...</span>
+                        </span>
+                    </div>
+                </div>
+                <div class="stream-container">
+                    <img id="liveStreamImg" src="/live" alt="Live Stream" onerror="handleStreamError()" />
+                    <div id="offlineOverlay" class="offline-overlay" style="display: none;">
+                        <div class="offline-badge-box" style="max-width: 440px;">
+                            <div class="offline-icon">📡</div>
+                            <h3>ESP-CAM Video Stream Offline</h3>
+                            <p style="margin-bottom: 10px;">Waiting for MJPEG video stream on port 81 (<code>http://192.168.29.10:81/stream</code>).</p>
+                            <div style="font-size: 0.82rem; background: rgba(255,255,255,0.06); padding: 10px 14px; border-radius: 8px; color: #94a3b8; text-align: left; line-height: 1.45;">
+                                <strong style="color: #f1f5f9;">Hardware Status:</strong> The board connected to USB COM11 is the <strong>ESP32-WROOM</strong> running in <code>WROOM_ONLY</code> mode at <code>192.168.29.20</code>.<br>
+                                To activate the video stream, power on the <strong>AI-Thinker ESP32-CAM</strong> at <code>192.168.29.10</code>.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>🧠 Live Recognition Telemetry</h2>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <button class="btn btn-primary btn-sm recog-toggle-btn" id="telemetryRecogToggleBtn" onclick="toggleRecognitionPipeline()" title="Toggle Recognition Pipeline" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
+                            🧠 Recognition: ON
+                        </button>
+                        <span class="stat-badge primary" id="pendingTrackBadge">0 Pending Tracks</span>
+                    </div>
+                </div>
+
+                <div class="telemetry-status-banner" id="lastRecognitionBanner">
+                    Waiting for face detections...
+                </div>
+
+                <div class="telemetry-counters">
+                    <div class="telemetry-pill">
+                        <span style="color: #34d399;">✔ Recognized</span>
+                        <strong id="cntRecognized">0</strong>
+                    </div>
+                    <div class="telemetry-pill">
+                        <span style="color: #38bdf8;">⏳ Unknown (Verifying)</span>
+                        <strong id="cntUnknownPending">0</strong>
+                    </div>
+                    <div class="telemetry-pill">
+                        <span style="color: #fbbf24;">⚠ Inconclusive</span>
+                        <strong id="cntInconclusive">0</strong>
+                    </div>
+                    <div class="telemetry-pill">
+                        <span style="color: #f87171;">✖ Low Quality Rejected</span>
+                        <strong id="cntUnusable">0</strong>
+                    </div>
+                </div>
+
+                <h4 style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+                    Recent Recognition & Quality Decisions
+                </h4>
+                <div class="events-list" id="recentEventsList">
+                    <div style="color: var(--text-muted); font-size: 0.85rem; padding: 12px;">
+                        No recognition events recorded in this session yet.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ENROLLED PERSON PROFILES -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin: 32px 0 16px;">
+            <h2 style="font-size:1.4rem; font-weight:700; color:var(--text-primary); margin:0; display:flex; align-items:center; gap:8px;">
+                <span>👤 Enrolled Identities</span>
+                <span class="badge-count" style="font-size:0.85rem; padding: 2px 8px;">{{ total_persons }}</span>
+            </h2>
+            <button class="btn btn-primary btn-sm" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);" onclick="openAddPersonModal()">
+                ➕ Enroll New Person
+            </button>
+        </div>
+        {% if persons %}
+            {% for person in persons %}
+            <div class="person-card" id="card-{{ person.id }}">
+                <div class="person-header">
+                    <div class="person-title">
+                        <h2 id="person-heading-{{ person.id }}">{{ person.label if person.label else person.id }}</h2>
+                        <span class="person-id-badge" id="id-badge-{{ person.id }}" style="{% if not person.label %}display:none;{% endif %}">
+                            {{ person.id }}
+                        </span>
+                        {% if not person.enrolled %}
+                        <span class="unenrolled-tag">Identity Unenrolled (Embeddings Removed)</span>
+                        {% endif %}
+                        <button class="btn btn-secondary btn-sm btn-edit-name" data-person-id="{{ person.id }}" data-current-label="{{ person.label or '' }}" onclick="openNameModal('{{ person.id }}')">
+                            ✏️ Name
+                        </button>
+                    </div>
+
+                    <div class="person-stats">
+                        <span class="stat-badge primary">{{ person.total_detections }} detections</span>
+                        <span class="stat-badge">{{ person.total_images }} images</span>
+                        <span class="stat-badge">{{ person.encodings }} embeddings</span>
+                        {% if person.avg_quality > 0 %}
+                        <span class="stat-badge quality">Avg Quality: {{ person.avg_quality }}/100</span>
+                        {% endif %}
+                        <button class="btn btn-secondary btn-sm" onclick="openSamplesModal('{{ person.id }}')">
+                            🖼️ Inspect Samples
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="openDeleteModal('{{ person.id }}')">
+                            🗑️ Delete Person
+                        </button>
+                    </div>
+                </div>
+
+                {% if person.last_seen %}
+                <div class="last-seen">
+                    Last seen: {{ person.last_seen.strftime('%Y-%m-%d %H:%M:%S') }}
+                    ({{ ((now - person.last_seen).total_seconds() / 3600) | int }}h {{ (((now - person.last_seen).total_seconds() % 3600) / 60) | int }}m ago)
+                </div>
+                {% endif %}
+
+                <div class="images-grid">
+                    {% for image in person.images %}
+                    <div class="image-container">
+                        <img src="/image/{{ person.id }}/{{ image.filename }}" alt="{{ person.id }}">
+                        {% if image.quality %}
+                        <div class="image-quality-chip">Q: {{ image.quality }}</div>
+                        {% endif %}
+                        <div class="image-time">{{ image.time }}</div>
+                    </div>
+                    {% endfor %}
+
+                    {% for i in range(5 - person.images|length) %}
+                    <div class="placeholder">No Sample</div>
+                    {% endfor %}
+                </div>
+
+                <div class="chart-container">
+                    <div class="chart-controls">
+                        <button class="chart-btn active" onclick="loadChart('{{ person.id }}', 1, this)">1 Hour</button>
+                        <button class="chart-btn" onclick="loadChart('{{ person.id }}', 6, this)">6 Hours</button>
+                        <button class="chart-btn" onclick="loadChart('{{ person.id }}', 24, this)">24 Hours</button>
+                        <button class="chart-btn" onclick="loadChart('{{ person.id }}', 168, this)">7 Days</button>
+                    </div>
+                    <canvas id="chart-{{ person.id }}"></canvas>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="no-persons">
+                <p>No enrolled identities yet. Waiting for verified face detections...</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- EDIT PERSON NAME MODAL -->
+    <div class="modal-backdrop" id="nameModal" onclick="if(event.target === this) closeNameModal()">
+        <div class="modal-content" style="max-width: 480px;">
+            <div class="modal-header">
+                <h3 style="font-size: 1.25rem;">✏️ Edit Display Name — <span id="nameModalPersonId"></span></h3>
+                <button class="btn btn-secondary btn-sm" onclick="closeNameModal()">✖ Close</button>
+            </div>
+            <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 14px;">
+                Assign a friendly name (e.g., "Adhyatm", "Mom", "Courier"). Leave blank to clear.
+            </p>
+            <div style="margin-bottom: 16px;">
+                <label for="nameModalInput" style="display:block; font-size:0.82rem; font-weight:600; color:var(--text-secondary); margin-bottom:6px;">DISPLAY NAME</label>
+                <input type="text" id="nameModalInput" class="setting-input" style="width: 100%; box-sizing: border-box; font-size: 1rem; padding: 10px 12px; border-radius: 8px; background: rgba(15, 23, 42, 0.6); color: var(--text-primary); border: 1px solid var(--border-color); outline: none;" placeholder="e.g. Adhyatm" autocomplete="off">
+                <div id="nameModalError" style="display:none; color:#f87171; font-size:0.82rem; margin-top:6px;"></div>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="closeNameModal()">Cancel</button>
+                <button class="btn btn-primary" id="saveNameBtn" onclick="savePersonName()">Save Name</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ENROLL NEW PERSON MODAL -->
+    <div class="modal-backdrop" id="addPersonModal" onclick="if(event.target === this) closeAddPersonModal()">
+        <div class="modal-content" style="max-width: 580px;">
+            <div class="modal-header">
+                <h3 style="font-size: 1.3rem; color: #34d399; display: flex; align-items: center; gap: 8px;">
+                    <span>➕ Enroll New Person with Photos</span>
+                </h3>
+                <button class="btn btn-secondary btn-sm" onclick="closeAddPersonModal()">✖ Close</button>
+            </div>
+            <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 16px;">
+                Train the YuNet + SFace recognition model with photos of this person. Upload clear photos from multiple angles (front, 45° left/right, tilted, different lighting).
+            </p>
+
+            <div style="margin-bottom: 16px;">
+                <label for="newPersonLabelInput" style="display:block; font-size:0.82rem; font-weight:600; color:var(--text-secondary); margin-bottom:6px;">DISPLAY NAME / LABEL</label>
+                <input type="text" id="newPersonLabelInput" class="setting-input" style="width: 100%; box-sizing: border-box; font-size: 1rem; padding: 10px 12px; border-radius: 8px; background: rgba(15, 23, 42, 0.6); color: var(--text-primary); border: 1px solid var(--border-color); outline: none;" placeholder="e.g. Adhyatm, Dad, Guest" autocomplete="off">
+            </div>
+
+            <div style="margin-bottom: 16px;">
+                <label style="display:block; font-size:0.82rem; font-weight:600; color:var(--text-secondary); margin-bottom:6px;">FACE PHOTOS (MULTIPLE ANGLES)</label>
+                <div id="newPersonDropzone" style="border: 2px dashed var(--border-highlight); border-radius: 12px; padding: 22px; text-align: center; cursor: pointer; background: rgba(15, 23, 42, 0.4); transition: border-color 0.2s;" onclick="document.getElementById('newPersonFileInput').click()">
+                    <div style="font-size: 1.8rem; margin-bottom: 4px;">📸</div>
+                    <div style="font-weight: 600; color: var(--text-primary); font-size: 0.95rem;">Click or Drag Photos Here</div>
+                    <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">Select multiple files: front, 45° side profiles, smile, etc.</div>
+                </div>
+                <input type="file" id="newPersonFileInput" accept="image/*" multiple style="display: none;" onchange="handleNewPersonFiles(this.files)">
+            </div>
+
+            <!-- Preview selected files -->
+            <div id="newPersonPreviewSection" style="display: none; margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span id="newPersonFileCount" style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary);"></span>
+                    <button class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 0.75rem;" onclick="clearNewPersonFiles()">Clear All</button>
+                </div>
+                <div id="newPersonThumbs" style="display: flex; gap: 8px; flex-wrap: wrap; max-height: 140px; overflow-y: auto; padding: 6px; background: rgba(15, 23, 42, 0.5); border-radius: 8px;"></div>
+            </div>
+
+            <div id="newPersonStatus" style="display: none; margin-bottom: 16px; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem;"></div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="closeAddPersonModal()">Cancel</button>
+                <button class="btn btn-primary" id="btnSubmitNewPerson" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);" onclick="submitNewPersonEnrollment()">
+                    ➕ Enroll Person
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PHASE 4: 3-OPTION SAFE PERSON DELETION MODAL -->
+    <div class="modal-backdrop" id="deleteModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 style="font-size: 1.3rem; color: #fca5a5;">🗑️ Safe Person Deletion — <span id="deleteModalPersonId"></span></h3>
+                <button class="btn btn-secondary btn-sm" onclick="closeDeleteModal()">✖ Close</button>
+            </div>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 14px;">
+                Choose how much data to remove. Shared full-frame images containing other people are automatically protected and never deleted.
+            </p>
+
+            <div class="delete-option-card" id="delOptA" onclick="selectDeleteOption('A')">
+                <h4>Option A — Remove Identity Only</h4>
+                <p>Clears enrolled facial embeddings so future recognition cannot match this identity. Preserves saved images and detection timeline.</p>
+            </div>
+
+            <div class="delete-option-card" id="delOptB" onclick="selectDeleteOption('B')">
+                <h4>Option B — Remove Identity & Associated Images</h4>
+                <p>Removes facial embeddings, all face crops for this profile, and full-frame images owned exclusively by this identity.</p>
+            </div>
+
+            <div class="delete-option-card selected" id="delOptC" onclick="selectDeleteOption('C')">
+                <h4>Option C — Remove All Associated Data (Complete Wipe)</h4>
+                <p>Removes identity embeddings, exclusively owned face & full-frame images, and all historical detection records.</p>
+            </div>
+
+            <div class="delete-impact-box" id="deletePreviewBox">
+                Loading storage ownership audit...
+            </div>
+
+            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+                <button class="btn btn-danger" id="confirmDeleteBtn" onclick="executeConfirmedDelete()">
+                    🗑️ Confirm Permanent Deletion
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- INSPECT FACE SAMPLES MODAL -->
+    <div class="modal-backdrop" id="samplesModal" onclick="if(event.target === this) closeSamplesModal()">
+        <div class="modal-content" style="max-width: 880px;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <h3 style="font-size: 1.25rem; margin: 0;">🖼️ Face Samples — <span id="samplesModalPersonId"></span></h3>
+                    <span id="samplesModalCountBadge" class="stat-badge primary" style="font-size: 0.76rem;">0 photos</span>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <!-- Files App Style Selection Toolbar & 3-dots Menu Button -->
+                    <div id="selectionToolbar" style="display: flex; align-items: center; gap: 8px;">
+                        <span id="selectionCounter" style="display: none; font-size: 0.82rem; font-weight: 600; color: #38bdf8; background: rgba(56, 189, 248, 0.12); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(56, 189, 248, 0.3);">
+                            0 selected
+                        </span>
+
+                        <div class="samples-dropdown-wrapper" style="position: relative; display: inline-block;">
+                            <button class="btn btn-secondary btn-sm" id="btnSamplesMenu" onclick="toggleSamplesMenu(event)" title="Selection Actions" style="font-size: 1.15rem; padding: 4px 10px; line-height: 1; min-width: 34px;">
+                                ⋮
+                            </button>
+                            <div class="samples-dropdown-menu" id="samplesDropdownMenu" style="display: none; position: absolute; right: 0; top: calc(100% + 6px); background: var(--bg-card); border: 1px solid var(--border-highlight); border-radius: 10px; box-shadow: 0 14px 35px rgba(0,0,0,0.7); min-width: 190px; z-index: 100; overflow: hidden; padding: 5px 0;">
+                                <button class="samples-menu-item" onclick="executeBatchAction('gallery')" style="width: 100%; text-align: left; padding: 8px 14px; background: none; border: none; color: var(--text-primary); font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                                    <span style="color: #34d399;">⭐</span> Add to Gallery
+                                </button>
+                                <button class="samples-menu-item" onclick="executeBatchAction('archive')" style="width: 100%; text-align: left; padding: 8px 14px; background: none; border: none; color: var(--text-primary); font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                                    <span style="color: #94a3b8;">📁</span> Make Archived
+                                </button>
+                                <button class="samples-menu-item" onclick="executeBatchAction('delete')" style="width: 100%; text-align: left; padding: 8px 14px; background: none; border: none; color: #f87171; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                                    <span>🗑️</span> Delete
+                                </button>
+                                <div style="height: 1px; background: var(--border-subtle); margin: 4px 0;"></div>
+                                <button class="samples-menu-item" onclick="selectAllSamples()" style="width: 100%; text-align: left; padding: 8px 14px; background: none; border: none; color: var(--text-secondary); font-size: 0.82rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                                    <span>☑️</span> Select All Loaded
+                                </button>
+                                <button class="samples-menu-item" onclick="clearSampleSelection()" style="width: 100%; text-align: left; padding: 8px 14px; background: none; border: none; color: var(--text-secondary); font-size: 0.82rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                                    <span>⏹️</span> Deselect All
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-secondary btn-sm" onclick="closeSamplesModal()">✖ Close</button>
+                </div>
+            </div>
+
+            <p style="color: var(--text-secondary); font-size: 0.88rem; margin: 8px 0 14px;">
+                Samples marked <strong style="color: #34d399;">★ In Gallery</strong> actively contribute to face recognition. Click any photo to select it (Files app style), then use the <strong>⋮ menu</strong> to <em>Add to Gallery</em>, <em>Make Archived</em>, or <em>Delete</em>.
+            </p>
+
+            <!-- ADD IMAGES TO EXISTING PERSON -->
+            <div style="background: var(--bg-elevated); border: 1px dashed var(--border-highlight); border-radius: 12px; padding: 14px 18px; margin: 16px 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <div style="font-weight: 600; font-size: 0.95rem; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                            <span>➕ Add Face Photos to Gallery</span>
+                        </div>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">
+                            Upload front, side, or tilted photos to enhance recognition accuracy.
+                        </div>
+                    </div>
+                    <div>
+                        <input type="file" id="personSampleFileInput" accept="image/*" multiple style="display: none;" onchange="handlePersonSampleFiles(this.files)">
+                        <button class="btn btn-primary btn-sm" onclick="document.getElementById('personSampleFileInput').click()">
+                            📁 Select Photos...
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Preview & Upload status -->
+                <div id="sampleUploadPreview" style="display: none; margin-top: 12px; border-top: 1px solid var(--border-subtle); padding-top: 12px;">
+                    <div id="samplePreviewThumbs" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;"></div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                        <span id="sampleUploadCount" style="font-size: 0.82rem; color: var(--text-secondary);"></span>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-secondary btn-sm" onclick="cancelSampleUpload()">Cancel</button>
+                            <button class="btn btn-primary btn-sm" id="btnUploadSamples" onclick="uploadSamplesToCurrentPerson()">
+                                ⚡ Enroll Selected Photos
+                            </button>
+                        </div>
+                    </div>
+                    <div id="sampleUploadProgress" style="display: none; margin-top: 10px; font-size: 0.82rem; padding: 8px 12px; border-radius: 6px;"></div>
+                </div>
+            </div>
+
+            <div class="samples-modal-grid" id="samplesModalGrid"></div>
+            <div id="samplesModalGridLoader" style="display: none; text-align: center; padding: 16px; color: var(--text-secondary); font-size: 0.85rem;">
+                ⏳ Loading more photos...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.borderColor = 'rgba(51, 65, 85, 0.45)';
+
+        const charts = {};
+        let selectedSource = null;
+        let selectedTarget = null;
+        let allPersons = [];
+        let deleteTargetPerson = null;
+        let selectedDeleteMode = 'C';
+        let wasOnline = null;
+
+        // ====================================================================
+        // CAMERA HARDWARE SETTINGS & ONBOARD FLASH
+        // ====================================================================
+        let currentFlashValue = 0;
+        const lastAppliedCameraSettings = {};
+
+        function toggleCameraSettings() {
+            const panel = document.getElementById('cameraSettingsPanel');
+            panel.classList.toggle('active');
+            if (panel.classList.contains('active')) {
+                fetchCameraSettings();
+            }
+        }
+
+        async function fetchCameraSettings(options = {}) {
+            try {
+                const res = await fetch('/api/camera/settings');
+                const data = await res.json();
+                if (!res.ok || !data.online) {
+                    throw new Error(data.error || 'Camera settings are unavailable');
+                }
+                populateCameraSettingsUI(data);
+                return true;
+            } catch (e) {
+                console.error("Failed to load camera settings:", e);
+                if (!options.silent) {
+                    showSettingSyncIndicator('error', `Camera settings unavailable: ${e.message}`);
+                }
+                return false;
+            }
+        }
+
+        function populateCameraSettingsUI(data) {
+            if (!data) return;
+            ['framesize', 'quality', 'brightness', 'contrast', 'saturation',
+             'special_effect', 'vflip', 'hmirror', 'awb', 'aec', 'flash'].forEach(k => {
+                if (data[k] !== undefined) lastAppliedCameraSettings[k] = data[k];
+            });
+
+            // Flash
+            currentFlashValue = data.flash !== undefined ? data.flash : 0;
+            const flashToggle = document.getElementById('setting_flash_toggle');
+            const flashSlider = document.getElementById('setting_flash_slider');
+            const flashBadge = document.getElementById('val_badge_flash');
+            const quickBtn = document.getElementById('quickFlashBtn');
+
+            if (flashSlider) flashSlider.value = currentFlashValue;
+            if (flashToggle) flashToggle.checked = currentFlashValue > 0;
+            if (flashBadge) flashBadge.textContent = Math.round((currentFlashValue / 255) * 100) + '%';
+            if (quickBtn) {
+                if (currentFlashValue > 0) {
+                    quickBtn.innerHTML = `💡 Flash: ON (${Math.round((currentFlashValue / 255) * 100)}%)`;
+                    quickBtn.style.borderColor = '#fbbf24';
+                    quickBtn.style.color = '#fbbf24';
+                } else {
+                    quickBtn.innerHTML = '💡 Flash: Off';
+                    quickBtn.style.borderColor = 'var(--border-highlight)';
+                    quickBtn.style.color = 'var(--text-primary)';
+                }
+            }
+
+            // Resolution & Quality
+            if (data.framesize !== undefined) {
+                const fs = document.getElementById('setting_framesize');
+                if (fs) fs.value = data.framesize;
+            }
+            if (data.quality !== undefined) {
+                const q = document.getElementById('setting_quality');
+                const qb = document.getElementById('val_badge_quality');
+                if (q) q.value = data.quality;
+                if (qb) qb.textContent = data.quality;
+            }
+
+            // Sensor Adjustments
+            ['brightness', 'contrast', 'saturation'].forEach(k => {
+                if (data[k] !== undefined) {
+                    const el = document.getElementById(`setting_${k}`);
+                    const badge = document.getElementById(`val_badge_${k}`);
+                    if (el) el.value = data[k];
+                    if (badge) badge.textContent = data[k] > 0 ? `+${data[k]}` : data[k];
+                }
+            });
+
+            if (data.special_effect !== undefined) {
+                const se = document.getElementById('setting_special_effect');
+                if (se) se.value = data.special_effect;
+            }
+
+            // Toggles
+            ['vflip', 'hmirror', 'awb', 'aec'].forEach(k => {
+                if (data[k] !== undefined) {
+                    const el = document.getElementById(`setting_${k}`);
+                    if (el) el.checked = Boolean(data[k]);
+                }
+            });
+        }
+
+        function onSettingSliderInput(varName, value, unit) {
+            const badge = document.getElementById(`val_badge_${varName}`);
+            if (badge) {
+                if (unit === '%') {
+                    badge.textContent = Math.round((parseInt(value) / 255) * 100) + '%';
+                } else if (parseInt(value) > 0 && ['brightness', 'contrast', 'saturation'].includes(varName)) {
+                    badge.textContent = `+${value}`;
+                } else {
+                    badge.textContent = value;
+                }
+            }
+        }
+
+        async function applyCameraSetting(varName, val) {
+            showSettingSyncIndicator('applying');
+            try {
+                const res = await fetch('/api/camera/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ var: varName, val: parseInt(val) })
+                });
+                const data = await res.json();
+                if (!res.ok || data.status !== 'ok') {
+                    throw new Error(data.error || `Camera rejected ${varName}`);
+                }
+                const actual = data.actual !== undefined ? data.actual : data.val;
+                populateCameraSettingsUI({ [varName]: actual });
+                showSettingSyncIndicator('synced');
+            } catch (e) {
+                console.error("Error applying setting:", e);
+                if (lastAppliedCameraSettings[varName] !== undefined) {
+                    populateCameraSettingsUI({ [varName]: lastAppliedCameraSettings[varName] });
+                }
+                await fetchCameraSettings({ silent: true });
+                showSettingSyncIndicator('error', `Not applied: ${e.message}`);
+            }
+        }
+
+        function onFlashToggleChange(isChecked) {
+            const val = isChecked ? 128 : 0;
+            const flashSlider = document.getElementById('setting_flash_slider');
+            const flashBadge = document.getElementById('val_badge_flash');
+            if (flashSlider) flashSlider.value = val;
+            if (flashBadge) flashBadge.textContent = isChecked ? '50%' : '0%';
+            applyCameraSetting('flash', val);
+        }
+
+        function setFlashPreset(val) {
+            const flashSlider = document.getElementById('setting_flash_slider');
+            const flashToggle = document.getElementById('setting_flash_toggle');
+            const flashBadge = document.getElementById('val_badge_flash');
+            if (flashSlider) flashSlider.value = val;
+            if (flashToggle) flashToggle.checked = val > 0;
+            if (flashBadge) flashBadge.textContent = Math.round((val / 255) * 100) + '%';
+            applyCameraSetting('flash', val);
+        }
+
+        function toggleQuickFlash() {
+            const nextVal = currentFlashValue > 0 ? 0 : 128;
+            setFlashPreset(nextVal);
+        }
+
+        function showSettingSyncIndicator(state, message = '') {
+            const statusEl = document.getElementById('settingsSaveStatus');
+            if (!statusEl) return;
+            if (state === 'applying') {
+                statusEl.textContent = '⏳ Applying...';
+                statusEl.style.color = '#38bdf8';
+                statusEl.style.display = 'inline-block';
+            } else if (state === 'synced') {
+                statusEl.textContent = '✔ Synced';
+                statusEl.style.color = '#34d399';
+                statusEl.style.display = 'inline-block';
+                setTimeout(() => {
+                    if (statusEl.textContent === '✔ Synced') {
+                        statusEl.style.display = 'none';
+                    }
+                }, 2000);
+            } else {
+                statusEl.textContent = `⚠ ${message}`;
+                statusEl.style.color = '#f87171';
+                statusEl.style.display = 'inline-block';
+            }
+        }
+
+        // ====================================================================
+        // PERSON LABELING MODAL & API
+        // ====================================================================
+        let currentEditPersonId = null;
+
+        function openNameModal(personId, initialLabel) {
+            currentEditPersonId = personId;
+            const titleEl = document.getElementById('nameModalPersonId');
+            if (titleEl) titleEl.textContent = personId;
+
+            const btn = document.querySelector(`.btn-edit-name[data-person-id="${personId}"]`);
+            const heading = document.getElementById(`person-heading-${personId}`);
+            let existingLabel = '';
+            if (initialLabel !== undefined && initialLabel !== null && initialLabel !== '') {
+                existingLabel = initialLabel;
+            } else if (btn && btn.getAttribute('data-current-label')) {
+                existingLabel = btn.getAttribute('data-current-label');
+            } else if (heading && heading.textContent.trim() !== personId) {
+                existingLabel = heading.textContent.trim();
+            }
+
+            const input = document.getElementById('nameModalInput');
+            if (input) {
+                input.value = existingLabel;
+            }
+            const err = document.getElementById('nameModalError');
+            if (err) {
+                err.style.display = 'none';
+                err.textContent = '';
+            }
+            const modal = document.getElementById('nameModal');
+            if (modal) {
+                modal.classList.add('active');
+            }
+            setTimeout(() => {
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+            }, 50);
+        }
+
+        function closeNameModal() {
+            const modal = document.getElementById('nameModal');
+            if (modal) modal.classList.remove('active');
+            currentEditPersonId = null;
+        }
+
+        async function savePersonName() {
+            if (!currentEditPersonId) return;
+            const personId = currentEditPersonId;
+            const input = document.getElementById('nameModalInput');
+            const nextLabel = input ? input.value.trim() : '';
+            const saveBtn = document.getElementById('saveNameBtn');
+            const err = document.getElementById('nameModalError');
+
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Saving...';
+            }
+            if (err) err.style.display = 'none';
+
+            try {
+                const res = await fetch(`/api/person/${encodeURIComponent(personId)}/label`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ label: nextLabel })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    const heading = document.getElementById(`person-heading-${personId}`);
+                    const idBadge = document.getElementById(`id-badge-${personId}`);
+                    if (heading) {
+                        heading.textContent = data.label ? data.label : personId;
+                    }
+                    if (idBadge) {
+                        if (data.label) {
+                            idBadge.textContent = personId;
+                            idBadge.style.display = 'inline-block';
+                        } else {
+                            idBadge.style.display = 'none';
+                        }
+                    }
+                    // Update button's data attribute
+                    document.querySelectorAll(`.btn-edit-name[data-person-id="${personId}"]`).forEach(btn => {
+                        btn.setAttribute('data-current-label', data.label || '');
+                    });
+                    closeNameModal();
+                } else {
+                    if (err) {
+                        err.textContent = data.error || 'Failed to update name.';
+                        err.style.display = 'block';
+                    } else {
+                        alert('Error: ' + (data.error || 'Failed to update name'));
+                    }
+                }
+            } catch (e) {
+                console.error('Error saving name:', e);
+                if (err) {
+                    err.textContent = 'Network or server error: ' + e.message;
+                    err.style.display = 'block';
+                } else {
+                    alert('Network error: ' + e.message);
+                }
+            } finally {
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Save Name';
+                }
+            }
+        }
+
+        function promptPersonLabel(personId, currentLabel) {
+            openNameModal(personId, currentLabel);
+        }
+
+        // ====================================================================
+        // PHASE 3: DUPLICATE IDENTITY REVIEW WORKFLOW
+        // ====================================================================
+        function toggleDuplicateReview() {
+            const panel = document.getElementById('duplicateReviewPanel');
+            panel.classList.toggle('active');
+            if (panel.classList.contains('active')) {
+                loadDuplicateCandidates();
+            }
+        }
+
+        async function loadDuplicateCandidates() {
+            const container = document.getElementById('duplicateCandidatesContainer');
+            container.innerHTML = '<p style="color: var(--text-secondary);">Computing pairwise 128-D facial similarity across profiles...</p>';
+            try {
+                const res = await fetch('/api/duplicates');
+                const data = await res.json();
+                document.getElementById('dupCountBadge').textContent = data.count;
+
+                if (!data.candidates || data.candidates.length === 0) {
+                    container.innerHTML = '<div style="padding:18px; background:var(--bg-elevated); border-radius:10px; color:#34d399;">✔ No duplicate identity candidates detected above facial similarity thresholds.</div>';
+                    return;
+                }
+
+                container.innerHTML = '';
+                data.candidates.forEach((cand, idx) => {
+                    const a = cand.person_a;
+                    const b = cand.person_b;
+                    const canonicalDefault = cand.recommended_canonical;
+
+                    const card = document.createElement('div');
+                    card.className = 'dup-card';
+                    card.id = `dup-card-${idx}`;
+                    card.dataset.canonical = canonicalDefault;
+                    card.dataset.personA = a.id;
+                    card.dataset.personB = b.id;
+
+                    const thumbsA = a.sample_images.map(img => `<img src="/image/${a.id}/${img}" alt="${a.id}">`).join('');
+                    const thumbsB = b.sample_images.map(img => `<img src="/image/${b.id}/${img}" alt="${b.id}">`).join('');
+
+                    card.innerHTML = `
+                        <div class="dup-header">
+                            <div>
+                                <span class="stat-badge primary" style="margin-right:8px;">${cand.tier}</span>
+                                <strong>${a.id}${a.label ? ' ('+a.label+')' : ''}</strong> ↔ <strong>${b.id}${b.label ? ' ('+b.label+')' : ''}</strong>
+                            </div>
+                            <div style="font-size:0.88rem; color:#38bdf8; font-weight:600;">
+                                Peak Cosine Sim: ${cand.max_cosine_similarity} | Centroid Sim: ${cand.centroid_similarity}
+                                ${cand.dlib_min_distance !== null ? ` | dlib Dist: ${cand.dlib_min_distance}` : ''}
+                            </div>
+                        </div>
+
+                        <div class="evidence-list">
+                            <strong>Facial Evidence:</strong> ${cand.evidence.join(' • ')}
+                        </div>
+
+                        <div class="dup-compare-grid">
+                            <div class="dup-side ${canonicalDefault === a.id ? 'canonical-selected' : ''}" id="dup-${idx}-sideA">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <h4>${a.id} ${a.label ? '('+a.label+')' : ''}</h4>
+                                    <button class="btn btn-sm ${canonicalDefault === a.id ? 'btn-primary' : 'btn-secondary'}"
+                                            onclick="selectCanonical(${idx}, '${a.id}', '${b.id}')">
+                                        ${canonicalDefault === a.id ? '★ Canonical (Keep)' : 'Set as Canonical'}
+                                    </button>
+                                </div>
+                                <p style="font-size:0.83rem; color:var(--text-secondary); margin-top:4px;">
+                                    ${a.image_count} images • ${a.sface_count} embeddings • Avg Q: ${a.avg_quality} • ${a.detections} detections
+                                </p>
+                                <div class="dup-thumbs">${thumbsA}</div>
+                            </div>
+
+                            <div style="display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--text-secondary);">
+                                VS
+                            </div>
+
+                            <div class="dup-side ${canonicalDefault === b.id ? 'canonical-selected' : ''}" id="dup-${idx}-sideB">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <h4>${b.id} ${b.label ? '('+b.label+')' : ''}</h4>
+                                    <button class="btn btn-sm ${canonicalDefault === b.id ? 'btn-primary' : 'btn-secondary'}"
+                                            onclick="selectCanonical(${idx}, '${b.id}', '${a.id}')">
+                                        ${canonicalDefault === b.id ? '★ Canonical (Keep)' : 'Set as Canonical'}
+                                    </button>
+                                </div>
+                                <p style="font-size:0.83rem; color:var(--text-secondary); margin-top:4px;">
+                                    ${b.image_count} images • ${b.sface_count} embeddings • Avg Q: ${b.avg_quality} • ${b.detections} detections
+                                </p>
+                                <div class="dup-thumbs">${thumbsB}</div>
+                            </div>
+                        </div>
+
+                        <div id="dup-preview-${idx}" style="margin-top:12px; font-size:0.85rem; color:var(--text-secondary);"></div>
+
+                        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:14px;">
+                            <button class="btn btn-secondary btn-sm" onclick="previewDuplicateCardMerge(${idx})">
+                                📋 Preview Impact
+                            </button>
+                            <button class="btn btn-primary btn-sm" onclick="confirmDuplicateCardMerge(${idx})">
+                                ✅ Merge into Canonical Profile
+                            </button>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                    previewDuplicateCardMerge(idx);
+                });
+            } catch (err) {
+                container.innerHTML = `<p style="color:#f87171;">Error loading duplicate candidates: ${err}</p>`;
+            }
+        }
+
+        function selectCanonical(idx, canonicalId, retireId) {
+            const card = document.getElementById(`dup-card-${idx}`);
+            card.dataset.canonical = canonicalId;
+            const sideA = document.getElementById(`dup-${idx}-sideA`);
+            const sideB = document.getElementById(`dup-${idx}-sideB`);
+            const personA = card.dataset.personA;
+
+            if (canonicalId === personA) {
+                sideA.classList.add('canonical-selected');
+                sideB.classList.remove('canonical-selected');
+            } else {
+                sideB.classList.add('canonical-selected');
+                sideA.classList.remove('canonical-selected');
+            }
+            previewDuplicateCardMerge(idx);
+        }
+
+        async function previewDuplicateCardMerge(idx) {
+            const card = document.getElementById(`dup-card-${idx}`);
+            const canonical = card.dataset.canonical;
+            const source = (canonical === card.dataset.personA) ? card.dataset.personB : card.dataset.personA;
+            const previewEl = document.getElementById(`dup-preview-${idx}`);
+
+            const res = await fetch('/api/merge/preview', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ source_id: source, target_id: canonical })
+            });
+            const p = await res.json();
+            if (p.error) return;
+            previewEl.innerHTML = `
+                <div style="background:rgba(15,23,42,0.7); padding:10px 14px; border-radius:8px; border:1px solid var(--border-highlight);">
+                    <strong>Merge Preview:</strong> Retire <code>${p.retired_source_id}</code> ➔ Keep Canonical <code>${p.canonical_target_id}</code> •
+                    Transfer <strong>${p.images_to_transfer}</strong> images (resulting in ${p.combined_images_after_cap} capped) •
+                    Consolidate into <strong>${p.combined_embeddings_after_cap}</strong> curated embeddings & <strong>${p.combined_detections}</strong> detection records.
+                </div>
+            `;
+        }
+
+        async function confirmDuplicateCardMerge(idx) {
+            const card = document.getElementById(`dup-card-${idx}`);
+            const canonical = card.dataset.canonical;
+            const source = (canonical === card.dataset.personA) ? card.dataset.personB : card.dataset.personA;
+
+            if (!confirm(`Confirm merging ${source} into canonical identity ${canonical}?\n\nA backup snapshot will be saved automatically before merging.`)) {
+                return;
+            }
+
+            const res = await fetch('/api/merge', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ source_id: source, target_id: canonical })
+            });
+            const data = await res.json();
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Merge error: ' + (data.error || 'Unknown error'));
+            }
+        }
+
+        // ====================================================================
+        // MANUAL MERGE MODE
+        // ====================================================================
+        function toggleMergeMode() {
+            const controls = document.getElementById('mergeControls');
+            controls.classList.toggle('active');
+            if (controls.classList.contains('active')) {
+                loadPersonsForMerge();
+            }
+        }
+
+        function loadPersonsForMerge() {
+            fetch('/api/persons')
+                .then(r => r.json())
+                .then(persons => {
+                    allPersons = persons;
+                    renderPersonOptions();
+                });
+        }
+
+        function renderPersonOptions() {
+            const sourceDiv = document.getElementById('sourcePersons');
+            const targetDiv = document.getElementById('targetPersons');
+            sourceDiv.innerHTML = '';
+            targetDiv.innerHTML = '';
+
+            allPersons.forEach(person => {
+                sourceDiv.appendChild(createPersonOption(person, 'source'));
+                targetDiv.appendChild(createPersonOption(person, 'target'));
+            });
+        }
+
+        function createPersonOption(person, type) {
+            const div = document.createElement('div');
+            div.className = 'person-option';
+            div.dataset.personId = person.id;
+            div.dataset.type = type;
+
+            const img = document.createElement('img');
+            img.src = person.sample_image ? `/image/${person.id}/${person.sample_image}` : '';
+
+            const info = document.createElement('div');
+            info.innerHTML = `
+                <h4 style="color:var(--text-primary);">${person.label ? person.label + ' ('+person.id+')' : person.id}</h4>
+                <p style="font-size:0.8rem; color:var(--text-secondary);">
+                    ${person.image_count} imgs • ${person.sface_count} emb • Avg Q: ${person.avg_quality}
+                </p>
+            `;
+            div.appendChild(img);
+            div.appendChild(info);
+            div.onclick = () => selectPerson(person.id, type, div);
+            return div;
+        }
+
+        async function selectPerson(personId, type, element) {
+            if (type === 'source') {
+                document.querySelectorAll('[data-type="source"]').forEach(el => el.classList.remove('selected'));
+                element.classList.add('selected');
+                selectedSource = personId;
+            } else {
+                document.querySelectorAll('[data-type="target"]').forEach(el => el.classList.remove('selected'));
+                element.classList.add('selected');
+                selectedTarget = personId;
+            }
+
+            const btn = document.getElementById('mergeExecuteBtn');
+            const previewBox = document.getElementById('manualMergePreview');
+            if (selectedSource && selectedTarget && selectedSource !== selectedTarget) {
+                btn.disabled = false;
+                const res = await fetch('/api/merge/preview', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ source_id: selectedSource, target_id: selectedTarget })
+                });
+                const p = await res.json();
+                previewBox.style.display = 'block';
+                const warnHtml = p.low_similarity_warning
+                    ? `<div style="color:#fbbf24; margin-bottom:8px;">⚠️ <strong>Low Facial Similarity Warning:</strong> Peak cosine similarity is ${p.max_cosine_similarity} (below ${0.363}). Verify carefully that these are the same person before merging!</div>`
+                    : `<div style="color:#34d399; margin-bottom:8px;">✔ Facial similarity verified (Peak Cosine: ${p.max_cosine_similarity}, Centroid: ${p.centroid_similarity}).</div>`;
+                previewBox.innerHTML = `
+                    ${warnHtml}
+                    <div>Retiring <strong>${p.retired_source_id}</strong> into Canonical <strong>${p.canonical_target_id}</strong>:
+                    Moving ${p.images_to_transfer} images, combining ${p.combined_embeddings_after_cap} embeddings and ${p.combined_detections} detections.</div>
+                `;
+            } else {
+                btn.disabled = true;
+                previewBox.style.display = 'none';
+            }
+        }
+
+        function executeMerge() {
+            if (!selectedSource || !selectedTarget || selectedSource === selectedTarget) return;
+            if (!confirm(`Merge ${selectedSource} into canonical profile ${selectedTarget}?`)) return;
+
+            const btn = document.getElementById('mergeExecuteBtn');
+            btn.disabled = true;
+            btn.textContent = 'Merging...';
+
+            fetch('/api/merge', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ source_id: selectedSource, target_id: selectedTarget })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + (data.error || 'Unknown error'));
+                    btn.disabled = false;
+                    btn.textContent = '✅ Confirm & Merge Selected Profiles';
+                }
+            });
+        }
+
+        // ====================================================================
+        // PHASE 4: SAFE PERSON DELETION MODAL
+        // ====================================================================
+        function openDeleteModal(personId) {
+            deleteTargetPerson = personId;
+            const label = document.querySelector(`.btn-edit-name[data-person-id="${personId}"]`)?.getAttribute('data-current-label');
+            document.getElementById('deleteModalPersonId').textContent = label ? `${label} (${personId})` : personId;
+            document.getElementById('deleteModal').classList.add('active');
+            selectDeleteOption('C');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.remove('active');
+            deleteTargetPerson = null;
+        }
+
+        async function selectDeleteOption(mode) {
+            selectedDeleteMode = mode;
+            ['A', 'B', 'C'].forEach(m => {
+                document.getElementById(`delOpt${m}`).classList.toggle('selected', m === mode);
+            });
+
+            if (!deleteTargetPerson) return;
+            const box = document.getElementById('deletePreviewBox');
+            box.innerHTML = 'Calculating exact storage impact...';
+
+            const res = await fetch(`/api/person/${deleteTargetPerson}/delete-preview?mode=${mode}`);
+            const data = await res.json();
+            const del = data.preview.will_delete;
+            const pres = data.preview.will_preserve;
+
+            box.innerHTML = `
+                <div style="font-weight:700; color:var(--text-primary); margin-bottom:8px;">${data.preview.mode_title}</div>
+                <div style="color:#fca5a5; margin-bottom:6px;">
+                    <strong>Will Delete:</strong>
+                    ${del.sface_embeddings} SFace embeddings •
+                    ${del.legacy_dlib_encodings} legacy encodings •
+                    ${del.face_crop_images} face crop files •
+                    ${del.exclusive_full_images} exclusively-owned full frames •
+                    ${del.detection_records} detection timeline records
+                </div>
+                <div style="color:#6ee7b7;">
+                    <strong>Will Preserve Safely:</strong>
+                    ${pres.shared_full_images !== undefined ? pres.shared_full_images + ' shared full frames' : ''}
+                    ${pres.face_crop_images !== undefined ? ' • ' + pres.face_crop_images + ' face crops' : ''}
+                    ${pres.detection_records !== undefined ? ' • ' + pres.detection_records + ' detection records' : ''}
+                </div>
+            `;
+        }
+
+        async function executeConfirmedDelete() {
+            if (!deleteTargetPerson) return;
+            const btn = document.getElementById('confirmDeleteBtn');
+            btn.disabled = true;
+            btn.textContent = 'Deleting...';
+
+            try {
+                const res = await fetch(`/api/person/${deleteTargetPerson}/delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mode: selectedDeleteMode, confirm: true })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    closeDeleteModal();
+                    location.reload();
+                } else {
+                    alert('Partial or failed deletion: ' + JSON.stringify(data.failed_items || data.error));
+                    btn.disabled = false;
+                    btn.textContent = '🗑️ Confirm Permanent Deletion';
+                }
+            } catch (err) {
+                alert('Delete request failed: ' + err);
+                btn.disabled = false;
+                btn.textContent = '🗑️ Confirm Permanent Deletion';
+            }
+        }
+
+        // ====================================================================
+        // INSPECT FACE SAMPLES MODAL & SAMPLE UPLOADER (FILES APP SELECTION & INFINITE SCROLL)
+        // ====================================================================
+        let currentSamplesPersonId = null;
+        let sampleUploadFiles = [];
+        let selectedSampleFilenames = new Set();
+        let samplesOffset = 0;
+        const SAMPLES_PAGE_LIMIT = 50;
+        let samplesTotalCount = 0;
+        let samplesHasMore = false;
+        let samplesIsLoading = false;
+        let samplesScrollListenerAttached = false;
+
+        function updateSelectionUI() {
+            const count = selectedSampleFilenames.size;
+            const grid = document.getElementById('samplesModalGrid');
+            const counter = document.getElementById('selectionCounter');
+            if (count > 0) {
+                if (grid) grid.classList.add('selection-mode');
+                if (counter) {
+                    counter.style.display = 'inline-block';
+                    counter.textContent = `${count} selected`;
+                }
+            } else {
+                if (grid) grid.classList.remove('selection-mode');
+                if (counter) counter.style.display = 'none';
+            }
+        }
+
+        function toggleCardSelection(filename, cardEl) {
+            if (selectedSampleFilenames.has(filename)) {
+                selectedSampleFilenames.delete(filename);
+                cardEl.classList.remove('selected');
+                const cb = cardEl.querySelector('.sample-checkbox');
+                if (cb) cb.textContent = '';
+            } else {
+                selectedSampleFilenames.add(filename);
+                cardEl.classList.add('selected');
+                const cb = cardEl.querySelector('.sample-checkbox');
+                if (cb) cb.textContent = '✓';
+            }
+            updateSelectionUI();
+        }
+
+        function selectAllSamples() {
+            closeSamplesMenu();
+            const cards = document.querySelectorAll('#samplesModalGrid .sample-card');
+            cards.forEach(card => {
+                const fname = card.getAttribute('data-filename');
+                if (fname) {
+                    selectedSampleFilenames.add(fname);
+                    card.classList.add('selected');
+                    const cb = card.querySelector('.sample-checkbox');
+                    if (cb) cb.textContent = '✓';
+                }
+            });
+            updateSelectionUI();
+        }
+
+        function clearSampleSelection() {
+            closeSamplesMenu();
+            selectedSampleFilenames.clear();
+            const cards = document.querySelectorAll('#samplesModalGrid .sample-card');
+            cards.forEach(card => {
+                card.classList.remove('selected');
+                const cb = card.querySelector('.sample-checkbox');
+                if (cb) cb.textContent = '';
+            });
+            updateSelectionUI();
+        }
+
+        function toggleSamplesMenu(event) {
+            if (event) event.stopPropagation();
+            const menu = document.getElementById('samplesDropdownMenu');
+            if (!menu) return;
+            menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+        }
+
+        function closeSamplesMenu() {
+            const menu = document.getElementById('samplesDropdownMenu');
+            if (menu) menu.style.display = 'none';
+        }
+
+        // Close dropdown menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.samples-dropdown-wrapper')) {
+                closeSamplesMenu();
+            }
+        });
+
+        async function executeBatchAction(action) {
+            closeSamplesMenu();
+            if (!currentSamplesPersonId) return;
+            if (selectedSampleFilenames.size === 0) {
+                alert('Please select at least one photo first by clicking on it.');
+                return;
+            }
+
+            const count = selectedSampleFilenames.size;
+            if (action === 'delete') {
+                if (!confirm(`Permanently delete ${count} selected photo(s) and remove any active embeddings?`)) return;
+            }
+
+            const btnMenu = document.getElementById('btnSamplesMenu');
+            if (btnMenu) btnMenu.disabled = true;
+
+            try {
+                const res = await fetch(`/api/person/${encodeURIComponent(currentSamplesPersonId)}/samples/batch`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: action,
+                        filenames: Array.from(selectedSampleFilenames)
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    selectedSampleFilenames.clear();
+                    updateSelectionUI();
+                    await refreshSamplesList();
+                } else {
+                    alert('Batch action failed: ' + (data.error || 'Unknown error'));
+                }
+            } catch (err) {
+                alert('Network error: ' + err.message);
+            } finally {
+                if (btnMenu) btnMenu.disabled = false;
+            }
+        }
+
+        async function openSamplesModal(personId) {
+            currentSamplesPersonId = personId;
+            cancelSampleUpload();
+            closeSamplesMenu();
+            selectedSampleFilenames.clear();
+            updateSelectionUI();
+
+            const label = document.querySelector(`.btn-edit-name[data-person-id="${personId}"]`)?.getAttribute('data-current-label');
+            document.getElementById('samplesModalPersonId').textContent = label ? `${label} (${personId})` : personId;
+
+            const grid = document.getElementById('samplesModalGrid');
+            grid.innerHTML = '<p style="color:var(--text-secondary); grid-column: 1 / -1; padding: 20px; text-align: center;">Loading photos...</p>';
+            document.getElementById('samplesModal').classList.add('active');
+
+            samplesOffset = 0;
+            samplesHasMore = true;
+            samplesIsLoading = false;
+
+            const modalContent = document.querySelector('#samplesModal .modal-content');
+            if (modalContent && !samplesScrollListenerAttached) {
+                modalContent.addEventListener('scroll', () => {
+                    if (modalContent.scrollTop + modalContent.clientHeight >= modalContent.scrollHeight - 160) {
+                        if (samplesHasMore && !samplesIsLoading) {
+                            loadNextSamplesPage();
+                        }
+                    }
+                });
+                samplesScrollListenerAttached = true;
+            }
+
+            await loadNextSamplesPage(true);
+        }
+
+        async function refreshSamplesList() {
+            samplesOffset = 0;
+            samplesHasMore = true;
+            samplesIsLoading = false;
+            const grid = document.getElementById('samplesModalGrid');
+            if (grid) grid.innerHTML = '';
+            await loadNextSamplesPage(true);
+        }
+
+        async function loadNextSamplesPage(isInitial = false) {
+            if (samplesIsLoading || (!isInitial && !samplesHasMore)) return;
+            samplesIsLoading = true;
+
+            const loader = document.getElementById('samplesModalGridLoader');
+            if (loader) loader.style.display = 'block';
+
+            try {
+                const res = await fetch(`/api/person/${encodeURIComponent(currentSamplesPersonId)}/samples?offset=${samplesOffset}&limit=${SAMPLES_PAGE_LIMIT}`);
+                const data = await res.json();
+
+                const grid = document.getElementById('samplesModalGrid');
+                if (isInitial) grid.innerHTML = '';
+
+                samplesTotalCount = data.total_count || 0;
+                samplesHasMore = !!data.has_more;
+
+                const countBadge = document.getElementById('samplesModalCountBadge');
+                if (countBadge) {
+                    countBadge.textContent = `${samplesTotalCount} photos (${data.gallery_size} In Gallery)`;
+                }
+
+                if (!data.samples || data.samples.length === 0) {
+                    if (isInitial) {
+                        grid.innerHTML = '<p style="color:var(--text-secondary); grid-column: 1 / -1; padding: 20px; text-align: center;">No saved face crops for this person.</p>';
+                    }
+                    samplesHasMore = false;
+                    return;
+                }
+
+                data.samples.forEach(s => {
+                    const isSelected = selectedSampleFilenames.has(s.filename);
+                    const card = document.createElement('div');
+                    card.className = `sample-card ${isSelected ? 'selected' : ''}`;
+                    card.setAttribute('data-filename', s.filename);
+
+                    card.innerHTML = `
+                        <div class="sample-checkbox">${isSelected ? '✓' : ''}</div>
+                        <div class="sample-badge-top-right ${s.in_gallery ? 'sample-badge-gallery' : 'sample-badge-archived'}">
+                            ${s.in_gallery ? '★ Gallery' : '📁 Archived'}
+                        </div>
+                        <img src="/image/${encodeURIComponent(currentSamplesPersonId)}/${encodeURIComponent(s.filename)}" loading="lazy" alt="${s.filename}">
+                        <div class="sample-card-footer" style="display:flex; flex-direction:column; gap:6px; padding:8px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                                <div style="color:var(--text-secondary); font-size:0.75rem;">
+                                    ${s.quality ? 'Q: ' + s.quality : (s.in_gallery ? 'In Gallery' : 'Archived')}
+                                </div>
+                                <button class="btn btn-danger btn-sm btn-delete-one" style="padding:2px 6px; font-size:0.72rem;" title="Delete image" onclick="deleteSample('${currentSamplesPersonId}', '${s.filename}', event)">🗑️</button>
+                            </div>
+                            <button class="btn btn-sm ${s.in_gallery ? 'btn-secondary' : 'btn-primary'} btn-toggle-one" 
+                                    style="width:100%; padding:4px 6px; font-size:0.74rem; border-radius:6px; ${!s.in_gallery ? 'background: linear-gradient(135deg, #059669 0%, #10b981 100%);' : ''}" 
+                                    onclick="toggleSampleGallery('${currentSamplesPersonId}', '${s.filename}', this, event)">
+                                ${s.in_gallery ? '➔ Change to Archived' : '⭐ Change to Gallery'}
+                            </button>
+                        </div>
+                    `;
+
+                    // Card click handler for Files App selection
+                    card.addEventListener('click', (e) => {
+                        if (e.target.closest('button')) return; // Ignore clicks on action buttons
+                        toggleCardSelection(s.filename, card);
+                    });
+
+                    grid.appendChild(card);
+                });
+
+                samplesOffset += data.samples.length;
+            } catch (err) {
+                console.error("Error loading samples page:", err);
+            } finally {
+                samplesIsLoading = false;
+                if (loader) loader.style.display = 'none';
+                updateSelectionUI();
+            }
+        }
+
+        async function toggleSampleGallery(personId, filename, button, event) {
+            if (event) event.stopPropagation();
+            const originalText = button.textContent;
+            button.disabled = true;
+            button.textContent = 'Updating...';
+            try {
+                const res = await fetch(`/api/person/${encodeURIComponent(personId)}/sample/${encodeURIComponent(filename)}/toggle-gallery`, {
+                    method: 'POST'
+                });
+                const data = await res.json();
+                if (data.success) {
+                    await refreshSamplesList();
+                } else {
+                    alert('Could not change status: ' + (data.error || 'Unknown error'));
+                    button.disabled = false;
+                    button.textContent = originalText;
+                }
+            } catch (err) {
+                alert('Network error: ' + err.message);
+                button.disabled = false;
+                button.textContent = originalText;
+            }
+        }
+
+        function closeSamplesModal() {
+            document.getElementById('samplesModal').classList.remove('active');
+            cancelSampleUpload();
+            closeSamplesMenu();
+            selectedSampleFilenames.clear();
+            updateSelectionUI();
+        }
+
+        async function deleteSample(personId, filename, event) {
+            if (event) event.stopPropagation();
+            if (!confirm(`Delete sample image ${filename} and remove its embedding from ${personId}?`)) return;
+            const res = await fetch(`/api/person/${encodeURIComponent(personId)}/sample/${encodeURIComponent(filename)}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (data.success) {
+                selectedSampleFilenames.delete(filename);
+                await refreshSamplesList();
+            }
+        }
+
+        function handlePersonSampleFiles(fileList) {
+            if (!fileList || !fileList.length) return;
+            for (let i = 0; i < fileList.length; i++) {
+                const file = fileList[i];
+                if (file.type.startsWith('image/')) {
+                    sampleUploadFiles.push(file);
+                }
+            }
+            renderSampleUploadPreviews();
+        }
+
+        function cancelSampleUpload() {
+            sampleUploadFiles = [];
+            const input = document.getElementById('personSampleFileInput');
+            if (input) input.value = '';
+            renderSampleUploadPreviews();
+            const progress = document.getElementById('sampleUploadProgress');
+            if (progress) progress.style.display = 'none';
+        }
+
+        function renderSampleUploadPreviews() {
+            const preview = document.getElementById('sampleUploadPreview');
+            const thumbs = document.getElementById('samplePreviewThumbs');
+            const countEl = document.getElementById('sampleUploadCount');
+            if (!preview || !thumbs) return;
+
+            if (sampleUploadFiles.length === 0) {
+                preview.style.display = 'none';
+                thumbs.innerHTML = '';
+                return;
+            }
+
+            preview.style.display = 'block';
+            countEl.textContent = `${sampleUploadFiles.length} photo(s) ready to enroll`;
+            thumbs.innerHTML = '';
+
+            sampleUploadFiles.forEach((file, idx) => {
+                const chip = document.createElement('div');
+                chip.className = 'upload-preview-chip';
+
+                const img = document.createElement('img');
+                const reader = new FileReader();
+                reader.onload = (e) => { img.src = e.target.result; };
+                reader.readAsDataURL(file);
+
+                const rm = document.createElement('button');
+                rm.className = 'chip-remove';
+                rm.innerHTML = '✖';
+                rm.type = 'button';
+                rm.onclick = (e) => {
+                    e.stopPropagation();
+                    sampleUploadFiles.splice(idx, 1);
+                    renderSampleUploadPreviews();
+                };
+
+                chip.appendChild(img);
+                chip.appendChild(rm);
+                thumbs.appendChild(chip);
+            });
+        }
+
+        async function uploadSamplesToCurrentPerson() {
+            if (!currentSamplesPersonId || sampleUploadFiles.length === 0) return;
+            const personId = currentSamplesPersonId;
+            const btn = document.getElementById('btnUploadSamples');
+            const progress = document.getElementById('sampleUploadProgress');
+
+            btn.disabled = true;
+            btn.textContent = 'Enrolling...';
+            progress.style.display = 'block';
+            progress.style.background = 'rgba(56, 189, 248, 0.12)';
+            progress.style.color = '#38bdf8';
+            progress.textContent = `Analyzing & embedding ${sampleUploadFiles.length} photo(s)...`;
+
+            const formData = new FormData();
+            sampleUploadFiles.forEach(file => {
+                formData.append('images', file, file.name);
+            });
+
+            try {
+                const res = await fetch(`/api/person/${encodeURIComponent(personId)}/upload-samples`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success) {
+                    progress.style.background = 'rgba(16, 185, 129, 0.15)';
+                    progress.style.color = '#34d399';
+                    progress.textContent = `✔ ${data.message}`;
+                    sampleUploadFiles = [];
+                    renderSampleUploadPreviews();
+                    setTimeout(() => {
+                        openSamplesModal(personId);
+                    }, 600);
+                } else {
+                    progress.style.background = 'rgba(239, 68, 68, 0.15)';
+                    progress.style.color = '#fca5a5';
+                    progress.textContent = data.error || 'Failed to add samples.';
+                }
+            } catch (err) {
+                progress.style.background = 'rgba(239, 68, 68, 0.15)';
+                progress.style.color = '#fca5a5';
+                progress.textContent = 'Upload error: ' + err.message;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '⚡ Enroll Selected Photos';
+            }
+        }
+
+        // ====================================================================
+        // ENROLL NEW PERSON MODAL & UPLOADER
+        // ====================================================================
+        let newPersonFiles = [];
+
+        function openAddPersonModal() {
+            newPersonFiles = [];
+            const labelInput = document.getElementById('newPersonLabelInput');
+            if (labelInput) labelInput.value = '';
+            renderNewPersonPreviews();
+            const statusEl = document.getElementById('newPersonStatus');
+            if (statusEl) {
+                statusEl.style.display = 'none';
+                statusEl.textContent = '';
+            }
+            const btn = document.getElementById('btnSubmitNewPerson');
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = '➕ Enroll Person';
+            }
+            const fileInput = document.getElementById('newPersonFileInput');
+            if (fileInput) fileInput.value = '';
+
+            document.getElementById('addPersonModal').classList.add('active');
+            setTimeout(() => {
+                if (labelInput) labelInput.focus();
+            }, 50);
+        }
+
+        function closeAddPersonModal() {
+            document.getElementById('addPersonModal').classList.remove('active');
+            newPersonFiles = [];
+        }
+
+        function handleNewPersonFiles(fileList) {
+            if (!fileList || !fileList.length) return;
+            for (let i = 0; i < fileList.length; i++) {
+                const file = fileList[i];
+                if (file.type.startsWith('image/')) {
+                    newPersonFiles.push(file);
+                }
+            }
+            renderNewPersonPreviews();
+        }
+
+        function removeNewPersonFile(index) {
+            newPersonFiles.splice(index, 1);
+            renderNewPersonPreviews();
+        }
+
+        function clearNewPersonFiles() {
+            newPersonFiles = [];
+            const fileInput = document.getElementById('newPersonFileInput');
+            if (fileInput) fileInput.value = '';
+            renderNewPersonPreviews();
+        }
+
+        function renderNewPersonPreviews() {
+            const sec = document.getElementById('newPersonPreviewSection');
+            const thumbs = document.getElementById('newPersonThumbs');
+            const countEl = document.getElementById('newPersonFileCount');
+            if (!sec || !thumbs) return;
+
+            if (newPersonFiles.length === 0) {
+                sec.style.display = 'none';
+                thumbs.innerHTML = '';
+                return;
+            }
+
+            sec.style.display = 'block';
+            countEl.textContent = `${newPersonFiles.length} photo(s) selected`;
+            thumbs.innerHTML = '';
+
+            newPersonFiles.forEach((file, idx) => {
+                const chip = document.createElement('div');
+                chip.className = 'upload-preview-chip';
+
+                const img = document.createElement('img');
+                const reader = new FileReader();
+                reader.onload = (e) => { img.src = e.target.result; };
+                reader.readAsDataURL(file);
+
+                const rm = document.createElement('button');
+                rm.className = 'chip-remove';
+                rm.innerHTML = '✖';
+                rm.type = 'button';
+                rm.onclick = (e) => {
+                    e.stopPropagation();
+                    removeNewPersonFile(idx);
+                };
+
+                chip.appendChild(img);
+                chip.appendChild(rm);
+                thumbs.appendChild(chip);
+            });
+        }
+
+        async function submitNewPersonEnrollment() {
+            const statusEl = document.getElementById('newPersonStatus');
+            const btn = document.getElementById('btnSubmitNewPerson');
+            const labelInput = document.getElementById('newPersonLabelInput');
+            const label = labelInput ? labelInput.value.trim() : '';
+
+            if (newPersonFiles.length === 0) {
+                statusEl.style.display = 'block';
+                statusEl.style.background = 'rgba(239, 68, 68, 0.15)';
+                statusEl.style.color = '#fca5a5';
+                statusEl.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+                statusEl.textContent = 'Please select at least one face photo (front, 45° angle, etc.).';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Enrolling Faces...';
+            statusEl.style.display = 'block';
+            statusEl.style.background = 'rgba(56, 189, 248, 0.12)';
+            statusEl.style.color = '#38bdf8';
+            statusEl.style.border = '1px solid rgba(56, 189, 248, 0.25)';
+            statusEl.textContent = `Processing ${newPersonFiles.length} photo(s) through YuNet & SFace...`;
+
+            const formData = new FormData();
+            if (label) formData.append('label', label);
+            newPersonFiles.forEach(file => {
+                formData.append('images', file, file.name);
+            });
+
+            try {
+                const res = await fetch('/api/person/enroll', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success) {
+                    statusEl.style.background = 'rgba(16, 185, 129, 0.15)';
+                    statusEl.style.color = '#34d399';
+                    statusEl.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+                    statusEl.textContent = `✔ ${data.message} Updating dashboard...`;
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1100);
+                } else {
+                    btn.disabled = false;
+                    btn.textContent = '➕ Enroll Person';
+                    statusEl.style.background = 'rgba(239, 68, 68, 0.15)';
+                    statusEl.style.color = '#fca5a5';
+                    statusEl.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+                    statusEl.textContent = data.error || 'Failed to enroll person.';
+                }
+            } catch (err) {
+                btn.disabled = false;
+                btn.textContent = '➕ Enroll Person';
+                statusEl.style.background = 'rgba(239, 68, 68, 0.15)';
+                statusEl.style.color = '#fca5a5';
+                statusEl.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+                statusEl.textContent = 'Network or server error: ' + err.message;
+            }
+        }
+
+        // ====================================================================
+        // CHARTS & REAL-TIME CAMERA / TELEMETRY POLLING
+        // ====================================================================
+        function loadChart(personId, hours, button) {
+            const buttons = button.parentElement.querySelectorAll('.chart-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+
+            fetch(`/api/detections/${personId}?hours=${hours}`)
+                .then(r => r.json())
+                .then(data => updateChart(personId, data, hours));
+        }
+
+        function updateChart(personId, data, hours) {
+            const canvas = document.getElementById(`chart-${personId}`);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            if (charts[personId]) {
+                charts[personId].destroy();
+            }
+
+            const labels = data.map(d => {
+                const date = new Date(d.time);
+                if (hours >= 24) {
+                    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                }
+                return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            });
+            const counts = data.map(d => d.count);
+
+            charts[personId] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Detections per 30s',
+                        data: counts,
+                        borderColor: '#38bdf8',
+                        backgroundColor: 'rgba(56, 189, 248, 0.14)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.35
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: true, position: 'top' },
+                        title: { display: true, text: `Detection Timeline (Last ${hours}h)` }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                        x: { ticks: { maxRotation: 45, minRotation: 45, autoSkip: true, maxTicksLimit: 12 } }
+                    }
+                }
+            });
+        }
+
+        async function toggleFaceOverlay() {
+            try {
+                const res = await fetch('/api/toggle_overlay', { method: 'POST' });
+                const data = await res.json();
+                updateOverlayBtn(data.show_face_overlay);
+            } catch (e) {
+                console.error("Error toggling face overlay:", e);
+            }
+        }
+
+        let recognitionActive = true;
+        let vlmActive = true;
+
+        function updateRecognitionUI(enabled) {
+            recognitionActive = !!enabled;
+            const buttons = document.querySelectorAll('.recog-toggle-btn');
+            const overlayBtn = document.getElementById('toggleOverlayBtn');
+            const banner = document.getElementById('lastRecognitionBanner');
+            const pendingBadge = document.getElementById('pendingTrackBadge');
+            const listEl = document.getElementById('recentEventsList');
+            const faceBadge = document.getElementById('faceEngineBadge');
+
+            if (faceBadge) {
+                if (recognitionActive) {
+                    faceBadge.textContent = '● Active (YuNet + MobileFaceNet)';
+                    faceBadge.style.color = '#34d399';
+                    faceBadge.style.background = 'rgba(16, 185, 129, 0.15)';
+                    faceBadge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+                } else {
+                    faceBadge.textContent = '⏸️ Paused (Face Engine OFF)';
+                    faceBadge.style.color = '#94a3b8';
+                    faceBadge.style.background = 'rgba(100, 116, 139, 0.15)';
+                    faceBadge.style.borderColor = 'rgba(148, 163, 184, 0.3)';
+                }
+            }
+
+            buttons.forEach(btn => {
+                const isTop = btn.id === 'topRecogToggleBtn';
+                if (recognitionActive) {
+                    btn.innerHTML = isTop ? '👤 Face Engine: ON' : (btn.id === 'hubRecogToggleBtn' ? '👤 Face Engine: ON' : '🧠 Recognition: ON');
+                    btn.className = 'btn btn-primary ' + (btn.classList.contains('btn-sm') ? 'btn-sm ' : '') + 'recog-toggle-btn';
+                    btn.style.background = 'linear-gradient(135deg, #059669 0%, #10b981 100%)';
+                    btn.style.color = '#ffffff';
+                    btn.style.borderColor = 'transparent';
+                } else {
+                    btn.innerHTML = isTop ? '💤 Face Engine: OFF' : (btn.id === 'hubRecogToggleBtn' ? '💤 Face Engine: OFF' : '💤 Recognition: OFF');
+                    btn.className = 'btn btn-secondary ' + (btn.classList.contains('btn-sm') ? 'btn-sm ' : '') + 'recog-toggle-btn';
+                    btn.style.background = 'rgba(51, 65, 85, 0.7)';
+                    btn.style.color = '#94a3b8';
+                    btn.style.borderColor = 'rgba(148, 163, 184, 0.35)';
+                }
+            });
+
+            if (overlayBtn) {
+                const anyAiOn = recognitionActive || vlmActive;
+                overlayBtn.disabled = !anyAiOn;
+                overlayBtn.style.opacity = anyAiOn ? '1' : '0.45';
+                overlayBtn.title = anyAiOn ? 'Toggle live face & object bounding boxes' : 'Overlay disabled when both Face & Object AI are OFF';
+            }
+
+            if (!recognitionActive) {
+                if (banner) {
+                    banner.textContent = '⏸️ Face recognition pipeline is turned off';
+                    banner.style.background = 'rgba(100, 116, 139, 0.15)';
+                    banner.style.color = '#94a3b8';
+                    banner.style.border = '1px dashed rgba(148, 163, 184, 0.3)';
+                }
+                if (pendingBadge) {
+                    pendingBadge.textContent = 'Face Engine Paused';
+                    pendingBadge.style.background = 'rgba(100, 116, 139, 0.3)';
+                    pendingBadge.style.color = '#94a3b8';
+                }
+                if (listEl) {
+                    listEl.innerHTML = `
+                        <div style="text-align: center; padding: 36px 16px; color: var(--text-secondary);">
+                            <div style="font-size: 2.4rem; margin-bottom: 10px;">⏸️</div>
+                            <div style="font-weight: 700; font-size: 1.05rem; color: #f1f5f9; margin-bottom: 6px;">
+                                Face Recognition Engine is turned off
+                            </div>
+                            <div style="font-size: 0.82rem; color: #94a3b8; line-height: 1.5; max-width: 320px; margin: 0 auto;">
+                                YuNet detection and MobileFaceNet 512-D identity matching is paused.<br>
+                                Click <strong>Face Engine: OFF</strong> to resume real-time face matching.
+                            </div>
+                        </div>
+                    `;
+                }
+            } else {
+                if (banner) {
+                    banner.style.background = '';
+                    banner.style.color = '';
+                    banner.style.border = '';
+                }
+                if (pendingBadge) {
+                    pendingBadge.style.background = '';
+                    pendingBadge.style.color = '';
+                }
+            }
+        }
+
+        function updateVlmUI(enabled, vlmData) {
+            vlmActive = !!enabled;
+            const vlmBtns = document.querySelectorAll('.vlm-toggle-btn');
+            const vlmBadge = document.getElementById('vlmEngineBadge');
+            const vlmLatestCaption = document.getElementById('vlmLatestCaption');
+            const vlmProviderTag = document.getElementById('vlmProviderTag');
+
+            vlmBtns.forEach(btn => {
+                if (vlmActive) {
+                    btn.innerHTML = '📦 Objects: ON';
+                    btn.className = 'btn btn-primary ' + (btn.classList.contains('btn-sm') ? 'btn-sm ' : '') + 'vlm-toggle-btn';
+                    btn.style.background = 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)';
+                    btn.style.color = '#ffffff';
+                    btn.style.borderColor = 'transparent';
+                } else {
+                    btn.innerHTML = '💤 Objects: OFF';
+                    btn.className = 'btn btn-secondary ' + (btn.classList.contains('btn-sm') ? 'btn-sm ' : '') + 'vlm-toggle-btn';
+                    btn.style.background = 'rgba(51, 65, 85, 0.7)';
+                    btn.style.color = '#94a3b8';
+                    btn.style.borderColor = 'rgba(148, 163, 184, 0.35)';
+                }
+            });
+
+            if (vlmBadge) {
+                if (vlmActive) {
+                    const providerName = (vlmData && vlmData.active_provider) ? vlmData.active_provider : 'DirectML • AMD Radeon 840M';
+                    vlmBadge.textContent = '● ' + providerName;
+                    vlmBadge.style.background = 'rgba(99, 102, 241, 0.15)';
+                    vlmBadge.style.color = '#a5b4fc';
+                    vlmBadge.style.borderColor = 'rgba(99, 102, 241, 0.3)';
+                } else {
+                    vlmBadge.textContent = '⏸️ Paused (VLM OFF)';
+                    vlmBadge.style.background = 'rgba(100, 116, 139, 0.15)';
+                    vlmBadge.style.color = '#94a3b8';
+                    vlmBadge.style.borderColor = 'rgba(148, 163, 184, 0.3)';
+                }
+            }
+
+            if (vlmData && vlmData.latest_caption && vlmLatestCaption) {
+                if (vlmActive) {
+                    vlmLatestCaption.textContent = vlmData.latest_caption;
+                } else {
+                    vlmLatestCaption.textContent = '⏸️ Universal VLM Engine paused. Scene intelligence inference disabled.';
+                }
+            }
+
+            if (vlmData && vlmData.active_provider && vlmProviderTag) {
+                vlmProviderTag.textContent = vlmData.gpu_accelerated ? 'DirectML GPU (Radeon 840M)' : 'CPU Mode';
+            }
+        }
+
+        async function toggleVlmPipeline() {
+            const vlmBtns = document.querySelectorAll('.vlm-toggle-btn');
+            vlmBtns.forEach(b => b.disabled = true);
+            try {
+                const res = await fetch('/api/v1/vlm/toggle', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled: !vlmActive })
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    updateVlmUI(data.vlm_enabled);
+                    setTimeout(pollCameraStatus, 200);
+                }
+            } catch (err) {
+                console.error("Error toggling VLM pipeline:", err);
+            } finally {
+                vlmBtns.forEach(b => b.disabled = false);
+            }
+        }
+
+        async function triggerVlmDescribe() {
+            const descBtns = [document.getElementById('hubVlmDescribeBtn'), document.getElementById('topVlmDescribeBtn')];
+            descBtns.forEach(b => {
+                if (b) {
+                    b.disabled = true;
+                    b.innerHTML = '⏳ Analyzing...';
+                }
+            });
+
+            const captionEl = document.getElementById('vlmLatestCaption');
+            if (captionEl) captionEl.textContent = '⚡ Running DirectML GPU scene analysis on AMD Radeon 840M...';
+
+            try {
+                const res = await fetch('/api/v1/vlm/describe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    if (captionEl) {
+                        captionEl.textContent = data.caption;
+                    }
+                } else {
+                    if (captionEl) {
+                        captionEl.textContent = '⚠ ' + (data.error || 'VLM describe error');
+                    }
+                }
+            } catch (err) {
+                if (captionEl) captionEl.textContent = '⚠ Network error invoking VLM: ' + err.message;
+            } finally {
+                descBtns.forEach(b => {
+                    if (b) {
+                        b.disabled = false;
+                        b.innerHTML = '🔍 Describe Scene';
+                    }
+                });
+                const hubBtn = document.getElementById('hubVlmDescribeBtn');
+                if (hubBtn) hubBtn.innerHTML = '🔍 Describe Scene Now';
+            }
+        }
+
+        async function toggleRecognitionPipeline() {
+            const buttons = document.querySelectorAll('.recog-toggle-btn');
+            buttons.forEach(b => b.disabled = true);
+            try {
+                const res = await fetch('/api/recognition/toggle', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled: !recognitionActive })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    updateRecognitionUI(data.recognition_enabled);
+                    setTimeout(pollCameraStatus, 200);
+                }
+            } catch (err) {
+                console.error("Error toggling recognition:", err);
+            } finally {
+                buttons.forEach(b => b.disabled = false);
+            }
+        }
+
+        async function rebootCamDevice() {
+            const msg = document.getElementById('rebootStatusMsg');
+            const btn = document.getElementById('btnRebootCam');
+            if (btn) btn.disabled = true;
+            if (msg) msg.textContent = 'Rebooting ESP32-CAM (192.168.29.10)...';
+            try {
+                const res = await fetch('/api/system/reboot_cam', { method: 'POST' });
+                const data = await res.json();
+                if (msg) msg.textContent = data.ok ? 'ESP32-CAM rebooting (reconnecting in ~5s)...' : ('CAM reboot failed: ' + (data.error || 'offline'));
+            } catch (e) {
+                if (msg) msg.textContent = 'CAM reboot error: ' + e.message;
+            } finally {
+                if (btn) setTimeout(() => { btn.disabled = false; }, 3000);
+            }
+        }
+
+        async function rebootWroomDevice() {
+            const msg = document.getElementById('rebootStatusMsg');
+            const btn = document.getElementById('btnRebootWroom');
+            if (btn) btn.disabled = true;
+            if (msg) msg.textContent = 'Rebooting ESP32-WROOM (192.168.29.20)...';
+            try {
+                const res = await fetch('/api/system/reboot_wroom', { method: 'POST' });
+                const data = await res.json();
+                if (msg) msg.textContent = data.ok ? 'ESP32-WROOM rebooting (reconnecting in ~5s)...' : ('WROOM reboot failed: ' + (data.error || 'offline'));
+            } catch (e) {
+                if (msg) msg.textContent = 'WROOM reboot error: ' + e.message;
+            } finally {
+                if (btn) setTimeout(() => { btn.disabled = false; }, 3000);
+            }
+        }
+
+        async function fullSystemReboot() {
+            const msg = document.getElementById('rebootStatusMsg');
+            const btn = document.getElementById('btnFullReboot');
+            if (btn) btn.disabled = true;
+            if (msg) msg.textContent = 'Rebooting CAM + WROOM & reloading AI models...';
+            try {
+                const res = await fetch('/api/system/full_reboot', { method: 'POST' });
+                const data = await res.json();
+                if (msg) {
+                    msg.textContent = `CAM: ${data.cam?.ok ? 'OK' : 'err'}, WROOM: ${data.wroom?.ok ? 'OK' : 'err'}, Models reloaded: ${data.face_models_reloaded && data.object_model_reloaded ? 'OK' : 'partial'} — refreshing dashboard in 5s...`;
+                }
+                setTimeout(() => { window.location.reload(); }, 5000);
+            } catch (e) {
+                if (msg) msg.textContent = 'Full reboot error: ' + e.message;
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        function updateOverlayBtn(enabled) {
+            const btn = document.getElementById('toggleOverlayBtn');
+            if (!btn) return;
+            if (enabled) {
+                btn.innerHTML = '🔲 Boxes: ON';
+                btn.style.borderColor = 'var(--primary, #10b981)';
+                btn.style.color = 'var(--primary, #10b981)';
+            } else {
+                btn.innerHTML = '🔲 Boxes: OFF';
+                btn.style.borderColor = '';
+                btn.style.color = '';
+            }
+        }
+
+        async function pollCameraStatus() {
+            try {
+                const res = await fetch('/stream/status');
+                if (!res.ok) throw new Error("HTTP " + res.status);
+                const data = await res.json();
+
+                if (data.recognition_enabled !== undefined) {
+                    updateRecognitionUI(data.recognition_enabled);
+                }
+
+                if (data.show_face_overlay !== undefined) {
+                    updateOverlayBtn(data.show_face_overlay);
+                }
+
+                const isOnline = data.camera_online;
+                const badge = document.getElementById('cameraStatusBadge');
+                const text = document.getElementById('cameraStatusText');
+                const overlay = document.getElementById('offlineOverlay');
+                const img = document.getElementById('liveStreamImg');
+
+                if (isOnline) {
+                    window._offlineCounter = 0;
+                    if (data.sensor_ready === false) {
+                        badge.className = 'status-badge-live warning';
+                        badge.style.background = 'rgba(245, 158, 11, 0.2)';
+                        badge.style.color = '#fbbf24';
+                        badge.style.borderColor = 'rgba(245, 158, 11, 0.4)';
+                        text.textContent = `⚠️ Board Connected (${data.ip}) • Optical Sensor Disconnected`;
+                    } else {
+                        badge.className = 'status-badge-live online';
+                        badge.style.background = '';
+                        badge.style.color = '';
+                        badge.style.borderColor = '';
+                        const tempText = (data.temp_c !== undefined && data.temp_c !== null) ? ` • 🔥 ${Math.round(data.temp_c)}°C` : '';
+                        text.textContent = `ESP-CAM Online (${data.ip || 'Connected'} • ${data.fps} FPS${tempText})`;
+                    }
+                    overlay.style.display = 'none';
+                    if (wasOnline === false && img) {
+                        img.src = '/live?t=' + Date.now();
+                    }
+                    wasOnline = true;
+                } else {
+                    window._offlineCounter = (window._offlineCounter || 0) + 1;
+                    if (window._offlineCounter < 6) {
+                        // Transient Wi-Fi retransmit: show subtle connecting status without jarring black overlay
+                        badge.className = 'status-badge-live offline';
+                        text.textContent = 'ESP-CAM Connecting...';
+                    } else {
+                        badge.className = 'status-badge-live offline';
+                        text.textContent = 'ESP-CAM Offline';
+                        overlay.style.display = 'flex';
+                        wasOnline = false;
+                    }
+                }
+
+                // Update top stats & recognition telemetry
+                document.getElementById('statTotalPersons').textContent = data.total_persons;
+                document.getElementById('statTotalImages').textContent = data.total_images;
+                if (data.recognition_enabled) {
+                    document.getElementById('pendingTrackBadge').textContent = `${data.pending_candidates || 0} Pending Tracks`;
+                }
+                const hubPending = document.getElementById('hubPendingCount');
+                if (hubPending) {
+                    hubPending.textContent = data.pending_candidates || 0;
+                }
+                if (data.vlm) {
+                    updateVlmUI(data.vlm.enabled, data.vlm);
+                }
+                const tempEl = document.getElementById('statChipTemp');
+                if (tempEl && data.temp_c !== undefined && data.temp_c !== null) {
+                    tempEl.textContent = `${Math.round(data.temp_c)} °C`;
+                }
+
+                if (data.recognition_enabled && data.recognition_stats) {
+                    const rs = data.recognition_stats;
+                    document.getElementById('cntRecognized').textContent = rs.recognized || 0;
+                    document.getElementById('cntUnknownPending').textContent = rs.unknown_pending || 0;
+                    document.getElementById('cntInconclusive').textContent = rs.inconclusive || 0;
+                    document.getElementById('cntUnusable').textContent = rs.unusable_quality || 0;
+                    document.getElementById('lastRecognitionBanner').textContent =
+                        rs.last_event_time ? `[${rs.last_event_time}] ${rs.last_status}` : rs.last_status;
+                }
+
+                if (data.recognition_enabled) {
+                    if (data.recent_events && data.recent_events.length > 0) {
+                        const listEl = document.getElementById('recentEventsList');
+                        listEl.innerHTML = data.recent_events.map(ev => {
+                            let thumbUrl = '';
+                            if (ev.thumb) {
+                                thumbUrl = ev.thumb.includes('/') ? `/image/${ev.thumb}` : `/unrecognized_image/${ev.thumb}`;
+                            }
+                            const imgHtml = thumbUrl ? `<img src="${thumbUrl}" alt="thumb">` : '';
+                            const title = ev.person_id
+                                ? `${ev.person_label ? ev.person_label + ' (' + ev.person_id + ')' : ev.person_id} — ${ev.status.toUpperCase()}`
+                                : ev.status.replace('_', ' ').toUpperCase();
+                            return `
+                                <div class="event-item ${ev.status}">
+                                    ${imgHtml}
+                                    <div class="event-meta">
+                                        <div class="event-title">[${ev.time}] ${title}</div>
+                                        <div class="event-sub">${ev.reason} • Sim: ${(ev.similarity*100).toFixed(1)}% • Quality: ${ev.quality}/100</div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+                }
+            } catch (err) {
+                const badge = document.getElementById('cameraStatusBadge');
+                const text = document.getElementById('cameraStatusText');
+                const overlay = document.getElementById('offlineOverlay');
+                if (badge) badge.className = 'status-badge-live offline';
+                if (text) text.textContent = 'ESP-CAM Offline';
+                if (overlay) overlay.style.display = 'flex';
+                wasOnline = false;
+            }
+        }
+
+        function handleStreamError() {
+            const overlay = document.getElementById('offlineOverlay');
+            if (overlay) overlay.style.display = 'flex';
+            setTimeout(() => {
+                const img = document.getElementById('liveStreamImg');
+                if (img) img.src = '/live?t=' + Date.now();
+            }, 2000);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const nameInput = document.getElementById('nameModalInput');
+            if (nameInput) {
+                nameInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        savePersonName();
+                    } else if (e.key === 'Escape') {
+                        e.preventDefault();
+                        closeNameModal();
+                    }
+                });
+            }
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeNameModal();
+                    if (typeof closeAddPersonModal === 'function') closeAddPersonModal();
+                    if (typeof closeDeleteModal === 'function') closeDeleteModal();
+                    if (typeof closeSamplesModal === 'function') closeSamplesModal();
+                }
+            });
+
+            const dropzone = document.getElementById('newPersonDropzone');
+            if (dropzone) {
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    dropzone.addEventListener(eventName, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        dropzone.style.borderColor = '#10b981';
+                    });
+                });
+                ['dragleave', 'drop'].forEach(eventName => {
+                    dropzone.addEventListener(eventName, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        dropzone.style.borderColor = 'var(--border-highlight)';
+                    });
+                });
+                dropzone.addEventListener('drop', (e) => {
+                    if (e.dataTransfer && e.dataTransfer.files) {
+                        handleNewPersonFiles(e.dataTransfer.files);
+                    }
+                });
+            }
+
+            {% for person in persons %}
+            loadChart('{{ person.id }}', 1, document.querySelector(`#chart-{{ person.id }}`).previousElementSibling.querySelector('.chart-btn'));
+            {% endfor %}
+            fetchCameraSettings();
+            pollCameraStatus();
+            setInterval(pollCameraStatus, 1500);
+        });
+    </script>
+</body>
+</html>

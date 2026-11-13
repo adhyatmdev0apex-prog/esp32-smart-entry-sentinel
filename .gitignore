@@ -1,0 +1,6 @@
+entrance_monitoring/
+venv/
+face_encodings.pkl
+detections.json
+.pio/
+firmware/esp32-cam/include/wifi_secrets.h
