@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🏠 Smart Door Entry — Facial Identity & Monitoring</title>
+    <title>Sentinel — Smart Door Entry &amp; Security Control Center</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%236366f1'/%3E%3Cstop offset='100%25' stop-color='%2310b981'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M32 4L8 14v18c0 15.2 10.2 28.6 24 32 13.8-3.4 24-16.8 24-32V14L32 4z' fill='%230f172a' stroke='url(%23g)' stroke-width='4'/%3E%3Ccircle cx='32' cy='31' r='9' fill='none' stroke='%2338bdf8' stroke-width='3.5'/%3E%3Ccircle cx='32' cy='31' r='3.5' fill='%2310b981'/%3E%3C/svg%3E">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         :root {
@@ -1301,6 +1302,98 @@
             gap: 16px;
             margin-bottom: 18px;
         }
+        /* Identity modal & Family hover dropdown */
+        .identity-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 9px;
+            border-radius: 999px;
+            font-size: 0.76rem;
+            font-weight: 700;
+            background: rgba(99, 102, 241, 0.16);
+            color: #a5b4fc;
+            border: 1px solid rgba(99, 102, 241, 0.35);
+        }
+        .identity-choice-btn {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            border-radius: 9px;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            background: rgba(15, 23, 42, 0.7);
+            color: #f1f5f9;
+            font-size: 0.92rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .identity-choice-btn:hover {
+            border-color: #6366f1;
+            background: rgba(99, 102, 241, 0.18);
+        }
+        .identity-family-wrap {
+            position: relative;
+        }
+        .identity-family-btn {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            border-radius: 9px;
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            background: rgba(30, 41, 59, 0.75);
+            color: #e2e8f0;
+            font-size: 0.92rem;
+            font-weight: 600;
+            cursor: default;
+            user-select: none;
+        }
+        .identity-family-arrow::after {
+            content: '▾';
+            font-size: 1rem;
+            color: #94a3b8;
+        }
+        .identity-family-wrap:hover .identity-family-arrow::after {
+            content: '▴';
+            color: #a5b4fc;
+        }
+        .identity-family-dropdown {
+            display: none;
+            margin-top: 6px;
+            padding: 8px;
+            border-radius: 10px;
+            border: 1px solid rgba(99, 102, 241, 0.35);
+            background: rgba(15, 23, 42, 0.96);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+        }
+        .identity-family-wrap:hover .identity-family-dropdown {
+            display: block;
+        }
+        .family-role-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+        .family-role-btn {
+            padding: 7px 10px;
+            border-radius: 7px;
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            background: rgba(30, 41, 59, 0.7);
+            color: #f1f5f9;
+            font-size: 0.84rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+        }
+        .family-role-btn:hover {
+            background: #4f46e5;
+            border-color: #6366f1;
+        }
     </style>
 </head>
 <body>
@@ -1986,6 +2079,12 @@
                         <button class="btn btn-secondary btn-sm btn-edit-name" data-person-id="{{ person.id }}" data-current-label="{{ person.label or '' }}" onclick="openNameModal('{{ person.id }}')">
                             ✏️ Name
                         </button>
+                        {% set id_cat = (person.identity.category if person.identity else '') %}
+                        {% set id_role = (person.identity.role if person.identity else '') %}
+                        {% set id_disp = (id_cat ~ ': ' ~ id_role) if (id_cat and id_role) else id_cat %}
+                        <span class="identity-pill" id="identity-pill-{{ person.id }}" style="{% if not id_disp %}display:none;{% endif %}">
+                            🪪 {{ id_disp }}
+                        </span>
                     </div>
 
                     <div class="person-stats">
@@ -1997,6 +2096,9 @@
                         {% endif %}
                         <button class="btn btn-secondary btn-sm" onclick="openSamplesModal('{{ person.id }}')">
                             🖼️ Inspect Samples
+                        </button>
+                        <button class="btn btn-secondary btn-sm" id="btn-identity-{{ person.id }}" onclick="openIdentityModal('{{ person.id }}')">
+                            🪪 Identity
                         </button>
                         <button class="btn btn-danger btn-sm" onclick="openDeleteModal('{{ person.id }}')">
                             🗑️ Delete Person
@@ -2132,6 +2234,24 @@
         <div id="page-settings" class="page-view">
             <div id="settingsAiSlot"></div>
 
+            <div class="card" style="padding: 20px; margin-bottom: 20px; border: 1px solid rgba(16, 185, 129, 0.3);">
+                <div class="card-header" style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                    <h2 style="margin:0;">🛡️ Security Hardening &amp; Industrial Readiness</h2>
+                    <button class="btn btn-secondary btn-sm" onclick="loadSecurityHealthz()">🔄 Refresh</button>
+                </div>
+                <div id="securityPostureGrid" style="font-size:0.83rem; color:#cbd5e1; margin-bottom:14px;">
+                    Loading security &amp; readiness telemetry...
+                </div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                    <input id="secPinInput" type="password" placeholder="Set Admin PIN (min 4 chars)" style="padding:7px 10px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; font-size:0.84rem;">
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.84rem;">
+                        <input type="checkbox" id="secLockLocalhost"> Lock Localhost Too
+                    </label>
+                    <button class="btn btn-primary btn-sm" onclick="saveAdminPin()">🔐 Save PIN / Lock</button>
+                    <button class="btn btn-secondary btn-sm" onclick="rotateApiKey()">🔑 Rotate API Key</button>
+                </div>
+            </div>
+
             <div class="card" style="padding: 20px; margin-bottom: 20px;">
                 <div class="card-header" style="margin-bottom:10px;">
                     <h2 style="margin:0;">📷 Default Camera Settings (Persisted &amp; Auto-Applied)</h2>
@@ -2185,6 +2305,24 @@
                 </div>
             </div>
 
+            <div class="card" style="padding: 20px; margin-bottom: 20px; border: 1px solid rgba(16, 185, 129, 0.3);">
+                <div class="card-header" style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                    <h2 style="margin:0;">🛡️ Security Hardening &amp; Industrial Readiness</h2>
+                    <button class="btn btn-secondary btn-sm" onclick="loadSecurityHealthz()">🔄 Refresh</button>
+                </div>
+                <div id="securityPostureGrid" style="font-size:0.83rem; color:#cbd5e1; margin-bottom:14px;">
+                    Loading security &amp; readiness telemetry...
+                </div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                    <input id="secPinInput" type="password" placeholder="Set Admin PIN (min 4 chars)" style="padding:7px 10px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; font-size:0.84rem;">
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.84rem;">
+                        <input type="checkbox" id="secLockLocalhost"> Lock Localhost Too
+                    </label>
+                    <button class="btn btn-primary btn-sm" onclick="saveAdminPin()">🔐 Save PIN / Lock</button>
+                    <button class="btn btn-secondary btn-sm" onclick="rotateApiKey()">🔑 Rotate API Key</button>
+                </div>
+            </div>
+
             <div class="card" style="padding: 20px; margin-bottom: 20px;">
                 <div class="card-header" style="margin-bottom:10px;">
                     <h2 style="margin:0;">🔔 Notification Providers &amp; Secrets (Backend-Only)</h2>
@@ -2205,6 +2343,64 @@
                 <button class="btn btn-danger btn-sm" onclick="if(confirm('Reset ALL enrolled identities and event history?')) fetch('/reset',{method:'POST'}).then(()=>location.reload())">🗑️ Reset All Data</button>
             </div>
         </div> <!-- /#page-settings -->
+    </div>
+
+    <!-- WHO IS THIS PERSON? IDENTITY MODAL -->
+    <div class="modal-backdrop" id="identityModal" onclick="if(event.target === this) closeIdentityModal()">
+        <div class="modal-content" style="max-width: 460px;">
+            <div class="modal-header">
+                <h3 style="font-size: 1.2rem;">🪪 Who is this person? — <span id="identityModalPersonId"></span></h3>
+                <button class="btn btn-secondary btn-sm" onclick="closeIdentityModal()">✖ Close</button>
+            </div>
+            <p style="color: var(--text-secondary); font-size: 0.86rem; margin-bottom: 14px;">
+                Choose how this person is related to you. Hover over <strong>Family</strong> to pick a specific family member.
+            </p>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <!-- Family: unclickable button with hover dropdown -->
+                <div class="identity-family-wrap">
+                    <div class="identity-family-btn" aria-disabled="true">
+                        <span>👨‍👩‍👧‍👦 Family</span>
+                        <span class="identity-family-arrow"></span>
+                    </div>
+                    <div class="identity-family-dropdown">
+                        <div class="family-role-grid">
+                            <button type="button" class="family-role-btn" onclick="selectIdentity('Family', 'Mom')">Mom</button>
+                            <button type="button" class="family-role-btn" onclick="selectIdentity('Family', 'Dad')">Dad</button>
+                            <button type="button" class="family-role-btn" onclick="selectIdentity('Family', 'Me')">Me</button>
+                            <button type="button" class="family-role-btn" onclick="selectIdentity('Family', 'Sis')">Sis</button>
+                            <button type="button" class="family-role-btn" onclick="selectIdentity('Family', 'Bro')">Bro</button>
+                            <button type="button" class="family-role-btn" onclick="selectIdentity('Family', 'Cousin')">Cousin</button>
+                        </div>
+                        <div style="display:flex; gap:6px; align-items:center;">
+                            <input id="familyCustomRoleInput" type="text" placeholder="Custom family member..." style="flex:1; padding:6px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; font-size:0.84rem;">
+                            <button type="button" class="btn btn-primary btn-sm" onclick="saveCustomFamilyRole()">Save</button>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="button" class="identity-choice-btn" onclick="selectIdentity('Friend', '')">
+                    <span>🤝 Friend</span>
+                    <span style="font-size:0.78rem; color:#94a3b8;">Select</span>
+                </button>
+
+                <button type="button" class="identity-choice-btn" onclick="selectIdentity('Neighbour', '')">
+                    <span>🏘️ Neighbour</span>
+                    <span style="font-size:0.78rem; color:#94a3b8;">Select</span>
+                </button>
+
+                <div style="padding:10px 12px; border-radius:9px; border:1px solid rgba(148,163,184,0.22); background:rgba(15,23,42,0.55);">
+                    <div style="font-size:0.84rem; font-weight:600; color:#e2e8f0; margin-bottom:6px;">✏️ Custom</div>
+                    <div style="display:flex; gap:6px;">
+                        <input id="customIdentityInput" type="text" placeholder="Type custom identity (e.g. Delivery, Maid, Guest)..." style="flex:1; padding:7px 9px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; font-size:0.86rem;">
+                        <button type="button" class="btn btn-primary btn-sm" onclick="saveCustomIdentity()">Save</button>
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top:14px; display:flex; justify-content:space-between; align-items:center;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="selectIdentity('', '')">Clear Identity</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeIdentityModal()">Cancel</button>
+            </div>
+        </div>
     </div>
 
     <!-- EDIT PERSON NAME MODAL -->
@@ -4433,6 +4629,7 @@
             if (pageId === 'settings') {
                 if (typeof loadNotifyConfig === 'function') loadNotifyConfig();
                 loadCameraDefaults();
+                loadSecurityHealthz();
             }
 
             if (window.location.hash !== `#${pageId}`) {
@@ -4728,6 +4925,106 @@
             } catch (e) {
                 showToast('Error saving defaults: ' + e.message, 'error');
             }
+        }
+
+        let activeIdentityPersonId = null;
+        function openIdentityModal(personId) {
+            activeIdentityPersonId = personId;
+            document.getElementById('identityModalPersonId').textContent = personId;
+            document.getElementById('familyCustomRoleInput').value = '';
+            document.getElementById('customIdentityInput').value = '';
+            document.getElementById('identityModal').classList.add('open');
+        }
+        function closeIdentityModal() {
+            document.getElementById('identityModal').classList.remove('open');
+            activeIdentityPersonId = null;
+        }
+        async function selectIdentity(category, role) {
+            if (!activeIdentityPersonId) return;
+            const pid = activeIdentityPersonId;
+            try {
+                const res = await fetch(`/api/person/${encodeURIComponent(pid)}/identity`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ category, role }),
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    const pill = document.getElementById(`identity-pill-${pid}`);
+                    if (pill) {
+                        if (data.display) {
+                            pill.textContent = `🪪 ${data.display}`;
+                            pill.style.display = 'inline-flex';
+                        } else {
+                            pill.style.display = 'none';
+                        }
+                    }
+                    showToast(data.display ? `Identity set: ${data.display}` : 'Identity cleared', 'success');
+                    closeIdentityModal();
+                } else {
+                    showToast('Failed to update identity', 'error');
+                }
+            } catch (e) {
+                showToast('Error: ' + e.message, 'error');
+            }
+        }
+        function saveCustomFamilyRole() {
+            const val = (document.getElementById('familyCustomRoleInput').value || '').trim();
+            if (!val) { showToast('Type a family role first', 'warning'); return; }
+            selectIdentity('Family', val);
+        }
+        function saveCustomIdentity() {
+            const val = (document.getElementById('customIdentityInput').value || '').trim();
+            if (!val) { showToast('Type a custom identity first', 'warning'); return; }
+            selectIdentity('Custom', val);
+        }
+
+        async function loadSecurityHealthz() {
+            try {
+                const res = await fetch('/api/v1/system/healthz');
+                const d = await res.json();
+                if (!d.ok) return;
+                const s = d.security || {};
+                const v = d.vlm || {};
+                const lockEl = document.getElementById('secLockLocalhost');
+                if (lockEl) lockEl.checked = !!s.lock_localhost;
+                const box = document.getElementById('securityPostureGrid');
+                if (box) {
+                    const th = Object.entries(d.threads || {}).map(([k, ok]) => `${k}: ${ok ? '🟢' : '🔴'}`).join(' | ');
+                    box.innerHTML = `
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:8px; margin-bottom:8px;">
+                            <div style="padding:8px; border-radius:8px; background:rgba(15,23,42,0.6);"><strong>Uptime:</strong> ${d.uptime_s}s</div>
+                            <div style="padding:8px; border-radius:8px; background:rgba(15,23,42,0.6);"><strong>RAM / Disk:</strong> ${d.process_rss_mb ?? '--'} MB | ${d.disk_free_gb} GB free</div>
+                            <div style="padding:8px; border-radius:8px; background:rgba(15,23,42,0.6);"><strong>CPU / GPU Duty:</strong> ${v.cpu_pct ?? d.cpu_pct ?? '--'}% | ${v.gpu_duty_pct ?? '--'}%</div>
+                            <div style="padding:8px; border-radius:8px; background:rgba(15,23,42,0.6);"><strong>PIN / API Key:</strong> ${s.pin_configured ? 'Set' : 'Open (LAN protected)'} | <code>${s.api_key_preview}</code></div>
+                        </div>
+                        <div style="font-size:0.78rem; color:#94a3b8;">Threads: ${th} | Blocked Requests: ${s.blocked_requests || 0} | Rate Limiter: ${s.rate_limiter}</div>
+                    `;
+                }
+            } catch (e) {
+                console.error('loadSecurityHealthz error', e);
+            }
+        }
+        async function saveAdminPin() {
+            const pin = document.getElementById('secPinInput').value;
+            const lockLocal = document.getElementById('secLockLocalhost').checked;
+            const body = { lock_localhost: lockLocal };
+            if (pin) body.pin = pin;
+            const res = await fetch('/api/v1/security/pin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            const d = await res.json();
+            showToast(d.ok ? 'Security PIN/lock updated!' : (d.error || 'Failed'), d.ok ? 'success' : 'error');
+            if (d.ok) document.getElementById('secPinInput').value = '';
+            loadSecurityHealthz();
+        }
+        async function rotateApiKey() {
+            const res = await fetch('/api/v1/security/rotate-key', { method: 'POST' });
+            const d = await res.json();
+            showToast(d.ok ? `New API Key generated (${d.api_key_preview})` : 'Failed', d.ok ? 'success' : 'error');
+            loadSecurityHealthz();
         }
     </script>
 </body>

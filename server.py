@@ -35,6 +35,17 @@ from huggingface_hub import hf_hub_download
 from vlm_engine import vlm
 from event_db import event_db
 from notifications import notification_manager, NotificationEvent
+from security_hardening import (
+    security_guard,
+    init_app_security,
+    mask_notification_secrets,
+    strip_masked_secrets,
+)
+import atexit
+try:
+    import psutil
+except ImportError:
+    psutil = None
 
 try:
     import face_recognition
@@ -43,6 +54,8 @@ except Exception:
     HAS_DLIB = False
 
 app = Flask(__name__)
+SERVER_START_EPOCH = time.time()
+init_app_security(app, audit_cb=event_db.log_audit)
 
 # ============================================================================
 # CONFIGURATION & CALIBRATED THRESHOLDS
@@ -68,10 +81,11 @@ MIN_FACE_SIZE = 22                      # Identifies small distant faces down to
 BACKUP_INTERVAL = 60
 BUCKET_SIZE = 30
 
-# Model & Threshold Configuration (InsightFace MobileFaceNet 512-D ArcFace)
-MODEL_NAME = 'InsightFace MobileFaceNet (512-D ArcFace)'
+# Model & Threshold Configuration (InsightFace ResNet50 ArcFace buffalo_m 512-D)
+MODEL_NAME = 'InsightFace ResNet50 ArcFace (512-D buffalo_m)'
+FACE_MODEL_TAG = 'buffalo_m_r50'
 YUNET_MODEL_PATH = os.path.join(MODELS_FOLDER, 'face_detection_yunet_2023mar.onnx')
-SFACE_MODEL_PATH = os.path.join(MODELS_FOLDER, 'insightface', 'recognition', 'model.onnx')
+SFACE_MODEL_PATH = os.path.join(MODELS_FOLDER, 'insightface_m', 'recognition', 'model.onnx')
 
 DETECTION_CONF_THRESHOLD = 0.58       # Reject weak/blurry face detections early
 ENROLL_DET_CONF_THRESHOLD = 0.72      # Stricter detection confidence required to enroll or update gallery
@@ -298,8 +312,8 @@ def ensure_models_downloaded():
         print("Downloading YuNet face detector model...")
         urllib.request.urlretrieve(yunet_url, YUNET_MODEL_PATH)
     if not os.path.exists(SFACE_MODEL_PATH):
-        print("Downloading InsightFace MobileFaceNet model from HF Hub...")
-        hf_hub_download(repo_id='immich-app/buffalo_s', filename='recognition/model.onnx', local_dir=os.path.join(MODELS_FOLDER, 'insightface'))
+        print("Downloading InsightFace ResNet50 (buffalo_m) model from HF Hub...")
+        hf_hub_download(repo_id='immich-app/buffalo_m', filename='recognition/model.onnx', local_dir=os.path.join(MODELS_FOLDER, 'insightface_m'))
 
 def init_cv_models():
     """Initialize YuNet detector (small faces down to 36px) and InsightFace MobileFaceNet (512-D ArcFace)"""
@@ -657,9 +671,10 @@ def sync_and_backfill_profiles():
                     updated = True
                     print(f"[*] Cleaned up {orig_len - len(prof['sface'])} orphaned gallery embeddings for {pid}")
 
-            if not prof.get('sface') and prof.get('enrolled', True):
+            if (not prof.get('sface') or prof.get('model') != FACE_MODEL_TAG) and prof.get('enrolled', True):
+                prof['sface'] = []
                 img_files = sorted(glob.glob(os.path.join(folder, '*.jpg')), key=os.path.getmtime, reverse=True)
-                # Sample up to 15 images to build a clean SFace gallery
+                # Sample up to 15 images to build a clean ArcFace gallery
                 for img_path in img_files[:15]:
                     feat, q, dconf = extract_sface_for_saved_image(img_path)
                     if feat is not None:
@@ -670,9 +685,10 @@ def sync_and_backfill_profiles():
                             'ts': datetime.fromtimestamp(os.path.getmtime(img_path)).isoformat(),
                             'file': os.path.basename(img_path)
                         })
+                prof['model'] = FACE_MODEL_TAG
                 recompute_profile_centroid(pid)
                 updated = True
-                print(f"[*] Backfilled {len(prof['sface'])} SFace embeddings for {pid}")
+                print(f"[*] Re-indexed {len(prof['sface'])} {FACE_MODEL_TAG} embeddings for {pid}")
             elif prof.get('centroid') is None and prof.get('sface'):
                 recompute_profile_centroid(pid)
                 updated = True
@@ -1738,6 +1754,26 @@ def stream_reconnect():
     mjpeg_thread.start()
     return jsonify({'success': True, 'message': 'Stream reconnecting'}), 200
 
+IDENTITIES_FILE = os.path.join('data', 'person_identities.json')
+
+def _load_identities():
+    if os.path.exists(IDENTITIES_FILE):
+        try:
+            with open(IDENTITIES_FILE, 'r', encoding='utf-8') as f:
+                d = json.load(f)
+                if isinstance(d, dict):
+                    return d
+        except Exception:
+            pass
+    return {}
+
+def _save_identities():
+    os.makedirs(os.path.dirname(IDENTITIES_FILE), exist_ok=True)
+    with open(IDENTITIES_FILE, 'w', encoding='utf-8') as f:
+        json.dump(person_identities, f, indent=2)
+
+person_identities = _load_identities()
+
 @app.route('/')
 def index():
     """Main dark-theme dashboard route"""
@@ -1780,6 +1816,7 @@ def index():
             persons_data.append({
                 'id': person_id,
                 'label': person_labels.get(person_id, ''),
+                'identity': person_identities.get(person_id, {}),
                 'enrolled': enrolled,
                 'total_images': len(image_files),
                 'total_detections': total_detections,
@@ -1843,6 +1880,29 @@ def update_person_label(person_id):
             person_labels.pop(person_id, None)
         save_labels()
     return jsonify({'success': True, 'person_id': person_id, 'label': label})
+
+@app.route('/api/person/<person_id>/identity', methods=['POST'])
+def update_person_identity(person_id):
+    """Assign relationship/identity category (Family/Friend/Neighbour/Custom) to a person"""
+    data = request.get_json(silent=True) or {}
+    category = str(data.get('category') or '').strip()
+    role = str(data.get('role') or '').strip()
+    if not category:
+        with state_lock:
+            person_identities.pop(person_id, None)
+            _save_identities()
+        return jsonify({'ok': True, 'person_id': person_id, 'identity': {}, 'display': ''})
+
+    entry = {'category': category, 'role': role}
+    display = f"{category}: {role}" if role else category
+    with state_lock:
+        person_identities[person_id] = entry
+        _save_identities()
+    try:
+        event_db.log_audit('user', 'set_identity', person_id, display)
+    except Exception:
+        pass
+    return jsonify({'ok': True, 'person_id': person_id, 'identity': entry, 'display': display})
 
 @app.route('/api/person/<person_id>/samples')
 def get_person_samples(person_id):
@@ -3142,16 +3202,16 @@ def notifications_status_api():
 
 @app.route('/api/v1/notifications/config', methods=['GET', 'POST'])
 def notifications_config_api():
-    """Phase 10: Read or update backend-only notification provider & rule config"""
+    """Phase 10: Read or update backend-only notification provider & rule config (secrets masked on GET)"""
     if request.method == 'GET':
-        return jsonify({'ok': True, 'config': notification_manager.config_store.get()})
-    patch = request.get_json(silent=True) or {}
+        return jsonify({'ok': True, 'config': mask_notification_secrets(notification_manager.config_store.get())})
+    patch = strip_masked_secrets(request.get_json(silent=True) or {})
     updated = notification_manager.config_store.update(patch)
     try:
         event_db.log_audit('dashboard', 'notifications_config_updated', target='notification_config', details='Updated provider/rule config')
     except Exception:
         pass
-    return jsonify({'ok': True, 'config': updated})
+    return jsonify({'ok': True, 'config': mask_notification_secrets(updated)})
 
 @app.route('/api/v1/notifications/test', methods=['POST'])
 def notifications_test_api():
@@ -3198,6 +3258,114 @@ def reset():
         save_labels()
     event_db.clear_all()
     return "All data reset", 200
+
+# ============================================================================
+# PHASE 11 & 12: INDUSTRIAL SECURITY & READINESS ENDPOINTS
+# ============================================================================
+@app.route('/api/v1/security/status', methods=['GET'])
+def security_status_api():
+    """Phase 11: Security posture (headers, rate limiter, PIN lock, API key preview)"""
+    return jsonify({'ok': True, **security_guard.get_public_status()})
+
+@app.route('/api/v1/security/pin', methods=['POST'])
+def security_set_pin_api():
+    """Set/clear Admin PIN and optional localhost lock"""
+    data = request.get_json(silent=True) or {}
+    if 'pin' in data:
+        pin = str(data.get('pin') or '').strip()
+        if pin and len(pin) < 4:
+            return jsonify({'ok': False, 'error': 'PIN must be at least 4 characters'}), 400
+        security_guard.set_pin(pin)
+        event_db.log_audit('user', 'security_pin_updated', 'security_config', 'PIN configured' if pin else 'PIN cleared')
+    if 'lock_localhost' in data:
+        try:
+            security_guard.set_lock_localhost(bool(data.get('lock_localhost')))
+            event_db.log_audit('user', 'security_lock_toggled', 'security_config', f"lock_localhost={bool(data.get('lock_localhost'))}")
+        except ValueError as exc:
+            return jsonify({'ok': False, 'error': str(exc)}), 400
+    return jsonify({'ok': True, **security_guard.get_public_status()})
+
+@app.route('/api/v1/security/login', methods=['POST'])
+def security_login_api():
+    """Authenticate session via Admin PIN (rate-limited + brute-force lockout)"""
+    from flask import session
+    data = request.get_json(silent=True) or {}
+    pin = str(data.get('pin') or '')
+    ok, msg = security_guard.check_pin(pin, request.remote_addr or 'unknown')
+    if not ok:
+        event_db.log_audit('security', 'login_failed', request.remote_addr or 'unknown', msg)
+        if 'Locked' in msg:
+            notification_manager.emit(NotificationEvent(
+                event_type='SYSTEM_FAILURE',
+                title='Security Lockout Triggered',
+                message=f"Brute-force PIN attempts from {request.remote_addr}: {msg}",
+                severity='critical',
+                dedup_key=f"BRUTEFORCE:{request.remote_addr}",
+            ))
+        return jsonify({'ok': False, 'error': msg}), 401
+    session['sentinel_auth'] = True
+    event_db.log_audit('security', 'login_success', request.remote_addr or 'unknown', 'Session authenticated')
+    return jsonify({'ok': True, 'message': 'Authenticated'})
+
+@app.route('/api/v1/security/logout', methods=['POST'])
+def security_logout_api():
+    from flask import session
+    session.pop('sentinel_auth', None)
+    return jsonify({'ok': True})
+
+@app.route('/api/v1/security/rotate-key', methods=['POST'])
+def security_rotate_key_api():
+    new_key = security_guard.rotate_api_key()
+    event_db.log_audit('user', 'api_key_rotated', 'security_config', 'Rotated X-Sentinel-API-Key')
+    return jsonify({'ok': True, 'api_key': new_key, **security_guard.get_public_status()})
+
+@app.route('/api/v1/system/healthz', methods=['GET'])
+def system_healthz_api():
+    """Phase 12: Industrial readiness, thread liveness, memory & disk telemetry"""
+    disk = shutil.disk_usage('.')
+    rss_mb = None
+    cpu_pct = None
+    if psutil is not None:
+        try:
+            proc = psutil.Process(os.getpid())
+            rss_mb = round(proc.memory_info().rss / (1024 * 1024), 1)
+            cpu_pct = round(psutil.cpu_percent(interval=None), 1)
+        except Exception:
+            pass
+    threads = {
+        'mjpeg_consumer': bool(mjpeg_thread.is_alive()) if 'mjpeg_thread' in globals() else False,
+        'ai_worker': bool(ai_thread.is_alive()) if 'ai_thread' in globals() else False,
+        'backup_daemon': bool(backup_daemon.is_alive()) if 'backup_daemon' in globals() else False,
+        'notification_worker': bool(notification_manager._worker.is_alive()) if getattr(notification_manager, '_worker', None) else False,
+    }
+    return jsonify({
+        'ok': True,
+        'uptime_s': round(time.time() - SERVER_START_EPOCH, 1),
+        'threads': threads,
+        'disk_free_gb': round(disk.free / (1024 ** 3), 2),
+        'process_rss_mb': rss_mb,
+        'cpu_pct': cpu_pct,
+        'vlm': vlm.get_status(),
+        'security': security_guard.get_public_status(),
+    })
+
+def _graceful_shutdown():
+    global stream_active
+    stream_active = False
+    try:
+        notification_manager._running = False
+    except Exception:
+        pass
+    try:
+        with state_lock:
+            save_encodings()
+            save_profiles()
+            save_detections()
+            save_labels()
+    except Exception:
+        pass
+
+atexit.register(_graceful_shutdown)
 
 # ============================================================================
 # INITIALIZATION & ENTRYPOINT

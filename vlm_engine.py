@@ -44,17 +44,24 @@ COCO_CLASSES = [
 ]
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_YOLO_MODEL = os.path.join(BASE_DIR, "models", "yolov8n.onnx")
+YOLO11S_MODEL = os.path.join(BASE_DIR, "models", "yolo11s.onnx")
+DEFAULT_YOLO_MODEL = YOLO11S_MODEL if os.path.exists(YOLO11S_MODEL) else os.path.join(BASE_DIR, "models", "yolov8n.onnx")
 
 
 class ObjectDetectionEngine:
-    def __init__(self, model_path=DEFAULT_YOLO_MODEL, use_gpu=True, cooldown_s=0.45):
-        self.model_name = "yolov8n-320 (COCO 80 classes)"
+    def __init__(self, model_path=DEFAULT_YOLO_MODEL, use_gpu=True, cooldown_s=0.22):
+        is_y11s = os.path.basename(model_path).startswith("yolo11s")
+        self.model_name = "yolo11s-416 (COCO 80 classes)" if is_y11s else "yolov8n-320 (COCO 80 classes)"
         self.model_path = model_path
         self.use_gpu = use_gpu
         self.cooldown_s = cooldown_s
-        self.input_size = 320
+        self.min_cooldown_s = 0.14
+        self.max_cooldown_s = 0.65
+        self.input_size = 416 if is_y11s else 320
         self.last_inference_time = 0.0
+        self.last_infer_ms = 0.0
+        self.gpu_duty_pct = 0.0
+        self.last_cpu_pct = 0.0
         self.lock = threading.Lock()
         self.is_loaded = False
         self.session = None
@@ -135,15 +142,17 @@ class ObjectDetectionEngine:
         return {
             "model": self.model_name,
             "enabled": getattr(self, "enabled", True),
-            "max_weight_size": "12.1 MB",
+            "max_weight_size": "36.2 MB" if "yolo11s" in self.model_name else "12.1 MB",
             "active_provider": self.active_provider,
             "gpu_accelerated": ("DirectML" in self.active_provider or "CUDA" in self.active_provider),
             "is_loaded": self.is_loaded,
             "latest_caption": caption,
             "detected_objects": objs,
             "caption_history": hist,
-            "cooldown_s": self.cooldown_s,
-            "resource_cap": "<= 40% CPU (DirectML GPU)"
+            "cooldown_s": round(self.cooldown_s, 3),
+            "gpu_duty_pct": round(self.gpu_duty_pct, 1),
+            "cpu_pct": round(self.last_cpu_pct, 1),
+            "resource_cap": "<= 36% CPU | 7-9% GPU (cap 15%)"
         }
 
     def _letterbox(self, bgr_img):
@@ -176,7 +185,9 @@ class ObjectDetectionEngine:
 
         if not force and HAS_PSUTIL:
             cpu_now = psutil.cpu_percent(interval=None)
+            self.last_cpu_pct = cpu_now
             if cpu_now > 36.0:
+                self.cooldown_s = min(self.max_cooldown_s, self.cooldown_s + 0.05)
                 with self.lock:
                     return list(self.latest_boxes)
 
@@ -192,9 +203,22 @@ class ObjectDetectionEngine:
             return []
 
         with self.lock:
+            prev_t = self.last_inference_time
+            t0 = time.perf_counter()
             self.last_inference_time = time.time()
             blob, scale, pad_x, pad_y, orig_w, orig_h = self._letterbox(img)
-            outputs = self.session.run(None, {self.input_name: blob})[0]  # (1, 84, 2100)
+            outputs = self.session.run(None, {self.input_name: blob})[0]
+            infer_ms = (time.perf_counter() - t0) * 1000.0
+            self.last_infer_ms = infer_ms
+            if prev_t > 0:
+                dt_ms = max(infer_ms, (self.last_inference_time - prev_t) * 1000.0)
+                duty = min(100.0, (infer_ms / dt_ms) * 100.0)
+                self.gpu_duty_pct = 0.7 * self.gpu_duty_pct + 0.3 * duty if self.gpu_duty_pct > 0 else duty
+                # Adaptive governor: target 7-9% GPU (hard cap 15%), CPU <= 36%
+                if self.gpu_duty_pct > 14.5 or self.last_cpu_pct > 32.0:
+                    self.cooldown_s = min(self.max_cooldown_s, self.cooldown_s + 0.04)
+                elif self.gpu_duty_pct < 7.0 and self.last_cpu_pct < 28.0:
+                    self.cooldown_s = max(self.min_cooldown_s, self.cooldown_s - 0.02)
 
             preds = np.squeeze(outputs, axis=0).T  # (2100, 84)
             boxes_xywh = preds[:, :4]
