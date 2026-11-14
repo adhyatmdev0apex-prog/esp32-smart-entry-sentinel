@@ -1149,71 +1149,272 @@
             color: white;
             border-color: var(--accent-primary);
         }
+
+        /* ================= SENTINEL SECURITY CONTROL CENTER ================= */
+        .sentinel-topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            padding: 14px 20px;
+            background: rgba(15, 23, 42, 0.92);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 14px;
+            margin-bottom: 14px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+            flex-wrap: wrap;
+        }
+        .sentinel-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .sentinel-logo {
+            font-size: 1.35rem;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            color: #f8fafc;
+        }
+        .sentinel-sub {
+            font-size: 0.78rem;
+            color: #94a3b8;
+        }
+        .sentinel-status-right {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+        .security-state-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            background: rgba(16, 185, 129, 0.14);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.35);
+        }
+        .security-state-pill.alert {
+            background: rgba(239, 68, 68, 0.16);
+            color: #f87171;
+            border-color: rgba(239, 68, 68, 0.45);
+        }
+        .sentinel-clock {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 0.92rem;
+            font-weight: 600;
+            color: #cbd5e1;
+        }
+        .sentinel-nav {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            padding: 8px;
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            border-radius: 12px;
+            margin-bottom: 18px;
+        }
+        .nav-tab {
+            background: transparent;
+            border: 1px solid transparent;
+            color: #94a3b8;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 0.86rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .nav-tab:hover {
+            color: #f1f5f9;
+            background: rgba(148, 163, 184, 0.1);
+        }
+        .nav-tab.active {
+            background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        .page-view { display: none; }
+        .page-view.active { display: block; }
+
+        .overview-top-grid {
+            display: grid;
+            grid-template-columns: 270px 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .overview-bottom-grid {
+            display: grid;
+            grid-template-columns: 270px 1fr 240px;
+            gap: 16px;
+        }
+        @media (max-width: 980px) {
+            .overview-top-grid, .overview-bottom-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .panel-title-sm {
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #94a3b8;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 9px 10px;
+            border-radius: 8px;
+            background: rgba(15, 23, 42, 0.55);
+            border: 1px solid rgba(148, 163, 184, 0.12);
+            margin-bottom: 8px;
+            font-size: 0.86rem;
+            font-weight: 600;
+        }
+        .dot-ind {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            background: #64748b;
+        }
+        .dot-ind.on { background: #10b981; box-shadow: 0 0 8px #10b981; }
+        .dot-ind.off { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
+        .dot-ind.warn { background: #f59e0b; box-shadow: 0 0 8px #f59e0b; }
+        .devices-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+            margin-bottom: 18px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- HEADER -->
-        <div class="header">
-            <div class="header-top">
+        <!-- SENTINEL SECURITY CONTROL CENTER TOPBAR -->
+        <div class="sentinel-topbar">
+            <div class="sentinel-brand">
+                <span style="font-size: 1.5rem;">🛡️</span>
                 <div>
-                    <h1>🏠 Smart Door Entry — Identity & Monitoring</h1>
-                    <div class="header-subtitle">
-                        Dual AI Architecture: 👤 Face Recognition Engine • 🌐 Universal Scene Recognition Engine (DirectML GPU)
+                    <div class="sentinel-logo">SENTINEL</div>
+                    <div class="sentinel-sub">Smart Door Entry &amp; Security Control Center (ESP32-CAM + ESP32-WROOM)</div>
+                </div>
+            </div>
+            <div class="sentinel-status-right">
+                <div id="securityStatePill" class="security-state-pill">
+                    <span class="dot-ind on" id="securityStateDot" style="margin-right:0;"></span>
+                    <span id="securityStateText">SYSTEM SECURE</span>
+                </div>
+                <div class="sentinel-clock" id="sentinelClock">--:-- --</div>
+            </div>
+        </div>
+
+        <!-- MULTI-PAGE NAVIGATION BAR -->
+        <nav class="sentinel-nav" id="sentinelNav">
+            <button class="nav-tab active" data-page="overview" onclick="switchPage('overview')">🛡️ Overview</button>
+            <button class="nav-tab" data-page="camera" onclick="switchPage('camera')">📹 Live Camera</button>
+            <button class="nav-tab" data-page="events" onclick="switchPage('events')">📋 Events</button>
+            <button class="nav-tab" data-page="people" onclick="switchPage('people')">👤 People <span class="badge-count" id="navPeopleCount">{{ total_persons }}</span></button>
+            <button class="nav-tab" data-page="alerts" onclick="switchPage('alerts')">🔔 Alerts</button>
+            <button class="nav-tab" data-page="devices" onclick="switchPage('devices')">🔌 Devices</button>
+            <button class="nav-tab" data-page="analytics" onclick="switchPage('analytics')">📊 Analytics</button>
+            <button class="nav-tab" data-page="settings" onclick="switchPage('settings')">⚙️ Settings</button>
+        </nav>
+
+        <!-- PAGE 1: OVERVIEW (SECURITY CONTROL CENTER) -->
+        <div id="page-overview" class="page-view active">
+            <div class="overview-top-grid">
+                <div class="card" style="padding: 16px;">
+                    <div class="panel-title-sm">
+                        <span>LIVE STATUS</span>
+                        <button class="btn btn-secondary btn-sm" onclick="refreshControlCenterHealth(true)" style="padding:2px 8px; font-size:0.72rem;">🔄</button>
+                    </div>
+                    <div class="status-row">
+                        <span><span class="dot-ind" id="ovDotWroom"></span>WROOM</span>
+                        <span id="ovTxtWroom" style="font-size:0.78rem; color:#94a3b8;">Checking...</span>
+                    </div>
+                    <div class="status-row">
+                        <span><span class="dot-ind" id="ovDotCamera"></span>CAMERA</span>
+                        <span id="ovTxtCamera" style="font-size:0.78rem; color:#94a3b8;">Checking...</span>
+                    </div>
+                    <div class="status-row">
+                        <span><span class="dot-ind on" id="ovDotAi"></span>AI SERVER</span>
+                        <span id="ovTxtAi" style="font-size:0.78rem; color:#34d399;">Online</span>
+                    </div>
+                    <div class="status-row" style="margin-bottom:0;">
+                        <span><span class="dot-ind on" id="ovDotDb"></span>DATABASE</span>
+                        <span id="ovTxtDb" style="font-size:0.78rem; color:#34d399;">SQLite OK</span>
+                    </div>
+                    <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="switchPage('devices')">🔌 Devices</button>
+                        <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="switchPage('camera')">📹 Full View</button>
                     </div>
                 </div>
-                <div class="action-toolbar">
-                    <button class="btn btn-primary recog-toggle-btn" onclick="toggleRecognitionPipeline()" id="topRecogToggleBtn" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); font-weight: 600; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);">
-                        👤 Face Engine: ON
-                    </button>
-                    <button class="btn btn-primary vlm-toggle-btn" onclick="toggleVlmPipeline()" id="topVlmToggleBtn" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); font-weight: 600; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.25);">
-                        🌐 Universal VLM: ON
-                    </button>
-                    <button class="btn btn-secondary" onclick="triggerVlmDescribe()" id="topVlmDescribeBtn" title="Invoke VLM to describe current scene on AMD Radeon 840M GPU">
-                        🔍 Describe Scene
-                    </button>
-                    <button class="btn btn-secondary" onclick="toggleCameraSettings()" id="settingsToggleBtn">
-                        ⚙️ Camera Controls
-                    </button>
-                    <button class="btn btn-warning" onclick="toggleDuplicateReview()">
-                        🔍 Duplicates
-                        <span class="badge-count" id="dupCountBadge">{{ duplicate_count }}</span>
-                    </button>
-                    <button class="btn btn-primary" onclick="toggleMergeMode()">
-                        🔀 Merge
-                    </button>
-                    <button class="btn btn-primary" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);" onclick="openAddPersonModal()">
-                        ➕ Enroll Person
-                    </button>
+
+                <div id="overviewCameraSlot">
+                    <!-- #liveStreamCard is placed here when Overview is active -->
                 </div>
             </div>
 
-            <div class="stats">
-                <div class="stat-box">
-                    <h3 id="statTotalPersons">{{ total_persons }}</h3>
-                    <p>Enrolled Identities</p>
+            <div class="overview-bottom-grid">
+                <div class="card" style="padding: 16px;">
+                    <div class="panel-title-sm">
+                        <span>ALERTS</span>
+                        <button class="btn btn-secondary btn-sm" onclick="switchPage('alerts')" style="padding:2px 8px; font-size:0.72rem;">View All</button>
+                    </div>
+                    <div id="ovAlertsSummary" style="font-size:0.84rem; display:flex; flex-direction:column; gap:8px;">
+                        <div style="color:#64748b;">Loading alerts...</div>
+                    </div>
                 </div>
-                <div class="stat-box">
-                    <h3 id="statTotalImages">{{ total_images }}</h3>
-                    <p>Full Event Frames</p>
+
+                <div class="card" style="padding: 16px;">
+                    <div class="panel-title-sm">
+                        <span>RECENT ACTIVITY</span>
+                        <button class="btn btn-secondary btn-sm" onclick="switchPage('events')" style="padding:2px 8px; font-size:0.72rem;">All Events</button>
+                    </div>
+                    <div id="ovRecentActivity" style="font-size:0.84rem; max-height:190px; overflow-y:auto;">
+                        <div style="color:#64748b;">Loading recent activity...</div>
+                    </div>
                 </div>
-                <div class="stat-box">
-                    <h3 style="font-size: 1.05rem; color: #34d399;">👤 YuNet + MobileFaceNet</h3>
-                    <p>Face Engine (Threshold: {{ tolerance }})</p>
-                </div>
-                <div class="stat-box">
-                    <h3 style="font-size: 1.05rem; color: #a5b4fc;">🌐 DirectML Radeon 840M</h3>
-                    <p>Universal VLM (&le; 30% Load)</p>
-                </div>
-                <div class="stat-box">
-                    <h3 id="statChipTemp" style="font-size: 1.25rem; color: #f59e0b;">-- °C</h3>
-                    <p>ESP32 Die Temp</p>
+
+                <div class="card" style="padding: 16px;">
+                    <div class="panel-title-sm"><span>SYSTEM</span></div>
+                    <div class="status-row">
+                        <span>WiFi (CAM/WROOM)</span>
+                        <span class="dot-ind" id="sysDotWifi" style="margin-right:0;"></span>
+                    </div>
+                    <div class="status-row">
+                        <span>MQTT</span>
+                        <span class="dot-ind" id="sysDotMqtt" style="margin-right:0;"></span>
+                    </div>
+                    <div class="status-row">
+                        <span>AI</span>
+                        <span class="dot-ind on" id="sysDotAi" style="margin-right:0;"></span>
+                    </div>
+                    <div class="status-row" style="margin-bottom:0;">
+                        <span>DB</span>
+                        <span class="dot-ind on" id="sysDotDb" style="margin-right:0;"></span>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- DUAL AI RECOGNITION ENGINES HUB -->
-        <div class="card" style="margin-bottom: 24px; border: 1px solid rgba(99, 102, 241, 0.35); background: linear-gradient(180deg, rgba(30, 27, 75, 0.45) 0%, rgba(17, 24, 39, 0.85) 100%); box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+        <!-- DUAL AI RECOGNITION ENGINES HUB (moved to #settingsAiSlot on load) -->
+        <div class="card" id="dualAiHubCard" style="margin-bottom: 24px; border: 1px solid rgba(99, 102, 241, 0.35); background: linear-gradient(180deg, rgba(30, 27, 75, 0.45) 0%, rgba(17, 24, 39, 0.85) 100%); box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
             <div class="card-header" style="border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 14px;">
                 <div>
                     <h2 style="display: flex; align-items: center; gap: 10px; margin: 0; font-size: 1.25rem;">
@@ -1563,9 +1764,12 @@
             </div>
         </div>
 
-        <!-- LIVE CAMERA STREAM + REAL-TIME RECOGNITION TELEMETRY -->
+        <!-- PAGE 2: LIVE CAMERA & TELEMETRY -->
+        <div id="page-camera" class="page-view">
+        <div id="cameraPageSettingsSlot"></div>
         <div class="live-grid">
-            <div class="card">
+            <div id="cameraPageSlot">
+            <div class="card" id="liveStreamCard">
                 <div class="card-header">
                     <h2>📹 Live ESP32-CAM Feed</h2>
                     <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
@@ -1605,8 +1809,9 @@
                     </div>
                 </div>
             </div>
+            </div> <!-- /#cameraPageSlot -->
 
-            <div class="card">
+            <div class="card" id="liveTelemetryCard">
                 <div class="card-header">
                     <h2>🧠 Live Recognition Telemetry</h2>
                     <div style="display: flex; gap: 8px; align-items: center;">
@@ -1650,16 +1855,121 @@
                 </div>
             </div>
         </div>
+        </div> <!-- /#page-camera -->
 
+        <!-- PAGE 3: EVENTS & AUDIT LOG -->
+        <div id="page-events" class="page-view">
+        <!-- PHASE 9: PERSISTENT EVENT DATABASE & AUDIT LOG -->
+        <div class="card" style="margin-top: 0;">
+            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <h2>🗄️ Event Database &amp; Audit Log (SQLite)</h2>
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <input id="dbSearchInput" type="text" placeholder="Search person, reason, object..." oninput="if(this._t)clearTimeout(this._t);this._t=setTimeout(loadEventDb,300);" style="background:#0f172a; color:#f1f5f9; border:1px solid rgba(148,163,184,0.3); border-radius:8px; padding:5px 10px; font-size:0.82rem; min-width:200px;">
+                    <select id="dbEventFilter" onchange="loadEventDb()" style="background:#0f172a; color:#f1f5f9; border:1px solid rgba(148,163,184,0.3); border-radius:8px; padding:5px 10px; font-size:0.82rem;">
+                        <option value="all">All Events</option>
+                        <option value="recognized">Recognized</option>
+                        <option value="inconclusive">Inconclusive</option>
+                        <option value="unknown_pending">Unknown</option>
+                        <option value="unusable_quality">Low Quality</option>
+                    </select>
+                    <button class="btn btn-secondary btn-sm" id="btnDbModeEvents" onclick="switchDbTab('events')">📋 Events</button>
+                    <button class="btn btn-secondary btn-sm" id="btnDbModeAudit" onclick="switchDbTab('audit')">🛡️ Audit Log</button>
+                    <button class="btn btn-secondary btn-sm" onclick="refreshPhase9Db()">🔄 Refresh</button>
+                </div>
+            </div>
+            <div id="dbAnalyticsSummary" style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px; font-size:0.82rem; color:#94a3b8;">
+                Loading analytics...
+            </div>
+            <div id="dbRecordsContainer" style="max-height:420px; overflow-y:auto; border:1px solid rgba(148,163,184,0.18); border-radius:10px; padding:10px; background:rgba(15,23,42,0.45); font-size:0.84rem;">
+                Loading persistent records...
+            </div>
+        </div>
+        </div> <!-- /#page-events -->
+
+        <!-- PAGE 5: ALERTS & NOTIFICATION CENTER -->
+        <div id="page-alerts" class="page-view">
+        <!-- PHASE 10: NOTIFICATION & ALERT CENTER -->
+        <div class="card" style="margin-top: 0; padding: 20px;" id="phase10NotifyCard">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+                <h2 style="font-size:1.25rem; font-weight:700; margin:0; display:flex; align-items:center; gap:8px;">
+                    <span>🔔 Notification & Alert Center</span>
+                    <span id="notifyQueueBadge" style="font-size:0.75rem; padding:2px 8px; border-radius:999px; background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3);">Queue: 0</span>
+                </h2>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                    <button class="btn btn-secondary btn-sm" id="btnWebPushPerm" onclick="requestWebPushPermission()">🖥️ Enable Browser Push</button>
+                    <button class="btn btn-secondary btn-sm" onclick="toggleNotifyConfigPanel()">⚙️ Providers</button>
+                    <button class="btn btn-primary btn-sm" onclick="sendTestNotification()">🧪 Test Alert</button>
+                    <button class="btn btn-secondary btn-sm" onclick="refreshPhase10Notifications()">🔄</button>
+                </div>
+            </div>
+
+            <div id="notifyProviderPills" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; font-size:0.8rem;">
+                Loading providers...
+            </div>
+
+            <div id="notifyConfigPanel" style="display:none; margin-bottom:14px; padding:12px; border-radius:10px; border:1px solid rgba(148,163,184,0.22); background:rgba(15,23,42,0.6);">
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px; font-size:0.82rem;">
+                    <div>
+                        <label style="display:flex; align-items:center; gap:6px; font-weight:600; margin-bottom:4px;">
+                            <input type="checkbox" id="cfgWebhookEnabled"> 🌐 Webhook
+                        </label>
+                        <input id="cfgWebhookUrl" type="text" placeholder="https://example.com/webhook" style="width:100%; padding:6px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+                    </div>
+                    <div>
+                        <label style="display:flex; align-items:center; gap:6px; font-weight:600; margin-bottom:4px;">
+                            <input type="checkbox" id="cfgMqttEnabled"> 📡 MQTT Broker
+                        </label>
+                        <input id="cfgMqttHost" type="text" placeholder="127.0.0.1:1883" style="width:100%; padding:6px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+                    </div>
+                    <div>
+                        <label style="display:flex; align-items:center; gap:6px; font-weight:600; margin-bottom:4px;">
+                            <input type="checkbox" id="cfgTelegramEnabled"> ✈️ Telegram
+                        </label>
+                        <input id="cfgTelegramToken" type="password" placeholder="Bot Token" style="width:100%; padding:6px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; margin-bottom:4px;">
+                        <input id="cfgTelegramChat" type="text" placeholder="Chat ID" style="width:100%; padding:6px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+                    </div>
+                    <div>
+                        <label style="display:flex; align-items:center; gap:6px; font-weight:600; margin-bottom:4px;">
+                            <input type="checkbox" id="cfgPushEnabled"> 📱 Device Push (ntfy)
+                        </label>
+                        <input id="cfgPushTopic" type="text" placeholder="ntfy topic (e.g. sentinel-door)" style="width:100%; padding:6px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+                    </div>
+                    <div>
+                        <label style="display:flex; align-items:center; gap:6px; font-weight:600; margin-bottom:4px;">
+                            <input type="checkbox" id="cfgWhatsappEnabled"> 💬 WhatsApp Gateway
+                        </label>
+                        <input id="cfgWhatsappUrl" type="text" placeholder="Gateway API URL" style="width:100%; padding:6px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+                    </div>
+                </div>
+                <div style="margin-top:10px; display:flex; justify-content:flex-end; gap:8px;">
+                    <button class="btn btn-primary btn-sm" onclick="saveNotifyConfig()">💾 Save Provider Config</button>
+                </div>
+            </div>
+
+            <div id="notifyAlertsList" style="max-height:360px; overflow-y:auto; border:1px solid rgba(148,163,184,0.18); border-radius:10px; padding:10px; background:rgba(15,23,42,0.45); font-size:0.84rem;">
+                Loading recent alerts...
+            </div>
+        </div>
+        </div> <!-- /#page-alerts -->
+
+        <!-- PAGE 4: PEOPLE (ENROLLED IDENTITIES) -->
+        <div id="page-people" class="page-view">
+        <div id="peopleDupMergeSlot"></div>
         <!-- ENROLLED PERSON PROFILES -->
-        <div style="display:flex; justify-content:space-between; align-items:center; margin: 32px 0 16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin: 4px 0 16px; flex-wrap:wrap; gap:10px;">
             <h2 style="font-size:1.4rem; font-weight:700; color:var(--text-primary); margin:0; display:flex; align-items:center; gap:8px;">
                 <span>👤 Enrolled Identities</span>
                 <span class="badge-count" style="font-size:0.85rem; padding: 2px 8px;">{{ total_persons }}</span>
             </h2>
-            <button class="btn btn-primary btn-sm" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);" onclick="openAddPersonModal()">
-                ➕ Enroll New Person
-            </button>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button class="btn btn-warning btn-sm" onclick="toggleDuplicateReview()">
+                    🔍 Duplicates <span class="badge-count" id="dupCountBadge">{{ duplicate_count }}</span>
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="toggleMergeMode()">🔀 Merge</button>
+                <button class="btn btn-primary btn-sm" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);" onclick="openAddPersonModal()">
+                    ➕ Enroll New Person
+                </button>
+            </div>
         </div>
         {% if persons %}
             {% for person in persons %}
@@ -1733,6 +2043,168 @@
                 <p>No enrolled identities yet. Waiting for verified face detections...</p>
             </div>
         {% endif %}
+        </div> <!-- /#page-people -->
+
+        <!-- PAGE 6: DEVICES (ESP32-WROOM, ESP32-CAM & AI SERVER) -->
+        <div id="page-devices" class="page-view">
+            <div class="devices-grid">
+                <div class="card" style="padding: 18px;">
+                    <div class="card-header" style="margin-bottom: 10px;">
+                        <h2 style="margin:0;">📡 ESP32-WROOM Node</h2>
+                        <span id="devWroomBadge" class="status-badge-live offline"><span class="status-dot"></span><span id="devWroomBadgeTxt">Checking...</span></span>
+                    </div>
+                    <p style="color:#94a3b8; font-size:0.86rem; margin-bottom:12px;">
+                        Door reed sensor, PIR motion, local buzzer &amp; hardware event relay (<code>192.168.29.20</code>).
+                    </p>
+                    <div id="devWroomMeta" style="font-size:0.83rem; color:#cbd5e1; margin-bottom:14px;">IP: 192.168.29.20</div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="btn btn-secondary btn-sm" onclick="rebootWroomDevice()">🔄 Reboot WROOM</button>
+                        <button class="btn btn-primary btn-sm" onclick="simulateWroomEvent('DOOR_OPEN')">🚪 Test Door Open</button>
+                        <button class="btn btn-secondary btn-sm" onclick="simulateWroomEvent('MOTION_DETECTED')">🏃 Test Motion</button>
+                    </div>
+                </div>
+
+                <div class="card" style="padding: 18px;">
+                    <div class="card-header" style="margin-bottom: 10px;">
+                        <h2 style="margin:0;">📹 ESP32-CAM Node</h2>
+                        <span id="devCamBadge" class="status-badge-live offline"><span class="status-dot"></span><span id="devCamBadgeTxt">Checking...</span></span>
+                    </div>
+                    <p style="color:#94a3b8; font-size:0.86rem; margin-bottom:12px;">
+                        AI-Thinker OV2640 MJPEG video stream (port 81) &amp; onboard GPIO 4 flash controller.
+                    </p>
+                    <div id="devCamMeta" style="font-size:0.83rem; color:#cbd5e1; margin-bottom:14px;">IP: 192.168.29.10 | FPS: -- | Temp: -- °C</div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="btn btn-secondary btn-sm" onclick="rebootCamDevice()">🔄 Reboot CAM</button>
+                        <button class="btn btn-secondary btn-sm" onclick="fetch('/stream/reconnect', {method:'POST'}).then(()=>showToast('Reconnecting stream...','info'))">🔌 Reconnect Stream</button>
+                    </div>
+                </div>
+
+                <div class="card" style="padding: 18px;">
+                    <div class="card-header" style="margin-bottom: 10px;">
+                        <h2 style="margin:0;">🧠 AI Server &amp; Cluster</h2>
+                        <span class="status-badge-live online"><span class="status-dot"></span><span>ONLINE</span></span>
+                    </div>
+                    <p style="color:#94a3b8; font-size:0.86rem; margin-bottom:12px;">
+                        Face Recognition (YuNet + MobileFaceNet 512-D), Object Detection (YOLOv8n DirectML), SQLite EventDB &amp; Notification Manager.
+                    </p>
+                    <div id="devAiMeta" style="font-size:0.83rem; color:#cbd5e1; margin-bottom:14px;">Enrolled: {{ total_persons }} | Frames: {{ total_images }}</div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="btn btn-danger btn-sm" onclick="fullSystemReboot()" style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); color:#fff;">⚡ Full Reboot (CAM + WROOM + Models)</button>
+                        <button class="btn btn-secondary btn-sm" onclick="refreshControlCenterHealth(true)">🔄 Refresh Health</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="devicesCamSettingsSlot"></div>
+        </div> <!-- /#page-devices -->
+
+        <!-- PAGE 7: ANALYTICS (PHASE 9 DATABASE) -->
+        <div id="page-analytics" class="page-view">
+            <div class="card" style="padding: 20px;">
+                <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <h2 style="margin:0;">📊 Security &amp; Visitor Analytics (Phase 9 SQLite)</h2>
+                    <button class="btn btn-secondary btn-sm" onclick="renderAnalyticsPage()">🔄 Refresh Analytics</button>
+                </div>
+                <div id="analyticsKpis" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px; margin:14px 0;">
+                    <div class="stat-box"><h3 id="anaTotalEvents">--</h3><p>Total DB Events</p></div>
+                    <div class="stat-box"><h3 id="anaRecognized">--</h3><p>Recognized (7d)</p></div>
+                    <div class="stat-box"><h3 id="anaUnknown">--</h3><p>Unknown / Pending (7d)</p></div>
+                    <div class="stat-box"><h3 id="anaTopVisitor">--</h3><p>Top Visitor (7d)</p></div>
+                </div>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-top:14px;">
+                    <div style="padding:14px; border-radius:10px; border:1px solid rgba(148,163,184,0.18); background:rgba(15,23,42,0.5);">
+                        <div class="panel-title-sm"><span>24h Hourly Activity</span></div>
+                        <div id="analyticsHourlyChart" style="font-size:0.82rem; color:#cbd5e1;">Loading...</div>
+                    </div>
+                    <div style="padding:14px; border-radius:10px; border:1px solid rgba(148,163,184,0.18); background:rgba(15,23,42,0.5);">
+                        <div class="panel-title-sm"><span>Daily Trend (Last 7 Days)</span></div>
+                        <div id="analyticsDailyChart" style="font-size:0.82rem; color:#cbd5e1;">Loading...</div>
+                    </div>
+                    <div style="padding:14px; border-radius:10px; border:1px solid rgba(148,163,184,0.18); background:rgba(15,23,42,0.5);">
+                        <div class="panel-title-sm"><span>Top Visitors</span></div>
+                        <div id="analyticsTopVisitors" style="font-size:0.82rem; color:#cbd5e1;">Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </div> <!-- /#page-analytics -->
+
+        <!-- PAGE 8: SETTINGS (AI MODES, THRESHOLDS & NOTIFICATION PROVIDERS) -->
+        <div id="page-settings" class="page-view">
+            <div id="settingsAiSlot"></div>
+
+            <div class="card" style="padding: 20px; margin-bottom: 20px;">
+                <div class="card-header" style="margin-bottom:10px;">
+                    <h2 style="margin:0;">📷 Default Camera Settings (Persisted &amp; Auto-Applied)</h2>
+                </div>
+                <p style="color:#94a3b8; font-size:0.86rem; margin-bottom:14px;">
+                    Any changes saved here are stored as the permanent default in <code>data/camera_defaults.json</code>, applied immediately to the ESP32-CAM, and automatically re-applied whenever the camera boots or reconnects.
+                </p>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:12px; font-size:0.84rem;">
+                    <div>
+                        <label style="display:block; color:#94a3b8; margin-bottom:4px;">Resolution (framesize)</label>
+                        <select id="defCamFramesize" style="width:100%; padding:7px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+                            <option value="5">QVGA (320x240)</option>
+                            <option value="6">CIF (400x296)</option>
+                            <option value="8">VGA (640x480)</option>
+                            <option value="9">SVGA (800x600)</option>
+                            <option value="10">XGA (1024x768)</option>
+                            <option value="11">HD (1280x720)</option>
+                            <option value="12">SXGA (1280x1024)</option>
+                            <option value="13">UXGA (1600x1200)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block; color:#94a3b8; margin-bottom:4px;">JPEG Quality (10-63)</label>
+                        <input id="defCamQuality" type="number" min="10" max="63" value="12" style="width:100%; padding:7px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+                    </div>
+                    <div>
+                        <label style="display:block; color:#94a3b8; margin-bottom:4px;">Flash LED (0-255)</label>
+                        <input id="defCamFlash" type="number" min="0" max="255" value="0" style="width:100%; padding:7px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+                    </div>
+                    <div>
+                        <label style="display:block; color:#94a3b8; margin-bottom:4px;">Brightness (-2 to 2)</label>
+                        <input id="defCamBrightness" type="number" min="-2" max="2" value="0" style="width:100%; padding:7px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+                    </div>
+                    <div>
+                        <label style="display:block; color:#94a3b8; margin-bottom:4px;">Contrast (-2 to 2)</label>
+                        <input id="defCamContrast" type="number" min="-2" max="2" value="0" style="width:100%; padding:7px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+                    </div>
+                    <div>
+                        <label style="display:block; color:#94a3b8; margin-bottom:4px;">Saturation (-2 to 2)</label>
+                        <input id="defCamSaturation" type="number" min="-2" max="2" value="0" style="width:100%; padding:7px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+                    </div>
+                </div>
+                <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:12px; font-size:0.84rem;">
+                    <label style="display:flex; align-items:center; gap:6px;"><input type="checkbox" id="defCamVflip"> V-Flip</label>
+                    <label style="display:flex; align-items:center; gap:6px;"><input type="checkbox" id="defCamHmirror"> H-Mirror</label>
+                    <label style="display:flex; align-items:center; gap:6px;"><input type="checkbox" id="defCamAwb" checked> Auto White Balance</label>
+                    <label style="display:flex; align-items:center; gap:6px;"><input type="checkbox" id="defCamAec" checked> Auto Exposure</label>
+                </div>
+                <div style="margin-top:14px; display:flex; justify-content:flex-end;">
+                    <button class="btn btn-primary btn-sm" onclick="saveCameraDefaults()">💾 Save &amp; Apply as Default Camera Settings</button>
+                </div>
+            </div>
+
+            <div class="card" style="padding: 20px; margin-bottom: 20px;">
+                <div class="card-header" style="margin-bottom:10px;">
+                    <h2 style="margin:0;">🔔 Notification Providers &amp; Secrets (Backend-Only)</h2>
+                </div>
+                <p style="color:#94a3b8; font-size:0.86rem; margin-bottom:12px;">
+                    Configure Webhook, MQTT, Telegram, Device Push (ntfy), and WhatsApp Gateway. Credentials are stored only on the Python backend (<code>data/notification_config.json</code>), never on ESP32 hardware.
+                </p>
+                <div id="settingsNotifySlot"></div>
+            </div>
+
+            <div class="card" style="padding: 20px; border: 1px solid rgba(239, 68, 68, 0.3);">
+                <div class="card-header" style="margin-bottom:8px;">
+                    <h2 style="margin:0; color:#f87171;">⚠️ System Maintenance</h2>
+                </div>
+                <p style="color:#94a3b8; font-size:0.86rem; margin-bottom:12px;">
+                    Face recognition matching threshold is currently <strong>{{ tolerance }}</strong>. Use the action below only if you want to wipe all enrolled profiles and event history.
+                </p>
+                <button class="btn btn-danger btn-sm" onclick="if(confirm('Reset ALL enrolled identities and event history?')) fetch('/reset',{method:'POST'}).then(()=>location.reload())">🗑️ Reset All Data</button>
+            </div>
+        </div> <!-- /#page-settings -->
     </div>
 
     <!-- EDIT PERSON NAME MODAL -->
@@ -3509,6 +3981,230 @@
             }
         }
 
+        let currentDbTab = 'events';
+        function switchDbTab(tab) {
+            currentDbTab = tab;
+            refreshPhase9Db();
+        }
+        async function refreshPhase9Db() {
+            try {
+                const aRes = await fetch('/api/v1/analytics?days=7');
+                const aData = await aRes.json();
+                const sumEl = document.getElementById('dbAnalyticsSummary');
+                if (sumEl && aData.ok) {
+                    const bt = aData.by_type || {};
+                    sumEl.innerHTML = `
+                        <span>Total DB Events: <strong style="color:#f8fafc;">${aData.total_events}</strong></span>
+                        <span>Recognized (7d): <strong style="color:#34d399;">${bt.recognized || 0}</strong></span>
+                        <span>Inconclusive (7d): <strong style="color:#fbbf24;">${bt.inconclusive || 0}</strong></span>
+                        <span>Audit Entries: <strong style="color:#38bdf8;">${aData.total_audit_entries}</strong></span>
+                    `;
+                }
+            } catch (e) {}
+            if (currentDbTab === 'audit') return loadAuditLog();
+            return loadEventDb();
+        }
+        async function loadEventDb() {
+            const box = document.getElementById('dbRecordsContainer');
+            const filterEl = document.getElementById('dbEventFilter');
+            const searchEl = document.getElementById('dbSearchInput');
+            const evType = filterEl ? filterEl.value : 'all';
+            const q = searchEl ? searchEl.value.trim() : '';
+            try {
+                const res = await fetch(`/api/v1/events/db?limit=50&type=${encodeURIComponent(evType)}&q=${encodeURIComponent(q)}`);
+                const data = await res.json();
+                if (!box) return;
+                if (!data.items || !data.items.length) {
+                    box.innerHTML = '<div style="color:#64748b;">No persistent events matching filter.</div>';
+                    return;
+                }
+                box.innerHTML = data.items.map(ev => {
+                    const who = ev.person_label ? `${ev.person_label} (${ev.person_id})` : (ev.person_id || 'Unknown');
+                    const objs = (ev.objects && ev.objects.length) ? ` • 📦 ${ev.objects.map(o => o.name).join(', ')}` : '';
+                    return `<div style="padding:6px 8px; border-bottom:1px solid rgba(148,163,184,0.1); display:flex; justify-content:space-between; gap:8px;">
+                        <span><strong>[${ev.event_type}]</strong> ${who} — ${ev.reason || ''}${objs}</span>
+                        <span style="color:#64748b; white-space:nowrap;">${ev.ts}</span>
+                    </div>`;
+                }).join('');
+            } catch (e) {
+                if (box) box.innerHTML = `<div style="color:#f87171;">Error loading events: ${e.message}</div>`;
+            }
+        }
+        async function loadAuditLog() {
+            const box = document.getElementById('dbRecordsContainer');
+            try {
+                const res = await fetch('/api/v1/audit?limit=40');
+                const data = await res.json();
+                if (!box) return;
+                if (!data.items || !data.items.length) {
+                    box.innerHTML = '<div style="color:#64748b;">No audit entries yet.</div>';
+                    return;
+                }
+                box.innerHTML = data.items.map(a => `<div style="padding:6px 8px; border-bottom:1px solid rgba(148,163,184,0.1); display:flex; justify-content:space-between; gap:8px;">
+                    <span><strong>[${a.action}]</strong> ${a.target} — ${a.details}</span>
+                    <span style="color:#64748b; white-space:nowrap;">${a.ts}</span>
+                </div>`).join('');
+            } catch (e) {
+                if (box) box.innerHTML = `<div style="color:#f87171;">Error loading audit log: ${e.message}</div>`;
+            }
+        }
+        document.addEventListener('DOMContentLoaded', () => { setTimeout(refreshPhase9Db, 600); setTimeout(refreshPhase10Notifications, 900); setInterval(refreshPhase10Notifications, 5000); });
+
+        let lastSeenAlertId = null;
+        function toggleNotifyConfigPanel() {
+            const p = document.getElementById('notifyConfigPanel');
+            if (!p) return;
+            const show = p.style.display === 'none';
+            p.style.display = show ? 'block' : 'none';
+            if (show) loadNotifyConfig();
+        }
+        function updateWebPushBtn() {
+            const btn = document.getElementById('btnWebPushPerm');
+            if (!btn || !('Notification' in window)) return;
+            if (Notification.permission === 'granted') {
+                btn.textContent = '🖥️ Browser Push: ON';
+                btn.style.color = '#34d399';
+            } else if (Notification.permission === 'denied') {
+                btn.textContent = '🖥️ Browser Push: Blocked';
+            } else {
+                btn.textContent = '🖥️ Enable Browser Push';
+            }
+        }
+        async function requestWebPushPermission() {
+            if (!('Notification' in window)) {
+                showToast('Browser notifications not supported in this browser.', 'error');
+                return;
+            }
+            const perm = await Notification.requestPermission();
+            updateWebPushBtn();
+            showToast(`Browser notification permission: ${perm}`, perm === 'granted' ? 'success' : 'warning');
+        }
+        async function loadNotifyConfig() {
+            try {
+                const res = await fetch('/api/v1/notifications/config');
+                const data = await res.json();
+                const cfg = (data.config && data.config.providers) || {};
+                document.getElementById('cfgWebhookEnabled').checked = !!(cfg.webhook && cfg.webhook.enabled);
+                document.getElementById('cfgWebhookUrl').value = (cfg.webhook && cfg.webhook.url) || '';
+                document.getElementById('cfgMqttEnabled').checked = !!(cfg.mqtt && cfg.mqtt.enabled);
+                const mHost = (cfg.mqtt && cfg.mqtt.host) || '127.0.0.1';
+                const mPort = (cfg.mqtt && cfg.mqtt.port) || 1883;
+                document.getElementById('cfgMqttHost').value = `${mHost}:${mPort}`;
+                document.getElementById('cfgTelegramEnabled').checked = !!(cfg.telegram && cfg.telegram.enabled);
+                document.getElementById('cfgTelegramToken').value = (cfg.telegram && cfg.telegram.bot_token) || '';
+                document.getElementById('cfgTelegramChat').value = (cfg.telegram && cfg.telegram.chat_id) || '';
+                document.getElementById('cfgPushEnabled').checked = !!(cfg.push && cfg.push.enabled);
+                document.getElementById('cfgPushTopic').value = (cfg.push && cfg.push.topic) || '';
+                document.getElementById('cfgWhatsappEnabled').checked = !!(cfg.whatsapp && cfg.whatsapp.enabled);
+                document.getElementById('cfgWhatsappUrl').value = (cfg.whatsapp && cfg.whatsapp.api_url) || '';
+            } catch (e) {
+                console.error('loadNotifyConfig error', e);
+            }
+        }
+        async function saveNotifyConfig() {
+            const mqttRaw = (document.getElementById('cfgMqttHost').value || '127.0.0.1:1883').split(':');
+            const patch = {
+                providers: {
+                    webhook: {
+                        enabled: document.getElementById('cfgWebhookEnabled').checked,
+                        url: document.getElementById('cfgWebhookUrl').value.trim(),
+                    },
+                    mqtt: {
+                        enabled: document.getElementById('cfgMqttEnabled').checked,
+                        host: mqttRaw[0].trim() || '127.0.0.1',
+                        port: parseInt(mqttRaw[1] || '1883', 10) || 1883,
+                    },
+                    telegram: {
+                        enabled: document.getElementById('cfgTelegramEnabled').checked,
+                        bot_token: document.getElementById('cfgTelegramToken').value.trim(),
+                        chat_id: document.getElementById('cfgTelegramChat').value.trim(),
+                    },
+                    push: {
+                        enabled: document.getElementById('cfgPushEnabled').checked,
+                        backend: 'ntfy',
+                        topic: document.getElementById('cfgPushTopic').value.trim(),
+                    },
+                    whatsapp: {
+                        enabled: document.getElementById('cfgWhatsappEnabled').checked,
+                        api_url: document.getElementById('cfgWhatsappUrl').value.trim(),
+                    },
+                }
+            };
+            try {
+                const res = await fetch('/api/v1/notifications/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(patch),
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    showToast('Notification provider config saved.', 'success');
+                    refreshPhase10Notifications();
+                } else {
+                    showToast('Failed to save notification config.', 'error');
+                }
+            } catch (e) {
+                showToast('Error saving config: ' + e.message, 'error');
+            }
+        }
+        async function sendTestNotification() {
+            try {
+                const res = await fetch('/api/v1/notifications/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ event_type: 'SYSTEM_FAILURE', title: 'Sentinel Test Alert', message: 'Test alert from Sentinel Dashboard.' })
+                });
+                const data = await res.json();
+                showToast('Test alert dispatched.', 'success');
+                refreshPhase10Notifications();
+            } catch (e) {
+                showToast('Test alert failed: ' + e.message, 'error');
+            }
+        }
+        async function refreshPhase10Notifications() {
+            updateWebPushBtn();
+            try {
+                const res = await fetch('/api/v1/notifications/status');
+                const data = await res.json();
+                if (!data.ok) return;
+                const qBadge = document.getElementById('notifyQueueBadge');
+                const totalSent = Object.values(data.providers || {}).reduce((acc, p) => acc + (p.sent || 0), 0);
+                if (qBadge) qBadge.textContent = `Queue: ${data.queue_size || 0} | Sent: ${totalSent}`;
+                const pills = document.getElementById('notifyProviderPills');
+                if (pills && data.providers) {
+                    pills.innerHTML = Object.entries(data.providers).map(([name, info]) => {
+                        const hasErr = !!info.last_error;
+                        const color = !info.enabled ? '#64748b' : (hasErr ? '#f87171' : '#34d399');
+                        const stateTxt = !info.enabled ? 'OFF' : (hasErr ? 'ERR' : 'READY');
+                        return `<span title="${info.last_error || ''}" style="padding:3px 9px; border-radius:999px; border:1px solid ${color}44; background:${color}18; color:${color};">${name.toUpperCase()}: ${stateTxt} (${info.sent || 0}/${info.failed || 0})</span>`;
+                    }).join('');
+                }
+                const list = document.getElementById('notifyAlertsList');
+                const alerts = data.recent_alerts || [];
+                if (alerts.length > 0 && alerts[0].event_id !== lastSeenAlertId) {
+                    if (lastSeenAlertId !== null && 'Notification' in window && Notification.permission === 'granted') {
+                        new Notification(alerts[0].title, { body: alerts[0].message });
+                    }
+                    lastSeenAlertId = alerts[0].event_id;
+                }
+                if (list) {
+                    if (!alerts.length) {
+                        list.innerHTML = '<div style="color:#64748b;">No alerts dispatched yet.</div>';
+                    } else {
+                        list.innerHTML = alerts.slice(0, 20).map(a => {
+                            const sevColor = a.severity === 'critical' ? '#f87171' : (a.severity === 'warning' ? '#fbbf24' : '#34d399');
+                            return `<div style="padding:6px 8px; border-bottom:1px solid rgba(148,163,184,0.1); display:flex; justify-content:space-between; gap:8px;">
+                                <span><strong style="color:${sevColor};">[${a.event_type}]</strong> ${a.title} — <span style="color:#cbd5e1;">${a.message}</span></span>
+                                <span style="color:#64748b; white-space:nowrap;">${(a.timestamp || '').slice(11, 19)}</span>
+                            </div>`;
+                        }).join('');
+                    }
+                }
+            } catch (e) {
+                console.error('refreshPhase10Notifications error', e);
+            }
+        }
+
         function updateOverlayBtn(enabled) {
             const btn = document.getElementById('toggleOverlayBtn');
             if (!btn) return;
@@ -3578,32 +4274,30 @@
                     }
                 }
 
-                // Update top stats & recognition telemetry
-                document.getElementById('statTotalPersons').textContent = data.total_persons;
-                document.getElementById('statTotalImages').textContent = data.total_images;
+                // Update top stats & recognition telemetry (null-safe)
+                const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+                setTxt('statTotalPersons', data.total_persons);
+                setTxt('statTotalImages', data.total_images);
+                setTxt('navPeopleCount', data.total_persons);
                 if (data.recognition_enabled) {
-                    document.getElementById('pendingTrackBadge').textContent = `${data.pending_candidates || 0} Pending Tracks`;
+                    setTxt('pendingTrackBadge', `${data.pending_candidates || 0} Pending Tracks`);
                 }
-                const hubPending = document.getElementById('hubPendingCount');
-                if (hubPending) {
-                    hubPending.textContent = data.pending_candidates || 0;
-                }
+                setTxt('hubPendingCount', data.pending_candidates || 0);
                 if (data.vlm) {
                     updateVlmUI(data.vlm.enabled, data.vlm);
                 }
-                const tempEl = document.getElementById('statChipTemp');
-                if (tempEl && data.temp_c !== undefined && data.temp_c !== null) {
-                    tempEl.textContent = `${Math.round(data.temp_c)} °C`;
+                if (data.temp_c !== undefined && data.temp_c !== null) {
+                    setTxt('statChipTemp', `${Math.round(data.temp_c)} °C`);
                 }
 
                 if (data.recognition_enabled && data.recognition_stats) {
                     const rs = data.recognition_stats;
-                    document.getElementById('cntRecognized').textContent = rs.recognized || 0;
-                    document.getElementById('cntUnknownPending').textContent = rs.unknown_pending || 0;
-                    document.getElementById('cntInconclusive').textContent = rs.inconclusive || 0;
-                    document.getElementById('cntUnusable').textContent = rs.unusable_quality || 0;
-                    document.getElementById('lastRecognitionBanner').textContent =
-                        rs.last_event_time ? `[${rs.last_event_time}] ${rs.last_status}` : rs.last_status;
+                    setTxt('cntRecognized', rs.recognized || 0);
+                    setTxt('cntUnknownPending', rs.unknown_pending || 0);
+                    setTxt('cntInconclusive', rs.inconclusive || 0);
+                    setTxt('cntUnusable', rs.unusable_quality || 0);
+                    setTxt('lastRecognitionBanner',
+                        rs.last_event_time ? `[${rs.last_event_time}] ${rs.last_status}` : rs.last_status);
                 }
 
                 if (data.recognition_enabled) {
@@ -3701,7 +4395,340 @@
             fetchCameraSettings();
             pollCameraStatus();
             setInterval(pollCameraStatus, 1500);
+            initControlCenter();
         });
+
+        /* ================= SENTINEL SECURITY CONTROL CENTER JS ================= */
+        let currentSentinelPage = 'overview';
+
+        function switchPage(pageId) {
+            const validPages = ['overview', 'camera', 'events', 'people', 'alerts', 'devices', 'analytics', 'settings'];
+            if (!validPages.includes(pageId)) pageId = 'overview';
+            currentSentinelPage = pageId;
+
+            document.querySelectorAll('.page-view').forEach(el => el.classList.remove('active'));
+            const target = document.getElementById(`page-${pageId}`);
+            if (target) target.classList.add('active');
+
+            document.querySelectorAll('.nav-tab').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.page === pageId);
+            });
+
+            // Reparent the single live MJPEG stream card between Overview and Live Camera
+            const streamCard = document.getElementById('liveStreamCard');
+            const ovSlot = document.getElementById('overviewCameraSlot');
+            const camSlot = document.getElementById('cameraPageSlot');
+            if (streamCard && ovSlot && camSlot) {
+                if (pageId === 'camera') {
+                    camSlot.appendChild(streamCard);
+                } else if (pageId === 'overview') {
+                    ovSlot.appendChild(streamCard);
+                }
+            }
+
+            if (pageId === 'events') refreshPhase9Db();
+            if (pageId === 'alerts') refreshPhase10Notifications();
+            if (pageId === 'devices') refreshControlCenterHealth(true);
+            if (pageId === 'analytics') renderAnalyticsPage();
+            if (pageId === 'settings') {
+                if (typeof loadNotifyConfig === 'function') loadNotifyConfig();
+                loadCameraDefaults();
+            }
+
+            if (window.location.hash !== `#${pageId}`) {
+                history.replaceState(null, '', `#${pageId}`);
+            }
+        }
+
+        function initControlCenter() {
+            // Move existing panels into their dedicated pages without losing any IDs
+            const moveInto = (elId, slotId, extraShow) => {
+                const el = document.getElementById(elId);
+                const slot = document.getElementById(slotId);
+                if (el && slot) {
+                    slot.appendChild(el);
+                    if (extraShow === 'block') el.style.display = 'block';
+                    if (extraShow === 'open') el.classList.add('open');
+                }
+            };
+            moveInto('dualAiHubCard', 'settingsAiSlot');
+            moveInto('notifyConfigPanel', 'settingsNotifySlot', 'block');
+            moveInto('cameraSettingsPanel', 'cameraPageSettingsSlot');
+            moveInto('duplicateReviewPanel', 'peopleDupMergeSlot');
+            moveInto('mergePanel', 'peopleDupMergeSlot');
+
+            // Ensure toggleCameraSettings spawns the panel right above the live camera box
+            const origToggleCam = window.toggleCameraSettings;
+            window.toggleCameraSettings = () => {
+                if (currentSentinelPage !== 'camera') {
+                    switchPage('camera');
+                    const panel = document.getElementById('cameraSettingsPanel');
+                    if (panel && !panel.classList.contains('open')) {
+                        panel.classList.add('open');
+                        if (typeof fetchCameraSettings === 'function') fetchCameraSettings();
+                    }
+                    return;
+                }
+                if (typeof origToggleCam === 'function') {
+                    origToggleCam();
+                } else {
+                    const panel = document.getElementById('cameraSettingsPanel');
+                    if (panel) panel.classList.toggle('open');
+                }
+            };
+
+            // Live clock
+            const updateClock = () => {
+                const clk = document.getElementById('sentinelClock');
+                if (clk) {
+                    clk.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                }
+            };
+            updateClock();
+            setInterval(updateClock, 15000);
+
+            // Initial page from hash
+            const hashPage = (window.location.hash || '#overview').replace('#', '');
+            switchPage(hashPage);
+
+            // Poll health + overview activity
+            refreshControlCenterHealth(false);
+            setInterval(() => refreshControlCenterHealth(false), 5000);
+            refreshOverviewActivity();
+            setInterval(refreshOverviewActivity, 5000);
+        }
+
+        async function refreshControlCenterHealth(force) {
+            try {
+                const res = await fetch('/api/v1/devices/health' + (force ? '?refresh=1' : ''));
+                const data = await res.json();
+                if (!data.ok) return;
+
+                const setDot = (dotId, txtId, ok, okTxt, offTxt) => {
+                    const dot = document.getElementById(dotId);
+                    const txt = document.getElementById(txtId);
+                    if (dot) {
+                        dot.classList.toggle('on', !!ok);
+                        dot.classList.toggle('off', !ok);
+                    }
+                    if (txt) {
+                        txt.textContent = ok ? okTxt : offTxt;
+                        txt.style.color = ok ? '#34d399' : '#f87171';
+                    }
+                };
+
+                const wOk = !!(data.wroom && data.wroom.online);
+                const cOk = !!(data.camera && data.camera.online);
+                setDot('ovDotWroom', 'ovTxtWroom', wOk, `Online (${data.wroom.ip})`, `Offline (${data.wroom.ip})`);
+                setDot('ovDotCamera', 'ovTxtCamera', cOk, `${data.camera.fps || 0} FPS`, 'Offline');
+                setDot('ovDotAi', 'ovTxtAi', true, data.ai_server.recognition_enabled ? 'Active' : 'Paused', 'Offline');
+                setDot('ovDotDb', 'ovTxtDb', true, 'SQLite OK', 'Offline');
+
+                // System panel dots
+                const wifiDot = document.getElementById('sysDotWifi');
+                if (wifiDot) {
+                    wifiDot.classList.toggle('on', wOk || cOk);
+                    wifiDot.classList.toggle('off', !wOk && !cOk);
+                }
+                const mqttDot = document.getElementById('sysDotMqtt');
+                if (mqttDot) {
+                    const mOn = data.mqtt && data.mqtt.enabled && !data.mqtt.last_error;
+                    mqttDot.classList.toggle('on', !!mOn);
+                    mqttDot.classList.toggle('warn', !!(data.mqtt && data.mqtt.enabled && data.mqtt.last_error));
+                }
+
+                // Devices page cards
+                const wBadge = document.getElementById('devWroomBadge');
+                const wBadgeTxt = document.getElementById('devWroomBadgeTxt');
+                const wMeta = document.getElementById('devWroomMeta');
+                if (wBadge && wBadgeTxt) {
+                    wBadge.className = 'status-badge-live ' + (wOk ? 'online' : 'offline');
+                    wBadgeTxt.textContent = wOk ? 'ONLINE' : 'OFFLINE';
+                }
+                if (wMeta) wMeta.textContent = `IP: ${data.wroom.ip} | Status: ${wOk ? 'Reachable' : 'Unreachable'}`;
+
+                const cBadge = document.getElementById('devCamBadge');
+                const cBadgeTxt = document.getElementById('devCamBadgeTxt');
+                const cMeta = document.getElementById('devCamMeta');
+                if (cBadge && cBadgeTxt) {
+                    cBadge.className = 'status-badge-live ' + (cOk ? 'online' : 'offline');
+                    cBadgeTxt.textContent = cOk ? 'STREAMING' : 'OFFLINE';
+                }
+                if (cMeta) {
+                    const t = data.camera.temp_c != null ? `${data.camera.temp_c} °C` : '-- °C';
+                    cMeta.textContent = `IP: ${data.camera.ip} | FPS: ${data.camera.fps} | Temp: ${t}`;
+                }
+            } catch (e) {
+                console.error('refreshControlCenterHealth error', e);
+            }
+        }
+
+        async function refreshOverviewActivity() {
+            try {
+                const [evRes, notifRes] = await Promise.all([
+                    fetch('/api/v1/events/db?limit=6'),
+                    fetch('/api/v1/notifications/status'),
+                ]);
+                const evData = await evRes.json();
+                const notifData = await notifRes.json();
+
+                // Recent activity
+                const actBox = document.getElementById('ovRecentActivity');
+                if (actBox && evData.items) {
+                    if (!evData.items.length) {
+                        actBox.innerHTML = '<div style="color:#64748b;">No recent activity yet.</div>';
+                    } else {
+                        actBox.innerHTML = evData.items.map(e => {
+                            const who = e.person_label || e.person_id || e.event_type;
+                            const timeStr = (e.ts || '').slice(11, 16);
+                            return `<div style="padding:6px 0; border-bottom:1px solid rgba(148,163,184,0.1); display:flex; justify-content:space-between; gap:8px;">
+                                <span><strong>${timeStr}</strong> ${who} <span style="color:#94a3b8;">(${e.event_type})</span></span>
+                            </div>`;
+                        }).join('');
+                    }
+                }
+
+                // Alerts summary + topbar security state
+                const alerts = (notifData && notifData.recent_alerts) || [];
+                const ovAlerts = document.getElementById('ovAlertsSummary');
+                if (ovAlerts) {
+                    if (!alerts.length) {
+                        ovAlerts.innerHTML = '<div style="color:#34d399;">🟢 No active alerts</div>';
+                    } else {
+                        ovAlerts.innerHTML = alerts.slice(0, 4).map(a => {
+                            const icon = a.event_type === 'UNKNOWN_PERSON' || a.severity === 'critical' ? '🔴' : (a.event_type === 'KNOWN_PERSON' ? '🟢' : '🟡');
+                            return `<div style="padding:5px 8px; border-radius:6px; background:rgba(15,23,42,0.55); border:1px solid rgba(148,163,184,0.12);">
+                                ${icon} <strong>${a.title}</strong>
+                            </div>`;
+                        }).join('');
+                    }
+                }
+                const pill = document.getElementById('securityStatePill');
+                const dot = document.getElementById('securityStateDot');
+                const txt = document.getElementById('securityStateText');
+                const hasCrit = alerts.slice(0, 3).some(a => a.severity === 'critical' || a.event_type === 'UNKNOWN_PERSON');
+                if (pill && dot && txt) {
+                    pill.classList.toggle('alert', hasCrit);
+                    dot.className = 'dot-ind ' + (hasCrit ? 'off' : 'on');
+                    dot.style.marginRight = '0';
+                    txt.textContent = hasCrit ? 'ATTENTION REQUIRED' : 'SYSTEM SECURE';
+                }
+            } catch (e) {
+                console.error('refreshOverviewActivity error', e);
+            }
+        }
+
+        async function simulateWroomEvent(eventType) {
+            try {
+                const res = await fetch('/api/v1/event', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        event_type: eventType,
+                        title: eventType === 'DOOR_OPEN' ? 'Door Opened (Test)' : 'Motion Detected (Test)',
+                        message: `Simulated ${eventType} from Devices Control Panel.`,
+                        source: 'esp32-wroom-test',
+                        severity: eventType === 'DOOR_OPEN' ? 'warning' : 'info',
+                        bypass_dedup: true,
+                    }),
+                });
+                const data = await res.json();
+                showToast(data.ok ? `Sent ${eventType} event` : 'Event failed', data.ok ? 'success' : 'error');
+                refreshOverviewActivity();
+                refreshPhase10Notifications();
+            } catch (e) {
+                showToast('Error: ' + e.message, 'error');
+            }
+        }
+
+        async function renderAnalyticsPage() {
+            try {
+                const res = await fetch('/api/v1/analytics?days=7');
+                const data = await res.json();
+                if (!data.ok) return;
+                document.getElementById('anaTotalEvents').textContent = data.total_events ?? 0;
+                const byType = data.by_type || {};
+                document.getElementById('anaRecognized').textContent = byType.recognized ?? 0;
+                document.getElementById('anaUnknown').textContent = (byType.unknown_pending ?? 0) + (byType.inconclusive ?? 0);
+                const topV = data.top_persons || [];
+                document.getElementById('anaTopVisitor').textContent = topV.length ? `${topV[0].label || topV[0].person_id} (${topV[0].cnt})` : 'None';
+
+                const renderBars = (items, labelKey, valKey, color) => {
+                    if (!items || !items.length) return '<div style="color:#64748b;">No data yet.</div>';
+                    const maxV = Math.max(1, ...items.map(i => i[valKey] || 0));
+                    return items.map(i => {
+                        const pct = Math.round(((i[valKey] || 0) / maxV) * 100);
+                        return `<div style="margin-bottom:6px;">
+                            <div style="display:flex; justify-content:space-between; font-size:0.78rem; margin-bottom:2px;">
+                                <span>${i[labelKey]}</span><span>${i[valKey]}</span>
+                            </div>
+                            <div style="height:6px; background:rgba(148,163,184,0.15); border-radius:4px; overflow:hidden;">
+                                <div style="width:${pct}%; height:100%; background:${color};"></div>
+                            </div>
+                        </div>`;
+                    }).join('');
+                };
+                const hourlyArr = Object.entries(data.hourly_24h || {}).map(([hr, cnt]) => ({ hour: `${hr}:00`, count: cnt })).slice(-12);
+                const dailyArr = Object.entries(data.daily || {}).map(([day, cnt]) => ({ day, count: cnt }));
+                document.getElementById('analyticsHourlyChart').innerHTML = renderBars(hourlyArr, 'hour', 'count', '#6366f1');
+                document.getElementById('analyticsDailyChart').innerHTML = renderBars(dailyArr, 'day', 'count', '#10b981');
+                document.getElementById('analyticsTopVisitors').innerHTML = renderBars(topV.map(v => ({ name: v.label || v.person_id, count: v.cnt })), 'name', 'count', '#f59e0b');
+            } catch (e) {
+                console.error('renderAnalyticsPage error', e);
+            }
+        }
+
+        async function loadCameraDefaults() {
+            try {
+                const res = await fetch('/api/camera/defaults');
+                const data = await res.json();
+                if (!data.ok || !data.defaults) return;
+                const d = data.defaults;
+                if (d.framesize !== undefined) document.getElementById('defCamFramesize').value = String(d.framesize);
+                if (d.quality !== undefined) document.getElementById('defCamQuality').value = d.quality;
+                if (d.flash !== undefined) document.getElementById('defCamFlash').value = d.flash;
+                if (d.brightness !== undefined) document.getElementById('defCamBrightness').value = d.brightness;
+                if (d.contrast !== undefined) document.getElementById('defCamContrast').value = d.contrast;
+                if (d.saturation !== undefined) document.getElementById('defCamSaturation').value = d.saturation;
+                document.getElementById('defCamVflip').checked = !!d.vflip;
+                document.getElementById('defCamHmirror').checked = !!d.hmirror;
+                document.getElementById('defCamAwb').checked = d.awb !== 0;
+                document.getElementById('defCamAec').checked = d.aec !== 0;
+            } catch (e) {
+                console.error('loadCameraDefaults error', e);
+            }
+        }
+
+        async function saveCameraDefaults() {
+            const payload = {
+                framesize: parseInt(document.getElementById('defCamFramesize').value, 10),
+                quality: parseInt(document.getElementById('defCamQuality').value, 10),
+                flash: parseInt(document.getElementById('defCamFlash').value, 10),
+                brightness: parseInt(document.getElementById('defCamBrightness').value, 10),
+                contrast: parseInt(document.getElementById('defCamContrast').value, 10),
+                saturation: parseInt(document.getElementById('defCamSaturation').value, 10),
+                vflip: document.getElementById('defCamVflip').checked ? 1 : 0,
+                hmirror: document.getElementById('defCamHmirror').checked ? 1 : 0,
+                awb: document.getElementById('defCamAwb').checked ? 1 : 0,
+                aec: document.getElementById('defCamAec').checked ? 1 : 0,
+            };
+            try {
+                const res = await fetch('/api/camera/defaults', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    showToast('Default camera settings saved & applied to ESP32-CAM!', 'success');
+                    if (typeof fetchCameraSettings === 'function') fetchCameraSettings();
+                } else {
+                    showToast('Failed to save defaults: ' + (data.error || 'unknown'), 'error');
+                }
+            } catch (e) {
+                showToast('Error saving defaults: ' + e.message, 'error');
+            }
+        }
     </script>
 </body>
 </html>

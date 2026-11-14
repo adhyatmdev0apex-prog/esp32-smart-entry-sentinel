@@ -175,6 +175,10 @@ Open **`http://localhost:5000`** in your browser.
 
 ```text
 .
+├── archives/                            # Backups, zips & legacy reference snapshots
+├── data/                                # Runtime DBs (identity_profiles.pkl, detections.json, person_labels.json)
+├── docs/                                # Architecture & planning docs (plan.md, ROADMAP.md)
+├── entrance_monitoring/                 # Captured face gallery & full images
 ├── firmware/esp32-cam/
 │   ├── platformio.ini                   # Environments: esp32cam, esp32wroom
 │   ├── boards/                          # ai_thinker_esp32_cam.h, esp32_wroom_devkit.h, boards.h
@@ -185,10 +189,15 @@ Open **`http://localhost:5000`** in your browser.
 │   ├── insightface/recognition/model.onnx
 │   ├── face_recognition_sface_2021dec.onnx
 │   └── yolov8n.onnx                     # 12.1 MB DirectML object detector (320x320, 80 COCO classes)
+├── scripts/
+│   ├── ota_upload.py                    # Wireless OTA upload utility
+│   ├── download_models.sh               # Runtime ONNX model downloader
+│   ├── run_full_validation.py           # End-to-end validation suite
+│   ├── test_capture.py                  # Snapshot capture test helper
+│   └── test_artifacts/                  # Saved test JPEGs
 ├── templates/index.html                 # Responsive web dashboard
 ├── server.py                            # Flask AI server (DirectML Face + Object Detection)
 ├── vlm_engine.py                        # DirectML YOLOv8n ObjectDetectionEngine
-├── ota_upload.py                        # Wireless OTA upload utility
 ├── requirements.txt
 └── README.md
 ```

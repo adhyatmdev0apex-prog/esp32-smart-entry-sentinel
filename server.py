@@ -33,6 +33,8 @@ import socket
 import onnxruntime as ort
 from huggingface_hub import hf_hub_download
 from vlm_engine import vlm
+from event_db import event_db
+from notifications import notification_manager, NotificationEvent
 
 try:
     import face_recognition
@@ -48,10 +50,12 @@ app = Flask(__name__)
 DATA_FOLDER = 'entrance_monitoring'
 MODELS_FOLDER = 'models'
 BACKUP_FOLDER = os.path.join(DATA_FOLDER, 'backups')
-ENCODINGS_FILE = 'face_encodings.pkl'           # Legacy dlib 128-D encodings (kept in sync)
-PROFILES_FILE = 'identity_profiles.pkl'         # Structured SFace + metadata store
-LABELS_FILE = 'person_labels.json'              # Custom human-readable labels per person_id
-DETECTIONS_FILE = 'detections.json'
+RUNTIME_DATA_DIR = 'data'
+os.makedirs(RUNTIME_DATA_DIR, exist_ok=True)
+ENCODINGS_FILE = os.path.join(RUNTIME_DATA_DIR, 'face_encodings.pkl')           # Legacy dlib 128-D encodings (kept in sync)
+PROFILES_FILE = os.path.join(RUNTIME_DATA_DIR, 'identity_profiles.pkl')         # Structured SFace + metadata store
+LABELS_FILE = os.path.join(RUNTIME_DATA_DIR, 'person_labels.json')              # Custom human-readable labels per person_id
+DETECTIONS_FILE = os.path.join(RUNTIME_DATA_DIR, 'detections.json')
 FULL_IMAGES_FOLDER = os.path.join(DATA_FOLDER, 'full_images')
 FACES_FOLDER = os.path.join(DATA_FOLDER, 'faces')
 UNRECOGNIZED_FOLDER = os.path.join(DATA_FOLDER, 'unrecognized')
@@ -933,6 +937,63 @@ def record_recognition_event(status, person_id=None, similarity=0.0, quality=0.0
                 'thumb': thumb_file
             })
 
+    if status != 'no_face':
+        try:
+            objs = list(vlm.latest_objects) if getattr(vlm, 'enabled', False) else None
+            event_db.log_recognition_event(
+                status,
+                person_id=person_id,
+                person_label=label,
+                similarity=similarity,
+                quality=quality,
+                reason=reason,
+                thumb=thumb_file,
+                objects=objs,
+            )
+        except Exception as e:
+            print(f"[!] EventDB log error: {e}")
+
+        # Phase 10: Emit notification events (non-blocking queue)
+        try:
+            snap_bytes = None
+            with latest_jpeg_lock:
+                snap_bytes = latest_jpeg
+            if status == 'recognized' and label:
+                notification_manager.emit(NotificationEvent(
+                    event_type='KNOWN_PERSON',
+                    title=f"Known Person: {label}",
+                    message=f"{label} ({person_id}) recognized with {similarity*100:.1f}% confidence (Q:{quality:.0f}).",
+                    severity='info',
+                    person_id=person_id,
+                    person_label=label,
+                    image_bytes=snap_bytes,
+                    metadata={'similarity': round(float(similarity), 3), 'quality': round(float(quality), 1), 'thumb': thumb_file},
+                    dedup_key=f"KNOWN_PERSON:{person_id}",
+                ))
+            elif status == 'recognized' and not label:
+                notification_manager.emit(NotificationEvent(
+                    event_type='UNKNOWN_PERSON',
+                    title=f"Unlabeled Visitor ({person_id})",
+                    message=f"Unlabeled person {person_id} detected at door (Q:{quality:.0f}).",
+                    severity='warning',
+                    person_id=person_id,
+                    image_bytes=snap_bytes,
+                    metadata={'similarity': round(float(similarity), 3), 'quality': round(float(quality), 1), 'thumb': thumb_file},
+                    dedup_key=f"UNKNOWN_PERSON:{person_id}",
+                ))
+            elif status == 'unknown_pending':
+                notification_manager.emit(NotificationEvent(
+                    event_type='UNKNOWN_PERSON',
+                    title="Unknown Person Detected",
+                    message=f"Unrecognized face at door ({reason}, Q:{quality:.0f}).",
+                    severity='warning',
+                    image_bytes=snap_bytes,
+                    metadata={'quality': round(float(quality), 1), 'reason': reason, 'thumb': thumb_file},
+                    dedup_key="UNKNOWN_PERSON:pending",
+                ))
+        except Exception as e:
+            print(f"[!] Notification emit error: {e}")
+
 def render_face_overlay(bgr_image, face_boxes):
     """
     Renders high-visibility cyber-style bounding boxes and name/quality badges directly onto frame.
@@ -1217,6 +1278,14 @@ def mjpeg_consumer_thread():
                 pass
 
         if not resp:
+            if camera_online:
+                notification_manager.emit(NotificationEvent(
+                    event_type='CAMERA_OFFLINE',
+                    title="Camera Offline",
+                    message="Unable to connect to ESP32-CAM MJPEG stream.",
+                    severity='critical',
+                    dedup_key="CAMERA_OFFLINE",
+                ))
             camera_online = False
             stream_fps = 0.0
             time.sleep(1.0)
@@ -1229,6 +1298,7 @@ def mjpeg_consumer_thread():
             last_frame_received_time = time.time()
             print(f"Connected to MJPEG stream ({connected_url}) - Streaming active")
             threading.Thread(target=refresh_camera_hardware_status, daemon=True).start()
+            threading.Thread(target=_apply_camera_defaults, args=(current_ip,), daemon=True).start()
 
             bytes_data = bytes()
             frame_count = 0
@@ -1299,6 +1369,14 @@ def mjpeg_consumer_thread():
             resp.close()
 
         except Exception as e:
+            if camera_online:
+                notification_manager.emit(NotificationEvent(
+                    event_type='CAMERA_OFFLINE',
+                    title="Camera Offline",
+                    message=f"ESP32-CAM stream disconnected: {e}",
+                    severity='critical',
+                    dedup_key="CAMERA_OFFLINE",
+                ))
             camera_online = False
             stream_fps = 0.0
             if resp:
@@ -2320,7 +2398,7 @@ def merge_persons():
             os.makedirs(snap_dir, exist_ok=True)
             for cfg_file in [ENCODINGS_FILE, PROFILES_FILE, DETECTIONS_FILE, LABELS_FILE]:
                 if os.path.exists(cfg_file):
-                    shutil.copy2(cfg_file, os.path.join(snap_dir, cfg_file))
+                    shutil.copy2(cfg_file, os.path.join(snap_dir, os.path.basename(cfg_file)))
 
             # 2. Move face images consistently and track any renamed files
             source_images = glob.glob(os.path.join(source_folder, '*.jpg'))
@@ -2617,6 +2695,98 @@ def get_camera_settings():
         return jsonify({'status': 'error', 'online': False, 'camera_ip': cam_ip,
                         'error': f'Could not read camera settings: {e}'}), 502
 
+CAMERA_DEFAULTS_FILE = os.path.join('data', 'camera_defaults.json')
+CAMERA_SETTING_RANGES = {
+    'framesize': {5, 6, 8, 9, 10, 11, 12, 13},
+    'quality': range(10, 64),
+    'flash': range(256),
+    'brightness': range(-2, 3),
+    'contrast': range(-2, 3),
+    'saturation': range(-2, 3),
+    'special_effect': range(7),
+    'vflip': {0, 1},
+    'hmirror': {0, 1},
+    'awb': {0, 1},
+    'aec': {0, 1},
+}
+
+def _load_camera_defaults():
+    if os.path.exists(CAMERA_DEFAULTS_FILE):
+        try:
+            with open(CAMERA_DEFAULTS_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                if isinstance(data, dict):
+                    return data
+        except Exception:
+            pass
+    return {
+        'framesize': 9,
+        'quality': 12,
+        'flash': 0,
+        'brightness': 0,
+        'contrast': 0,
+        'saturation': 0,
+        'vflip': 0,
+        'hmirror': 0,
+        'awb': 1,
+        'aec': 1,
+    }
+
+def _save_camera_defaults(defaults_dict):
+    os.makedirs(os.path.dirname(CAMERA_DEFAULTS_FILE), exist_ok=True)
+    with open(CAMERA_DEFAULTS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(defaults_dict, f, indent=2)
+
+def _apply_camera_defaults(cam_ip=None):
+    defaults = _load_camera_defaults()
+    ip_addr = cam_ip or get_current_camera_ip()
+    applied = {}
+    for k, v in defaults.items():
+        if k not in CAMERA_SETTING_RANGES:
+            continue
+        try:
+            iv = int(v)
+            if iv not in CAMERA_SETTING_RANGES[k]:
+                continue
+            url = f"http://{ip_addr}:80/control?var={urllib.parse.quote(str(k))}&val={iv}"
+            req = urllib.request.Request(url, headers={'User-Agent': 'ESP32-Dashboard'})
+            with urllib.request.urlopen(req, timeout=2.0) as resp:
+                applied[k] = (resp.status == 200)
+        except Exception:
+            applied[k] = False
+    if applied:
+        refresh_camera_hardware_status()
+    return applied
+
+@app.route('/api/camera/defaults', methods=['GET', 'POST'])
+def camera_defaults_api():
+    """Get or update persisted default camera settings (applied immediately & on reconnect)"""
+    if request.method == 'GET':
+        return jsonify({'ok': True, 'defaults': _load_camera_defaults()})
+
+    patch = request.get_json(silent=True) or {}
+    current = _load_camera_defaults()
+    for k, v in patch.items():
+        if k in ('flash', 'led_intensity'):
+            k = 'flash'
+        if k not in CAMERA_SETTING_RANGES:
+            return jsonify({'ok': False, 'error': f'Unsupported camera setting: {k}'}), 400
+        try:
+            iv = int(v)
+        except (ValueError, TypeError):
+            return jsonify({'ok': False, 'error': f'Invalid value for {k}'}), 400
+        if iv not in CAMERA_SETTING_RANGES[k]:
+            return jsonify({'ok': False, 'error': f'Out of range value for {k}: {iv}'}), 400
+        current[k] = iv
+
+    _save_camera_defaults(current)
+    applied = _apply_camera_defaults()
+    try:
+        event_db.log_audit('user', 'camera_defaults_updated', 'camera_defaults.json', json.dumps(patch))
+    except Exception:
+        pass
+    return jsonify({'ok': True, 'defaults': current, 'applied': applied})
+
 @app.route('/api/camera/settings', methods=['POST'])
 def set_camera_setting():
     """Send parameter adjustment to ESP32-CAM Port 80 (/control?var=...&val=...)"""
@@ -2677,6 +2847,7 @@ def set_camera_setting():
         with state_lock:
             cached_camera_settings[var_name] = int(actual)
             cached_camera_settings['online'] = True
+        event_db.log_audit("user", "camera_setting", var_name, f"val={int(actual)}")
         return jsonify({'status': 'ok', 'var': var_name, 'val': val, 'actual': int(actual)})
     except Exception as e:
         with state_lock:
@@ -2783,12 +2954,14 @@ def reboot_cam_api():
     """Reboot the ESP32-CAM node"""
     cam_ip = get_current_camera_ip()
     res = _trigger_esp_reboot(cam_ip)
+    event_db.log_audit("user", "reboot_cam", cam_ip, f"ok={res.get('ok')}")
     return jsonify(res), (200 if res.get('ok') else 502)
 
 @app.route('/api/system/reboot_wroom', methods=['POST'])
 def reboot_wroom_api():
     """Reboot the ESP32-WROOM node"""
     res = _trigger_esp_reboot(WROOM_NODE_IP)
+    event_db.log_audit("user", "reboot_wroom", WROOM_NODE_IP, f"ok={res.get('ok')}")
     return jsonify(res), (200 if res.get('ok') else 502)
 
 @app.route('/api/system/full_reboot', methods=['POST'])
@@ -2817,6 +2990,9 @@ def full_reboot_api():
     except Exception as e:
         print(f"[!] Object detector reload failed: {e}")
 
+    event_db.log_audit("user", "full_reboot", f"{cam_ip},{WROOM_NODE_IP}",
+                       f"face_reloaded={face_reloaded}, obj_reloaded={obj_reloaded}")
+
     return jsonify({
         'ok': True,
         'cam': cam_res,
@@ -2824,6 +3000,184 @@ def full_reboot_api():
         'face_models_reloaded': face_reloaded,
         'object_model_reloaded': obj_reloaded
     }), 200
+
+_wroom_health_cache = {'ts': 0.0, 'online': False, 'info': {}}
+
+def _probe_wroom_health(force=False):
+    now = time.time()
+    if not force and (now - _wroom_health_cache['ts']) < 5.0:
+        return _wroom_health_cache['online'], _wroom_health_cache['info']
+    online = False
+    info = {}
+    try:
+        req = urllib.request.Request(f"http://{WROOM_NODE_IP}:80/status", headers={'User-Agent': 'Sentinel-Dashboard'})
+        with urllib.request.urlopen(req, timeout=0.45) as resp:
+            online = resp.status == 200
+            raw = resp.read().decode('utf-8', errors='replace')
+            try:
+                info = json.loads(raw)
+            except Exception:
+                info = {'raw': raw[:120]}
+    except Exception:
+        try:
+            import socket
+            with socket.create_connection((WROOM_NODE_IP, 80), timeout=0.45):
+                online = True
+        except Exception:
+            online = False
+    _wroom_health_cache['ts'] = now
+    _wroom_health_cache['online'] = online
+    _wroom_health_cache['info'] = info
+    return online, info
+
+@app.route('/api/v1/devices/health', methods=['GET'])
+def devices_health_api():
+    """Unified health telemetry for ESP32-WROOM, ESP32-CAM, AI Server, and EventDB"""
+    force = request.args.get('refresh') == '1'
+    wroom_online, wroom_info = _probe_wroom_health(force=force)
+    now = time.time()
+    cam_alive = camera_online and (now - last_frame_received_time < 12.0)
+    with state_lock:
+        cam_info = cached_camera_settings.get('camera', {})
+        sensor_ready = bool(cam_info.get('ready', False)) if isinstance(cam_info, dict) else False
+        temp_c = cached_camera_settings.get('temp_c')
+        recog_on = recognition_enabled
+    notif_status = notification_manager.get_status()
+    mqtt_cfg = notification_manager.config_store.get().get('providers', {}).get('mqtt', {})
+    return jsonify({
+        'ok': True,
+        'wroom': {
+            'online': wroom_online,
+            'ip': WROOM_NODE_IP,
+            'info': wroom_info,
+        },
+        'camera': {
+            'online': cam_alive,
+            'sensor_ready': sensor_ready,
+            'ip': active_camera_ip if cam_alive else get_current_camera_ip(),
+            'fps': round(stream_fps, 1) if cam_alive else 0.0,
+            'temp_c': temp_c,
+        },
+        'ai_server': {
+            'online': True,
+            'recognition_enabled': recog_on,
+            'vlm': vlm.get_status(),
+        },
+        'database': {
+            'online': True,
+            'path': 'data/events.db',
+        },
+        'mqtt': {
+            'enabled': bool(mqtt_cfg.get('enabled', False)),
+            'last_error': notif_status.get('providers', {}).get('mqtt', {}).get('last_error'),
+        }
+    })
+
+@app.route('/api/v1/events/db', methods=['GET'])
+def events_db_api():
+    """Phase 9: Query persistent SQLite recognition & system events"""
+    limit = request.args.get('limit', 50, type=int)
+    offset = request.args.get('offset', 0, type=int)
+    event_type = request.args.get('type', 'all')
+    person_id = request.args.get('person_id')
+    search = request.args.get('q')
+    return jsonify({'ok': True, **event_db.query_events(limit=limit, offset=offset, event_type=event_type, person_id=person_id, search=search)})
+
+@app.route('/api/v1/audit', methods=['GET'])
+def audit_log_api():
+    """Phase 9: Query persistent user/system audit log"""
+    limit = request.args.get('limit', 50, type=int)
+    offset = request.args.get('offset', 0, type=int)
+    return jsonify({'ok': True, **event_db.query_audit(limit=limit, offset=offset)})
+
+@app.route('/api/v1/analytics', methods=['GET'])
+def analytics_db_api():
+    """Phase 9: Aggregated 24h hourly, multi-day daily, and top-visitor analytics"""
+    days = request.args.get('days', 7, type=int)
+    return jsonify({'ok': True, **event_db.get_analytics(days=days)})
+
+# ============================================================================
+# PHASE 10: NOTIFICATION & ALERT SYSTEM ROUTES
+# ============================================================================
+@app.route('/api/v1/event', methods=['POST'])
+def ingest_hardware_event_api():
+    """Phase 10: Unified event ingestion from ESP32-WROOM / ESP32-CAM / services"""
+    data = request.get_json(silent=True) or {}
+    event_type = str(data.get('event_type') or 'SYSTEM_FAILURE').strip().upper()
+    title = str(data.get('title') or event_type.replace('_', ' ').title())
+    message = str(data.get('message') or f"{event_type} event received.")
+    severity = str(data.get('severity') or ('critical' if event_type in ('CAMERA_OFFLINE', 'SYSTEM_FAILURE') else 'info')).lower()
+    source = str(data.get('source') or 'esp32')
+    meta = data.get('metadata') if isinstance(data.get('metadata'), dict) else {}
+    meta['source'] = source
+
+    snap_bytes = None
+    if data.get('attach_snapshot', True):
+        with latest_jpeg_lock:
+            snap_bytes = latest_jpeg
+
+    try:
+        event_db.log_audit(source, event_type.lower(), target=title, details=message)
+    except Exception:
+        pass
+
+    ev = NotificationEvent(
+        event_type=event_type,
+        title=title,
+        message=message,
+        severity=severity,
+        person_id=data.get('person_id'),
+        person_label=data.get('person_label'),
+        image_bytes=snap_bytes,
+        metadata=meta,
+        dedup_key=data.get('dedup_key'),
+    )
+    accepted, reason = notification_manager.emit(ev, bypass_dedup=bool(data.get('bypass_dedup', False)))
+    return jsonify({'ok': True, 'accepted': accepted, 'reason': reason, 'event_id': ev.event_id}), 200
+
+@app.route('/api/v1/notifications/status', methods=['GET'])
+def notifications_status_api():
+    """Phase 10: Provider health, queue metrics, rules, and recent alerts"""
+    return jsonify({'ok': True, **notification_manager.get_status()})
+
+@app.route('/api/v1/notifications/config', methods=['GET', 'POST'])
+def notifications_config_api():
+    """Phase 10: Read or update backend-only notification provider & rule config"""
+    if request.method == 'GET':
+        return jsonify({'ok': True, 'config': notification_manager.config_store.get()})
+    patch = request.get_json(silent=True) or {}
+    updated = notification_manager.config_store.update(patch)
+    try:
+        event_db.log_audit('dashboard', 'notifications_config_updated', target='notification_config', details='Updated provider/rule config')
+    except Exception:
+        pass
+    return jsonify({'ok': True, 'config': updated})
+
+@app.route('/api/v1/notifications/test', methods=['POST'])
+def notifications_test_api():
+    """Phase 10: Trigger a synchronous test notification (all routed providers or a specific provider)"""
+    data = request.get_json(silent=True) or {}
+    event_type = str(data.get('event_type') or 'SYSTEM_FAILURE').strip().upper()
+    provider = data.get('provider')
+    title = str(data.get('title') or f"Sentinel Test Alert ({provider or event_type})")
+    message = str(data.get('message') or "Test notification triggered from Sentinel Notification Center.")
+    severity = str(data.get('severity') or 'info')
+
+    snap_bytes = None
+    with latest_jpeg_lock:
+        snap_bytes = latest_jpeg
+
+    ev = NotificationEvent(
+        event_type=event_type,
+        title=title,
+        message=message,
+        severity=severity,
+        image_bytes=snap_bytes,
+        metadata={'test': True},
+    )
+    force = [provider] if provider else None
+    results = notification_manager.dispatch_sync(ev, force_providers=force, bypass_cooldown=True)
+    return jsonify({'ok': True, 'event_id': ev.event_id, 'results': results}), 200
 
 @app.route('/reset', methods=['POST'])
 def reset():
@@ -2842,6 +3196,7 @@ def reset():
         save_profiles()
         save_detections()
         save_labels()
+    event_db.clear_all()
     return "All data reset", 200
 
 # ============================================================================
@@ -2853,6 +3208,9 @@ identity_profiles = load_profiles()
 person_labels = load_labels()
 person_detections = load_detections()
 sync_and_backfill_profiles()
+migrated_events = event_db.backfill_from_detections(person_detections, person_labels)
+if migrated_events:
+    print(f"[*] Phase 9 EventDB: migrated {migrated_events} historical events into data/events.db")
 
 backup_daemon = threading.Thread(target=backup_thread, daemon=True)
 backup_daemon.start()

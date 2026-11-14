@@ -11,7 +11,9 @@ DEFAULT_PORT = 3232
 
 def find_firmware_bin():
     script_dir = os.path.dirname(os.path.abspath(__file__))
+    root_dir = os.path.dirname(script_dir)
     candidates = [
+        os.path.join(root_dir, "firmware", "esp32-cam", ".pio", "build", "esp32cam", "firmware.bin"),
         os.path.join(script_dir, "firmware", "esp32-cam", ".pio", "build", "esp32cam", "firmware.bin"),
         os.path.join(script_dir, ".pio", "build", "esp32cam", "firmware.bin"),
     ]
