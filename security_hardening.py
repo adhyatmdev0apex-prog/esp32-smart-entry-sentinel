@@ -21,7 +21,48 @@ import time
 from collections import defaultdict, deque
 from functools import wraps
 
-from flask import jsonify, request, session
+from flask import jsonify, redirect, request, session
+
+SECRETS_H_PATH = os.path.join("firmware", "esp32-cam", "include", "secrets.h")
+_SECRETS_DEFINE_RE = re.compile(r'^\s*#define\s+(SECRET_[A-Z0-9_]+)\s+"([^"]*)"', re.MULTILINE)
+
+
+def load_secrets_h_credentials() -> dict:
+    """Read SECRET_ADMIN_* and SECRET_VIEW_* logins live from firmware secrets.h."""
+    creds = {
+        "admin_user": "ADmin",
+        "admin_pass": "",
+        "view_user": "user",
+        "view_pass": "",
+    }
+    try:
+        if os.path.exists(SECRETS_H_PATH):
+            with open(SECRETS_H_PATH, "r", encoding="utf-8", errors="ignore") as f:
+                text = f.read()
+            defines = dict(_SECRETS_DEFINE_RE.findall(text))
+            if "SECRET_ADMIN_USER" in defines:
+                creds["admin_user"] = defines["SECRET_ADMIN_USER"]
+            if "SECRET_ADMIN_PASSWORD" in defines:
+                creds["admin_pass"] = defines["SECRET_ADMIN_PASSWORD"]
+            if "SECRET_VIEW_USER" in defines:
+                creds["view_user"] = defines["SECRET_VIEW_USER"]
+            if "SECRET_VIEW_PASSWORD" in defines:
+                creds["view_pass"] = defines["SECRET_VIEW_PASSWORD"]
+    except Exception:
+        pass
+    return creds
+
+
+def verify_secrets_h_login(username: str, password: str) -> tuple[bool, str | None]:
+    """Verify username & password against secrets.h. Returns (ok, role)."""
+    if not username or not password:
+        return False, None
+    creds = load_secrets_h_credentials()
+    if creds["admin_pass"] and hmac.compare_digest(username, creds["admin_user"]) and hmac.compare_digest(password, creds["admin_pass"]):
+        return True, "admin"
+    if creds["view_pass"] and hmac.compare_digest(username, creds["view_user"]) and hmac.compare_digest(password, creds["view_pass"]):
+        return True, "user"
+    return False, None
 
 SECURITY_CONFIG_PATH = os.path.join("data", "security_config.json")
 SAFE_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,48}$")
@@ -161,7 +202,7 @@ class SecurityGuard:
 
     def is_authorized(self, client_ip: str, path: str, method: str) -> tuple[bool, str]:
         # Public read / auth / health endpoints
-        if path in ("/api/v1/security/login", "/api/v1/security/status", "/api/v1/system/healthz"):
+        if path in ("/login", "/logout", "/favicon.ico", "/api/v1/security/login", "/api/v1/security/status", "/api/v1/system/healthz"):
             return True, "public"
 
         # Allow ESP32-WROOM / ESP32-CAM on LAN to post hardware events
@@ -177,13 +218,16 @@ class SecurityGuard:
         if self.is_loopback(client_ip) and not self.config.get("lock_localhost", False):
             return True, "loopback"
 
+        is_mut = method in ("POST", "PUT", "DELETE", "PATCH") or any(path.startswith(p) for p in MUTATION_PREFIXES)
+
         # Authenticated session cookie
         if session.get("sentinel_auth") is True:
+            if session.get("auth_role") == "user" and is_mut:
+                return False, "admin_required"
             return True, "session"
 
         # Allow read-only GET dashboard assets when no PIN is configured on loopback;
         # require auth for all remote mutations and when locked
-        is_mut = method in ("POST", "PUT", "DELETE", "PATCH") or any(path.startswith(p) for p in MUTATION_PREFIXES)
         if not is_mut and self.is_loopback(client_ip) and not self.config.get("lock_localhost", False):
             return True, "loopback_read"
 
@@ -281,6 +325,10 @@ def init_app_security(app, audit_cb=None):
             security_guard.blocked_count += 1
             if audit_cb:
                 audit_cb("security", "unauthorized_blocked", client_ip, f"{method} {path} ({reason})")
+            if reason == "admin_required":
+                return jsonify({"ok": False, "error": "Admin role required for this action", "code": "ADMIN_REQUIRED"}), 403
+            if method == "GET" and not path.startswith("/api/") and path != "/live":
+                return redirect("/login")
             return jsonify({"ok": False, "error": "Authentication required", "code": "AUTH_REQUIRED"}), 401
 
     @app.after_request

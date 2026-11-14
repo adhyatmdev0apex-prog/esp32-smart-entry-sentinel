@@ -29,19 +29,32 @@
 // 3. SENSORS (Configure based on hardware you actually own)
 // ============================================================================
 // --- Magnetic Reed Door Switch ---
-#define CFG_ENABLE_REED             0       // 1 = enabled, 0 = disabled
-#define CFG_REED_ACTIVE_LEVEL       LOW     // LOW when magnet is near (closed door)
+#ifdef BOARD_ESP32_WROOM
+  #define CFG_ENABLE_REED           1       // Enabled on WROOM
+  #define CFG_REED_ACTIVE_LEVEL     HIGH    // HIGH when magnet is near (closed door), LOW when open
+#else
+  #define CFG_ENABLE_REED           0       // 1 = enabled, 0 = disabled
+  #define CFG_REED_ACTIVE_LEVEL     LOW     // LOW when magnet is near (closed door)
+#endif
 #define CFG_REED_DEBOUNCE_MS        50      // Contact bounce filter
 #define CFG_REED_OPEN_TIMEOUT_MS    30000   // Alert if door stays open longer than this
 
 // --- PIR Motion Sensor ---
-#define CFG_ENABLE_PIR              0       // 1 = enabled, 0 = disabled
+#ifdef BOARD_ESP32_WROOM
+  #define CFG_ENABLE_PIR            1       // Enabled on WROOM
+#else
+  #define CFG_ENABLE_PIR            0       // 1 = enabled, 0 = disabled
+#endif
 #define CFG_PIR_ACTIVE_LEVEL        HIGH    // HIGH when motion detected
 #define CFG_PIR_WARMUP_MS           15000   // Sensor warm-up time after boot
 #define CFG_PIR_COOLDOWN_MS         3000    // Minimum cooldown between motion triggers
 
 // --- Door Alert Buzzer ---
-#define CFG_ENABLE_BUZZER           0       // 1 = enabled, 0 = disabled
+#ifdef BOARD_ESP32_WROOM
+  #define CFG_ENABLE_BUZZER         1       // Enabled on WROOM
+#else
+  #define CFG_ENABLE_BUZZER         0       // 1 = enabled, 0 = disabled
+#endif
 #define CFG_BUZZER_ACTIVE_LEVEL     HIGH
 
 // ============================================================================

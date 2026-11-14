@@ -4,18 +4,48 @@ import socket
 import hashlib
 import time
 import argparse
+import shutil
+import subprocess
 import urllib.request
 
 DEFAULT_IP = "192.168.29.10"
 DEFAULT_PORT = 3232
 
-def find_firmware_bin():
+TARGETS = {
+    "cam": {"env": "esp32cam", "ip": "192.168.29.10"},
+    "wroom": {"env": "esp32wroom", "ip": "192.168.29.20"},
+}
+
+def get_project_root():
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    return os.path.dirname(script_dir)
+
+def find_pio_executable():
+    pio = shutil.which("pio")
+    if pio:
+        return pio
+    win_pio = os.path.join(os.path.expanduser("~"), ".platformio", "penv", "Scripts", "pio.exe")
+    if os.path.exists(win_pio):
+        return win_pio
+    return None
+
+def build_firmware(env_name):
+    pio = find_pio_executable()
+    if not pio:
+        print("Error: PlatformIO ('pio') not found in PATH or ~/.platformio/penv/Scripts/pio.exe")
+        return False
+    fw_dir = os.path.join(get_project_root(), "firmware", "esp32-cam")
+    print(f"\n=== Building {env_name} ===")
+    res = subprocess.run([pio, "run", "-d", fw_dir, "-e", env_name])
+    return res.returncode == 0
+
+def find_firmware_bin(env_name="esp32cam"):
     script_dir = os.path.dirname(os.path.abspath(__file__))
     root_dir = os.path.dirname(script_dir)
     candidates = [
-        os.path.join(root_dir, "firmware", "esp32-cam", ".pio", "build", "esp32cam", "firmware.bin"),
-        os.path.join(script_dir, "firmware", "esp32-cam", ".pio", "build", "esp32cam", "firmware.bin"),
-        os.path.join(script_dir, ".pio", "build", "esp32cam", "firmware.bin"),
+        os.path.join(root_dir, "firmware", "esp32-cam", ".pio", "build", env_name, "firmware.bin"),
+        os.path.join(script_dir, "firmware", "esp32-cam", ".pio", "build", env_name, "firmware.bin"),
+        os.path.join(script_dir, ".pio", "build", env_name, "firmware.bin"),
     ]
     for c in candidates:
         if os.path.exists(c):
@@ -151,17 +181,41 @@ def upload_ota(ip=DEFAULT_IP, port=DEFAULT_PORT, bin_path=None):
         return False
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Upload ESP32 firmware over Wi-Fi (ArduinoOTA)")
-    parser.add_argument("-i", "--ip", default=DEFAULT_IP, help=f"ESP32 IP (default: {DEFAULT_IP})")
+    parser = argparse.ArgumentParser(description="Build and upload ESP32 firmware over Wi-Fi (ArduinoOTA)")
+    parser.add_argument("-t", "--target", choices=["cam", "wroom", "both"], default="cam",
+                        help="Target device: cam (192.168.29.10), wroom (192.168.29.20), or both (default: cam)")
+    parser.add_argument("-b", "--build", action="store_true",
+                        help="Build firmware with PlatformIO before OTA uploading")
+    parser.add_argument("-i", "--ip", default=None, help="Override target ESP32 IP (single target only)")
     parser.add_argument("-p", "--port", type=int, default=DEFAULT_PORT, help=f"OTA Port (default: {DEFAULT_PORT})")
-    parser.add_argument("-f", "--file", default=None, help="Path to firmware.bin")
+    parser.add_argument("-f", "--file", default=None, help="Override path to firmware.bin (single target only)")
     args = parser.parse_args()
 
-    for attempt in range(1, 4):
-        if attempt > 1:
-            print(f"\nRetrying OTA (attempt {attempt}/3)...")
-            time.sleep(2)
-        if upload_ota(args.ip, args.port, args.file):
-            sys.exit(0)
+    selected = ["cam", "wroom"] if args.target == "both" else [args.target]
+    all_ok = True
 
-    sys.exit(1)
+    for name in selected:
+        cfg = TARGETS[name]
+        env_name = cfg["env"]
+        ip = args.ip if (args.ip and len(selected) == 1) else cfg["ip"]
+        bin_path = args.file if (args.file and len(selected) == 1) else find_firmware_bin(env_name)
+
+        if args.build:
+            if not build_firmware(env_name):
+                print(f"Build failed for {env_name} ({name}).")
+                all_ok = False
+                continue
+
+        print(f"\n=== OTA Uploading {name} ({env_name}) -> {ip}:{args.port} ===")
+        ok = False
+        for attempt in range(1, 4):
+            if attempt > 1:
+                print(f"\nRetrying OTA for {name} (attempt {attempt}/3)...")
+                time.sleep(2)
+            if upload_ota(ip, args.port, bin_path):
+                ok = True
+                break
+        if not ok:
+            all_ok = False
+
+    sys.exit(0 if all_ok else 1)

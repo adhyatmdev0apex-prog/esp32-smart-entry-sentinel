@@ -17,9 +17,9 @@
 
 // --- User Sensor Pin Defaults ---
 // Standard WROOM boards have plenty of unconstrained GPIOs:
-#define PIN_DEFAULT_REED     4  // Reed magnetic door sensor (internal pull-up)
+#define PIN_DEFAULT_REED    27  // Reed magnetic door sensor (internal pull-up)
 #define PIN_DEFAULT_PIR     14  // PIR motion sensor (input)
-#define PIN_DEFAULT_BUZZER  15  // Optional active or passive buzzer
+#define PIN_DEFAULT_BUZZER  26  // Optional active or passive buzzer
 
 // --- Actuators / Optional Outputs ---
 #define PIN_FLASH_LED       -1

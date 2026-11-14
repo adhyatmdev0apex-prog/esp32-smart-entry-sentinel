@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control Center — Smart Door Firmware &amp; Releases</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #0b1120;
+            --panel: #111827;
+            --panel2: #0f172a;
+            --border: rgba(148, 163, 184, 0.2);
+            --text: #f1f5f9;
+            --muted: #94a3b8;
+            --accent: #3b82f6;
+            --ok: #34d399;
+            --warn: #fbbf24;
+            --err: #f87171;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: 14px;
+        }
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 14px 20px;
+            background: var(--panel);
+            border-bottom: 1px solid var(--border);
+        }
+        .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.05rem; }
+        .pills { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .pill {
+            font-size: 0.78rem;
+            padding: 4px 10px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: var(--panel2);
+            color: var(--muted);
+            text-decoration: none;
+        }
+        .pill.ok { color: var(--ok); border-color: rgba(52, 211, 153, 0.35); }
+        .pill.err { color: var(--err); border-color: rgba(248, 113, 113, 0.35); }
+        nav {
+            display: flex;
+            gap: 6px;
+            padding: 10px 20px;
+            background: rgba(17, 24, 39, 0.65);
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+        }
+        .tab-btn {
+            background: transparent;
+            color: var(--muted);
+            border: 1px solid transparent;
+            padding: 7px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .tab-btn.active { background: var(--panel2); color: var(--text); border-color: var(--border); }
+        main { padding: 18px 20px; max-width: 1320px; margin: 0 auto; }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        .card h3 { margin: 0 0 12px; font-size: 1rem; }
+        .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        input, select {
+            background: var(--panel2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 7px 10px;
+            font-size: 0.88rem;
+        }
+        .btn {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 7px 14px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn.sec { background: #1e293b; border: 1px solid var(--border); }
+        .btn.warn { background: #b45309; }
+        .btn.ok { background: #059669; }
+        .log-box {
+            background: #020617;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.8rem;
+            line-height: 1.45;
+            max-height: 360px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            color: #cbd5e1;
+        }
+        .editor-grid {
+            display: grid;
+            grid-template-columns: 270px 1fr;
+            gap: 14px;
+            min-height: 500px;
+        }
+        @media (max-width: 820px) { .editor-grid { grid-template-columns: 1fr; } }
+        .tree-box {
+            background: var(--panel2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 8px;
+            max-height: 540px;
+            overflow-y: auto;
+        }
+        .tree-item {
+            padding: 6px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: ui-monospace, monospace;
+            font-size: 0.8rem;
+            color: var(--muted);
+            word-break: break-all;
+        }
+        .tree-item:hover, .tree-item.active { background: rgba(59, 130, 246, 0.16); color: var(--text); }
+        .code-wrap {
+            display: grid;
+            grid-template-columns: 44px 1fr;
+            background: #020617;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            height: 480px;
+        }
+        .line-nums {
+            background: #0f172a;
+            color: #475569;
+            padding: 10px 6px;
+            text-align: right;
+            font-family: ui-monospace, monospace;
+            font-size: 0.82rem;
+            line-height: 1.5;
+            user-select: none;
+            overflow: hidden;
+        }
+        .editor-box {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        pre#codeHighlight, textarea#codeEditor {
+            position: absolute;
+            inset: 0;
+            margin: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            outline: none;
+            padding: 10px 12px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.82rem;
+            line-height: 1.5;
+            tab-size: 2;
+            white-space: pre;
+            overflow: auto;
+        }
+        pre#codeHighlight {
+            pointer-events: none;
+            color: #e2e8f0;
+            z-index: 1;
+        }
+        textarea#codeEditor {
+            resize: none;
+            background: transparent;
+            color: transparent;
+            caret-color: #38bdf8;
+            z-index: 2;
+        }
+        .tok-cm { color: #64748b; font-style: italic; }
+        .tok-pp { color: #c084fc; }
+        .tok-kw { color: #60a5fa; font-weight: 600; }
+        .tok-str { color: #34d399; }
+        .tok-num { color: #fbbf24; }
+        .muted { color: var(--muted); font-size: 0.82rem; }
+    </style>
+</head>
+<body>
+<header>
+    <div class="brand">
+        <span>Smart Door Control Center</span>
+        <span class="pill">:5001</span>
+    </div>
+    <div class="pills">
+        <span id="pillSentinel" class="pill">Dashboard :5000 ...</span>
+        <span id="pillPio" class="pill">PlatformIO ...</span>
+        <a id="linkDashboard" class="pill" href="#" target="_blank">Open Dashboard :5000</a>
+        <a class="pill" href="/logout">Sign Out</a>
+    </div>
+</header>
+
+<nav>
+    <button class="tab-btn active" onclick="showTab('releases', this)">Releases &amp; Config</button>
+    <button class="tab-btn" onclick="showTab('editor', this)">Controlled Editor</button>
+    <button class="tab-btn" onclick="showTab('build', this)">Build &amp; Audit</button>
+    <button class="tab-btn" onclick="showTab('upload', this)">Flash / Upload</button>
+</nav>
+
+<main>
+    <!-- D4: RELEASES & CONFIG -->
+    <section id="tab-releases" class="tab-pane active">
+        <div class="card">
+            <h3>GitHub Release &amp; Workspace Sync</h3>
+            <div class="row" style="margin-bottom:12px;">
+                <label class="muted">GitHub Repo:</label>
+                <input id="cfgRepo" type="text" style="min-width:290px;" placeholder="owner/repo">
+                <label class="muted">CAM IP:</label>
+                <input id="cfgCamIp" type="text" style="width:130px;">
+                <label class="muted">WROOM IP:</label>
+                <input id="cfgWroomIp" type="text" style="width:130px;">
+                <button class="btn sec" onclick="saveConfig()">Save Config</button>
+            </div>
+            <div class="row" style="margin-bottom:12px;">
+                <span class="muted">Installed: <strong id="installedVersion" style="color:#f1f5f9;">-</strong></span>
+                <button class="btn" onclick="checkRelease()">Check Latest on GitHub</button>
+                <button class="btn ok" onclick="installRelease()">Download &amp; Install Latest</button>
+                <button class="btn warn" onclick="rollbackRelease()">Rollback Previous</button>
+            </div>
+            <div id="releaseInfo" class="log-box" style="max-height:170px;">Click "Check Latest on GitHub" to inspect upstream version.</div>
+        </div>
+    </section>
+
+    <!-- D5: CONTROLLED EDITOR -->
+    <section id="tab-editor" class="tab-pane">
+        <div class="card">
+            <div class="row" style="justify-content:space-between; margin-bottom:10px;">
+                <h3 style="margin:0;">Whitelisted Firmware Editor <span id="editorFileLabel" class="muted"></span></h3>
+                <div class="row">
+                    <button class="btn sec" onclick="loadTree()">Refresh Tree</button>
+                    <button id="btnRevert" class="btn warn" onclick="revertFile()" disabled>Revert to Backup</button>
+                    <button id="btnSave" class="btn ok" onclick="saveFile()" disabled>Save File</button>
+                </div>
+            </div>
+            <div class="editor-grid">
+                <div id="fileTree" class="tree-box">Loading files...</div>
+                <div>
+                    <div class="code-wrap">
+                        <div id="lineNums" class="line-nums">1</div>
+                        <div class="editor-box">
+                            <pre id="codeHighlight" aria-hidden="true"></pre>
+                            <textarea id="codeEditor" spellcheck="false" wrap="off" placeholder="Select a file from the left tree..."></textarea>
+                        </div>
+                    </div>
+                    <div id="editorStatus" class="muted" style="margin-top:6px;">Only whitelisted .h/.cpp/.c/.ini/.json files inside workspace/firmware/esp32-cam can be edited.</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- D6: BUILD & AUDIT -->
+    <section id="tab-build" class="tab-pane">
+        <div class="card">
+            <h3>PlatformIO Build &amp; Config Audit</h3>
+            <div class="row" style="margin-bottom:12px;">
+                <button class="btn" onclick="startBuild('esp32cam', false)">Build ESP32-CAM</button>
+                <button class="btn" onclick="startBuild('esp32wroom', false)">Build ESP32-WROOM</button>
+                <button class="btn sec" onclick="startBuild('esp32cam', true)">Clean CAM</button>
+                <button class="btn sec" onclick="startBuild('esp32wroom', true)">Clean WROOM</button>
+                <button class="btn ok" onclick="runAudit()">Run Config Audit</button>
+                <span class="muted">Status: <strong id="buildStateLabel">idle</strong></span>
+            </div>
+            <div id="auditBox" class="muted" style="margin-bottom:10px;"></div>
+            <div id="artifactBox" class="muted" style="margin-bottom:10px;"></div>
+            <div id="buildLogs" class="log-box">No build run yet.</div>
+        </div>
+    </section>
+
+    <!-- D7: UPLOAD / FLASH -->
+    <section id="tab-upload" class="tab-pane">
+        <div class="card">
+            <h3>Firmware Flash &amp; Verification</h3>
+            <div class="row" style="margin-bottom:12px;">
+                <select id="upEnv">
+                    <option value="esp32wroom">ESP32-WROOM (esp32wroom)</option>
+                    <option value="esp32cam">ESP32-CAM (esp32cam)</option>
+                </select>
+                <select id="upMode" onchange="toggleUploadMode()">
+                    <option value="ota">Wi-Fi OTA (scripts/ota_upload.py)</option>
+                    <option value="serial">USB Serial (PlatformIO)</option>
+                </select>
+                <input id="upTargetIp" type="text" placeholder="IP (leave blank for default)" style="width:190px;">
+                <select id="upSerialPort" style="display:none; min-width:190px;"></select>
+                <button class="btn ok" onclick="startUpload()">Flash Device</button>
+                <button class="btn sec" onclick="refreshUpload()">Refresh Ports</button>
+                <span class="muted">Status: <strong id="uploadStateLabel">idle</strong></span>
+            </div>
+            <div id="uploadVerifyBox" class="muted" style="margin-bottom:10px;"></div>
+            <div id="uploadLogs" class="log-box">Ready to flash built firmware.bin via OTA or USB Serial.</div>
+        </div>
+    </section>
+</main>
+
+<script>
+let currentFilePath = null;
+document.getElementById('linkDashboard').href = `${location.protocol}//${location.hostname}:5000/`;
+
+function showTab(name, btn) {
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(`tab-${name}`).classList.add('active');
+    btn.classList.add('active');
+    if (name === 'editor' && !currentFilePath) loadTree();
+    if (name === 'build') refreshBuild();
+    if (name === 'upload') refreshUpload();
+}
+
+async function refreshHealth() {
+    try {
+        const r = await fetch('/api/cc/healthz');
+        const d = await r.json();
+        const p = document.getElementById('pillSentinel');
+        p.textContent = d.sentinel_online ? 'Dashboard :5000 Online' : 'Dashboard :5000 Offline';
+        p.className = 'pill ' + (d.sentinel_online ? 'ok' : 'err');
+    } catch {}
+}
+
+async function loadConfig() {
+    const r = await fetch('/api/cc/config');
+    const d = await r.json();
+    if (!d.ok) return;
+    document.getElementById('cfgRepo').value = d.config.github_repo || '';
+    document.getElementById('cfgCamIp').value = d.config.esp32_cam_ip || '';
+    document.getElementById('cfgWroomIp').value = d.config.esp32_wroom_ip || '';
+    document.getElementById('installedVersion').textContent = d.config.installed_version || 'local';
+}
+
+async function saveConfig() {
+    const body = {
+        github_repo: document.getElementById('cfgRepo').value,
+        esp32_cam_ip: document.getElementById('cfgCamIp').value,
+        esp32_wroom_ip: document.getElementById('cfgWroomIp').value,
+    };
+    const r = await fetch('/api/cc/config', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const d = await r.json();
+    document.getElementById('releaseInfo').textContent = d.ok ? 'Configuration saved.' : (d.error || 'Save failed');
+}
+
+async function checkRelease() {
+    const repo = encodeURIComponent(document.getElementById('cfgRepo').value.trim());
+    const box = document.getElementById('releaseInfo');
+    box.textContent = 'Checking GitHub...';
+    const r = await fetch(`/api/cc/releases/check?repo=${repo}`);
+    const d = await r.json();
+    box.textContent = d.ok
+        ? `Repo: ${d.repo}\nLatest (${d.kind}): ${d.tag}\nPublished: ${d.published_at || '-'}\nURL: ${d.html_url}\nNotes: ${d.notes || '-'}`
+        : `Error: ${d.error}`;
+}
+
+async function installRelease() {
+    if (!confirm('Download and install latest GitHub firmware into workspace/? (Local secrets.h is preserved and current workspace is backed up.)')) return;
+    const box = document.getElementById('releaseInfo');
+    box.textContent = 'Downloading & verifying archive...';
+    const r = await fetch('/api/cc/releases/install', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ repo: document.getElementById('cfgRepo').value.trim() }),
+    });
+    const d = await r.json();
+    box.textContent = d.ok
+        ? `Installed ${d.installed_version}\nSHA256: ${d.sha256}\nBackup: ${d.backup}`
+        : `Install failed: ${d.error}`;
+    loadConfig();
+    loadTree();
+}
+
+async function rollbackRelease() {
+    if (!confirm('Rollback workspace firmware to previous backup?')) return;
+    const r = await fetch('/api/cc/releases/rollback', { method: 'POST', headers: {'Content-Type':'application/json'}, body: '{}' });
+    const d = await r.json();
+    document.getElementById('releaseInfo').textContent = d.ok ? `Rolled back to ${d.restored}` : `Rollback error: ${d.error}`;
+    loadConfig();
+    loadTree();
+}
+
+function highlightCode(src) {
+    const esc = src.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return esc.replace(
+        /(\/\/[^\n]*|\/\*[\s\S]*?\*\/|"(?:\\.|[^"\\])*"|^\s*#[A-Za-z_]+|\b(?:void|static|const|constexpr|int|uint8_t|uint16_t|uint32_t|int32_t|bool|char|float|double|if|else|for|while|return|switch|case|break|struct|class|true|false|nullptr|HIGH|LOW)\b|\b\d+(?:\.\d+)?\b)/gm,
+        (m) => {
+            if (m.startsWith('//') || m.startsWith('/*')) return `<span class="tok-cm">${m}</span>`;
+            if (m.startsWith('"')) return `<span class="tok-str">${m}</span>`;
+            if (/^\s*#/.test(m)) return `<span class="tok-pp">${m}</span>`;
+            if (/^\d/.test(m)) return `<span class="tok-num">${m}</span>`;
+            return `<span class="tok-kw">${m}</span>`;
+        }
+    ) + '\n';
+}
+
+function updateLineNumbers() {
+    const ta = document.getElementById('codeEditor');
+    const lines = ta.value.split('\n').length;
+    document.getElementById('lineNums').textContent = Array.from({length: lines}, (_, i) => i + 1).join('\n');
+    document.getElementById('codeHighlight').innerHTML = highlightCode(ta.value);
+}
+const codeEl = document.getElementById('codeEditor');
+const hlEl = document.getElementById('codeHighlight');
+codeEl.addEventListener('input', updateLineNumbers);
+codeEl.addEventListener('scroll', () => {
+    document.getElementById('lineNums').scrollTop = codeEl.scrollTop;
+    hlEl.scrollTop = codeEl.scrollTop;
+    hlEl.scrollLeft = codeEl.scrollLeft;
+});
+
+async function loadTree() {
+    const r = await fetch('/api/cc/editor/tree');
+    const d = await r.json();
+    const box = document.getElementById('fileTree');
+    if (!d.ok) { box.textContent = d.error; return; }
+    box.innerHTML = d.files.map(f =>
+        `<div class="tree-item ${f.path === currentFilePath ? 'active' : ''}" onclick="openFile('${f.path}')">${f.path}${f.has_backup ? ' *' : ''}</div>`
+    ).join('');
+}
+
+async function openFile(path) {
+    const r = await fetch(`/api/cc/editor/file?path=${encodeURIComponent(path)}`);
+    const d = await r.json();
+    if (!d.ok) { document.getElementById('editorStatus').textContent = d.error; return; }
+    currentFilePath = d.path;
+    document.getElementById('editorFileLabel').textContent = `— ${d.path}`;
+    codeEl.value = d.content;
+    updateLineNumbers();
+    document.getElementById('btnSave').disabled = false;
+    document.getElementById('btnRevert').disabled = !d.has_backup;
+    document.getElementById('editorStatus').textContent = `Loaded ${d.path} (${d.size} bytes)`;
+    loadTree();
+}
+
+async function saveFile() {
+    if (!currentFilePath) return;
+    const r = await fetch('/api/cc/editor/file', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ path: currentFilePath, content: codeEl.value }),
+    });
+    const d = await r.json();
+    document.getElementById('editorStatus').textContent = d.ok ? `Saved ${d.path} (backup snapshot created)` : `Save error: ${d.error}`;
+    document.getElementById('btnRevert').disabled = !d.has_backup;
+    loadTree();
+}
+
+async function revertFile() {
+    if (!currentFilePath || !confirm(`Revert ${currentFilePath} to previous saved snapshot?`)) return;
+    const r = await fetch('/api/cc/editor/revert', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ path: currentFilePath }),
+    });
+    const d = await r.json();
+    if (d.ok) {
+        codeEl.value = d.content;
+        updateLineNumbers();
+        document.getElementById('editorStatus').textContent = `Reverted ${d.path}`;
+    } else {
+        document.getElementById('editorStatus').textContent = `Revert error: ${d.error}`;
+    }
+}
+
+async function startBuild(env, clean) {
+    const r = await fetch('/api/cc/build/start', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ env, clean }),
+    });
+    const d = await r.json();
+    if (!d.ok) alert(d.error);
+    refreshBuild();
+}
+
+async function runAudit() {
+    const r = await fetch('/api/cc/build/audit');
+    const d = await r.json();
+    document.getElementById('auditBox').innerHTML = (d.findings || []).map(f =>
+        `<span style="margin-right:12px; color:${f.level==='ok'?'#34d399':f.level==='warn'?'#fbbf24':'#f87171'};">[${f.level.toUpperCase()}] ${f.msg}</span>`
+    ).join('');
+}
+
+async function refreshBuild() {
+    try {
+        const r = await fetch('/api/cc/build/status');
+        const d = await r.json();
+        const pio = document.getElementById('pillPio');
+        pio.textContent = d.pio_available ? 'PlatformIO Ready' : 'PlatformIO Missing';
+        pio.className = 'pill ' + (d.pio_available ? 'ok' : 'err');
+        document.getElementById('buildStateLabel').textContent = `${d.status}${d.active_env ? ' ('+d.active_env+')' : ''}`;
+        if (d.logs && d.logs.length) {
+            const box = document.getElementById('buildLogs');
+            box.textContent = d.logs.join('\n');
+            box.scrollTop = box.scrollHeight;
+        }
+        document.getElementById('artifactBox').innerHTML = (d.artifacts || []).map(a =>
+            `Artifact <strong>${a.env}</strong>: ${(a.size/1024).toFixed(1)} KB | MD5 ${a.md5.slice(0,10)} | ${a.mtime}`
+        ).join(' &nbsp;•&nbsp; ');
+    } catch {}
+}
+
+function toggleUploadMode() {
+    const m = document.getElementById('upMode').value;
+    document.getElementById('upTargetIp').style.display = m === 'ota' ? '' : 'none';
+    document.getElementById('upSerialPort').style.display = m === 'serial' ? '' : 'none';
+}
+
+async function startUpload() {
+    const env = document.getElementById('upEnv').value;
+    const mode = document.getElementById('upMode').value;
+    const target = mode === 'ota'
+        ? document.getElementById('upTargetIp').value.trim()
+        : document.getElementById('upSerialPort').value;
+    const r = await fetch('/api/cc/upload/start', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ env, mode, target: target || null }),
+    });
+    const d = await r.json();
+    if (!d.ok) alert(d.error);
+    refreshUpload();
+}
+
+async function refreshUpload() {
+    try {
+        const r = await fetch('/api/cc/upload/status');
+        const d = await r.json();
+        document.getElementById('uploadStateLabel').textContent = d.status;
+        if (d.logs && d.logs.length) {
+            const box = document.getElementById('uploadLogs');
+            box.textContent = d.logs.join('\n');
+            box.scrollTop = box.scrollHeight;
+        }
+        const sel = document.getElementById('upSerialPort');
+        const prev = sel.value;
+        sel.innerHTML = (d.serial_ports || []).length
+            ? d.serial_ports.map(p => `<option value="${p.port}">${p.port} (${p.description})</option>`).join('')
+            : '<option value="">No USB serial ports detected</option>';
+        if (prev) sel.value = prev;
+        if (d.last_verified) {
+            const v = d.last_verified;
+            document.getElementById('uploadVerifyBox').textContent = v.ok
+                ? `Post-flash verify OK: ${v.ip} (${v.mode}, uptime ${v.uptime_s}s)`
+                : `Post-flash verify failed: ${v.error}`;
+        }
+    } catch {}
+}
+
+loadConfig();
+refreshHealth();
+refreshBuild();
+setInterval(refreshHealth, 5000);
+setInterval(() => {
+    if (document.getElementById('tab-build').classList.contains('active')) refreshBuild();
+    if (document.getElementById('tab-upload').classList.contains('active')) refreshUpload();
+}, 1500);
+</script>
+</body>
+</html>

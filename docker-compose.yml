@@ -1,0 +1,44 @@
+services:
+  sentinel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: smart-door-sentinel
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - PORT=5000
+      - CONTROL_CENTER_PORT=5001
+    ports:
+      - "5000:5000"
+      - "5001:5001"
+    volumes:
+      - sentinel_data:/app/data
+      - sentinel_monitoring:/app/entrance_monitoring
+      - sentinel_models:/app/models
+      - sentinel_workspace:/app/workspace
+      - sentinel_releases:/app/releases
+      - sentinel_builds:/app/builds
+      - sentinel_config:/app/config
+      # Optional: mount your local secrets directly
+      # - ./firmware/esp32-cam/include/wifi_secrets.h:/app/firmware/esp32-cam/include/wifi_secrets.h:ro
+    # Optional: USB Serial passthrough on Linux for direct ESP32 flashing
+    # devices:
+    #   - "/dev/ttyUSB0:/dev/ttyUSB0"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:5000/api/v1/system/healthz >/dev/null && curl -fsS http://127.0.0.1:5001/api/cc/healthz >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  sentinel_data:
+  sentinel_monitoring:
+  sentinel_models:
+  sentinel_workspace:
+  sentinel_releases:
+  sentinel_builds:
+  sentinel_config:

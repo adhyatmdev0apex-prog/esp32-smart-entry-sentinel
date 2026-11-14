@@ -8,18 +8,34 @@
 #if defined(SYSTEM_MODE_WROOM_CAM)
 static uint32_t s_sent_count = 0;
 static uint32_t s_fail_count = 0;
+static QueueHandle_t s_link_queue = nullptr;
+
+static void wroomLinkWorkerTask(void* param) {
+  Event ev;
+  for (;;) {
+    if (xQueueReceive(s_link_queue, &ev, portMAX_DELAY) == pdTRUE) {
+      sendEventToPeer(ev);
+    }
+  }
+}
 
 static void onLocalEvent(const Event& event) {
-  // If we are WROOM and door/motion triggers, notify CAM immediately
+  // Queue immediately (non-blocking) so sensors & buzzer never stall on HTTP
   if (event.type == EVENT_DOOR_OPEN || event.type == EVENT_MOTION_START) {
-    sendEventToPeer(event);
+    if (s_link_queue) {
+      xQueueSend(s_link_queue, &event, 0);
+    }
   }
 }
 
 void initWroomCamLink() {
 #if !BOARD_HAS_CAMERA
+  s_link_queue = xQueueCreate(16, sizeof(Event));
+  if (s_link_queue) {
+    xTaskCreatePinnedToCore(wroomLinkWorkerTask, "wroom_link", 4096, nullptr, 1, nullptr, 0);
+  }
   registerEventSubscriber(onLocalEvent);
-  logInfo("LINK", "WROOM -> CAM Inter-device Link active (Peer target: %s)", CFG_PEER_CAM_IP);
+  logInfo("LINK", "WROOM -> CAM Async Link active on Core 0 (Peer target: %s)", CFG_PEER_CAM_IP);
 #else
   logInfo("LINK", "CAM <- WROOM Inter-device Link ready (Listening for peer: %s)", CFG_PEER_WROOM_IP);
 #endif

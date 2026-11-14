@@ -21,9 +21,20 @@
 // System event handler: react to sensor or system events
 static void onSystemEvent(const Event& event) {
   if (event.type == EVENT_DOOR_OPEN) {
-    beep(100, 2); // Double beep when door opens
+    playTwoToneAlert(3000); // 3-second calm med/low passive buzzer chime
   }
 }
+
+#if !BOARD_HAS_CAMERA
+static void sensorTaskCore0(void* param) {
+  for (;;) {
+    updateReedSensor();
+    updatePirSensor();
+    updateBuzzer();
+    vTaskDelay(pdMS_TO_TICKS(5));
+  }
+}
+#endif
 
 void setup() {
   initSystem();
@@ -75,14 +86,22 @@ void setup() {
 #endif
 
   postEvent(EVENT_BOOT, "MAIN");
+
+#if !BOARD_HAS_CAMERA
+  xTaskCreatePinnedToCore(sensorTaskCore0, "sensor_c0", 4096, nullptr, 2, nullptr, 0);
+  logInfo("MAIN", "Sensor & buzzer task pinned to Core 0 (5ms tick).");
+#endif
+
   logInfo("MAIN", "Startup complete. System operational.");
 }
 
 void loop() {
   updateSystem();
+#if BOARD_HAS_CAMERA
   updateReedSensor();
   updatePirSensor();
   updateBuzzer();
+#endif
 
 #if HAS_CAMERA_FEATURE
   updateCamera();

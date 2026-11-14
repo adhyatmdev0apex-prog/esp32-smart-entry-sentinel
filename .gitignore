@@ -64,5 +64,12 @@ detections.json
 *.bmp
 
 # Secrets
+.env
 firmware/esp32-cam/include/wifi_secrets.h
 *.log
+
+# Control Center Runtime Volumes
+workspace/
+releases/
+builds/
+config/

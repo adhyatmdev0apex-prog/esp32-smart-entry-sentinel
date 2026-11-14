@@ -12,7 +12,7 @@ Architecture:
 - Identity Management: Side-by-side duplicate review, previewed transactional merge, and 3-tier safe deletion
 """
 
-from flask import Flask, request, send_file, render_template, jsonify, Response
+from flask import Flask, request, send_file, render_template, jsonify, Response, redirect, session
 import os
 from datetime import datetime, timedelta
 from collections import defaultdict, deque
@@ -40,6 +40,7 @@ from security_hardening import (
     init_app_security,
     mask_notification_secrets,
     strip_masked_secrets,
+    verify_secrets_h_login,
 )
 import atexit
 try:
@@ -3262,6 +3263,47 @@ def reset():
 # ============================================================================
 # PHASE 11 & 12: INDUSTRIAL SECURITY & READINESS ENDPOINTS
 # ============================================================================
+@app.route('/login', methods=['GET', 'POST'])
+def web_login_page():
+    """Browser auth page backed by ADmin / user credentials in secrets.h"""
+    if request.method == 'GET':
+        if session.get('sentinel_auth') is True:
+            return redirect('/')
+        return render_template('login.html', error=None)
+
+    data = request.get_json(silent=True)
+    if isinstance(data, dict):
+        username = str(data.get('username') or '').strip()
+        password = str(data.get('password') or '')
+    else:
+        username = str(request.form.get('username') or '').strip()
+        password = str(request.form.get('password') or '')
+
+    client_ip = request.remote_addr or 'unknown'
+    ok, role = verify_secrets_h_login(username, password)
+    if ok:
+        session['sentinel_auth'] = True
+        session['auth_role'] = role
+        session['auth_user'] = username
+        event_db.log_audit(username, 'login_success', client_ip, f'role={role}')
+        if isinstance(data, dict):
+            return jsonify({'ok': True, 'role': role, 'user': username}), 200
+        return redirect('/')
+
+    event_db.log_audit(username or 'unknown', 'login_failed', client_ip, 'invalid credentials')
+    if isinstance(data, dict):
+        return jsonify({'ok': False, 'error': 'Invalid username or password'}), 401
+    return render_template('login.html', error='Invalid username or password'), 401
+
+@app.route('/logout', methods=['GET', 'POST'])
+def web_logout_page():
+    user = session.pop('auth_user', None)
+    session.pop('auth_role', None)
+    session.pop('sentinel_auth', None)
+    if user:
+        event_db.log_audit(user, 'logout', request.remote_addr or 'unknown', '')
+    return redirect('/login')
+
 @app.route('/api/v1/security/status', methods=['GET'])
 def security_status_api():
     """Phase 11: Security posture (headers, rate limiter, PIN lock, API key preview)"""
@@ -3349,9 +3391,151 @@ def system_healthz_api():
         'security': security_guard.get_public_status(),
     })
 
+def _format_wroom_event_reason(ev):
+    ev_type = str(ev.get('type') or 'CUSTOM')
+    src = str(ev.get('src') or 'WROOM')
+    val = ev.get('val', 0)
+    time_ms = int(ev.get('time_ms') or 0)
+    extra = str(ev.get('extra') or '').strip()
+    if ev_type == 'DOOR_OPEN':
+        desc = f"Door opened (count: {val})"
+    elif ev_type == 'DOOR_CLOSED':
+        desc = f"Door closed (was open {val}s)"
+    elif ev_type == 'DOOR_TIMEOUT':
+        desc = f"Door open timeout (>{val}s)"
+    elif ev_type == 'MOTION_START':
+        desc = f"Motion detected (count: {val})"
+    elif ev_type == 'MOTION_END':
+        desc = "Motion ended"
+    elif ev_type == 'BOOT':
+        desc = "WROOM booted"
+    elif ev_type == 'WIFI_CONNECTED':
+        desc = "WROOM Wi-Fi connected"
+    else:
+        desc = f"{src} {ev_type} (val={val})"
+    if extra:
+        desc += f" [{extra}]"
+    return f"{desc} (uptime {time_ms / 1000.0:.1f}s)"
+
+
+def _wroom_event_poller_thread():
+    """Poll ESP32-WROOM /events and persist new hardware/sensor logs into EventDB."""
+    seen_keys = []
+    max_time_ms = -1
+    first_poll = True
+    recent_reasons = set()
+    try:
+        existing = event_db.query_events(limit=50, event_type='wroom').get('items', [])
+        recent_reasons = {(r.get('person_label'), r.get('reason')) for r in existing}
+    except Exception:
+        pass
+
+    while stream_active:
+        try:
+            req = urllib.request.Request(
+                f"http://{WROOM_NODE_IP}:80/events",
+                headers={'User-Agent': 'Sentinel-WROOM-Poller'},
+            )
+            with urllib.request.urlopen(req, timeout=1.5) as resp:
+                if resp.status == 200:
+                    payload = json.loads(resp.read().decode('utf-8', errors='ignore'))
+                    events = payload.get('events') or []
+                    if events:
+                        newest_ms = max(int(e.get('time_ms') or 0) for e in events)
+                        if max_time_ms >= 0 and newest_ms + 5000 < max_time_ms:
+                            # WROOM rebooted (millis reset)
+                            seen_keys.clear()
+                            max_time_ms = -1
+
+                        for ev in reversed(events):
+                            ev_type = str(ev.get('type') or 'CUSTOM')
+                            src = str(ev.get('src') or 'WROOM')
+                            time_ms = int(ev.get('time_ms') or 0)
+                            key = (ev_type, src, time_ms)
+                            if key in seen_keys:
+                                continue
+                            seen_keys.append(key)
+                            if len(seen_keys) > 64:
+                                seen_keys.pop(0)
+                            if time_ms > max_time_ms:
+                                max_time_ms = time_ms
+
+                            label = f"{src}: {ev_type}"
+                            reason = _format_wroom_event_reason(ev)
+                            if first_poll and (label, reason) in recent_reasons:
+                                continue
+
+                            event_db.log_recognition_event(
+                                event_type='wroom',
+                                person_id='ESP32-WROOM',
+                                person_label=label,
+                                similarity=1.0,
+                                quality=100.0,
+                                reason=reason,
+                            )
+                        first_poll = False
+        except Exception:
+            pass
+        time.sleep(0.5)
+
+
+_mdns_zc = None
+_mdns_info = None
+
+
+def _get_lan_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("192.168.29.1", 80))
+        return s.getsockname()[0]
+    except Exception:
+        try:
+            return socket.gethostbyname(socket.gethostname())
+        except Exception:
+            return "127.0.0.1"
+    finally:
+        s.close()
+
+
+def _start_mdns_advertiser(port, mdns_host="doorcam"):
+    global _mdns_zc, _mdns_info
+    try:
+        from zeroconf import Zeroconf, ServiceInfo
+        lan_ip = _get_lan_ip()
+        clean_host = mdns_host.strip().lower().removesuffix('.local') or 'doorcam'
+        _mdns_info = ServiceInfo(
+            "_http._tcp.local.",
+            f"{clean_host}._http._tcp.local.",
+            addresses=[socket.inet_aton(lan_ip)],
+            port=int(port),
+            properties={"path": "/"},
+            server=f"{clean_host}.local.",
+        )
+        _mdns_zc = Zeroconf()
+        _mdns_zc.register_service(_mdns_info)
+        return f"http://{clean_host}.local:{port}", lan_ip
+    except Exception as e:
+        print(f"[!] mDNS advertiser unavailable: {e}")
+        return None, _get_lan_ip()
+
+
+def _stop_mdns_advertiser():
+    global _mdns_zc, _mdns_info
+    try:
+        if _mdns_zc and _mdns_info:
+            _mdns_zc.unregister_service(_mdns_info)
+        if _mdns_zc:
+            _mdns_zc.close()
+    except Exception:
+        pass
+    _mdns_zc = None
+    _mdns_info = None
+
+
 def _graceful_shutdown():
     global stream_active
     stream_active = False
+    _stop_mdns_advertiser()
     try:
         notification_manager._running = False
     except Exception:
@@ -3390,6 +3574,9 @@ mjpeg_thread.start()
 ai_thread = threading.Thread(target=ai_worker_thread, daemon=True)
 ai_thread.start()
 
+wroom_poller_thread = threading.Thread(target=_wroom_event_poller_thread, daemon=True)
+wroom_poller_thread.start()
+
 if __name__ == '__main__':
     print("=" * 65)
     print("[*] ESP32-CAM Smart Door Entry & Facial Identity Server")
@@ -3401,7 +3588,12 @@ if __name__ == '__main__':
     print(f"Enrolled profiles: {len(identity_profiles)}")
     print("=" * 65)
     PORT = int(os.environ.get('PORT', 5000))
+    MDNS_HOST = os.environ.get('MDNS_HOST', 'doorcam')
+    mdns_url, lan_ip = _start_mdns_advertiser(PORT, MDNS_HOST)
     print(f"Web dashboard: http://localhost:{PORT}")
+    print(f"LAN IP URL:    http://{lan_ip}:{PORT}")
+    if mdns_url:
+        print(f"LAN DNS URL:   {mdns_url}")
     print("=" * 65)
 
     try:

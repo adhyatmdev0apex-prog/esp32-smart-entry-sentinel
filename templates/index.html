@@ -1960,6 +1960,7 @@
                     <input id="dbSearchInput" type="text" placeholder="Search person, reason, object..." oninput="if(this._t)clearTimeout(this._t);this._t=setTimeout(loadEventDb,300);" style="background:#0f172a; color:#f1f5f9; border:1px solid rgba(148,163,184,0.3); border-radius:8px; padding:5px 10px; font-size:0.82rem; min-width:200px;">
                     <select id="dbEventFilter" onchange="loadEventDb()" style="background:#0f172a; color:#f1f5f9; border:1px solid rgba(148,163,184,0.3); border-radius:8px; padding:5px 10px; font-size:0.82rem;">
                         <option value="all">All Events</option>
+                        <option value="wroom">WROOM Sensors</option>
                         <option value="recognized">Recognized</option>
                         <option value="inconclusive">Inconclusive</option>
                         <option value="unknown_pending">Unknown</option>
@@ -4215,7 +4216,9 @@
                     return;
                 }
                 box.innerHTML = data.items.map(ev => {
-                    const who = ev.person_label ? `${ev.person_label} (${ev.person_id})` : (ev.person_id || 'Unknown');
+                    const who = ev.event_type === 'wroom'
+                        ? (ev.person_label || 'ESP32-WROOM')
+                        : (ev.person_label ? `${ev.person_label} (${ev.person_id})` : (ev.person_id || 'Unknown'));
                     const objs = (ev.objects && ev.objects.length) ? ` • 📦 ${ev.objects.map(o => o.name).join(', ')}` : '';
                     return `<div style="padding:6px 8px; border-bottom:1px solid rgba(148,163,184,0.1); display:flex; justify-content:space-between; gap:8px;">
                         <span><strong>[${ev.event_type}]</strong> ${who} — ${ev.reason || ''}${objs}</span>
@@ -4244,7 +4247,17 @@
                 if (box) box.innerHTML = `<div style="color:#f87171;">Error loading audit log: ${e.message}</div>`;
             }
         }
-        document.addEventListener('DOMContentLoaded', () => { setTimeout(refreshPhase9Db, 600); setTimeout(refreshPhase10Notifications, 900); setInterval(refreshPhase10Notifications, 5000); });
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(refreshPhase9Db, 600);
+            setTimeout(refreshPhase10Notifications, 900);
+            setInterval(refreshPhase10Notifications, 5000);
+            setInterval(() => {
+                const pg = document.getElementById('page-events');
+                if (pg && pg.classList.contains('active') && currentDbTab === 'events') {
+                    loadEventDb();
+                }
+            }, 2000);
+        });
 
         let lastSeenAlertId = null;
         function toggleNotifyConfigPanel() {
