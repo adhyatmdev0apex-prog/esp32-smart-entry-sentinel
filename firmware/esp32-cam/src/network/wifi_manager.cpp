@@ -13,8 +13,14 @@ static int s_tx_power_dbm = 18;
 static int s_wifi_proto = (WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N);
 static unsigned long s_last_reconnect_attempt = 0;
 static unsigned long s_disconnected_since_ms = 0;
+static unsigned long s_last_server_heartbeat_ms = 0;
 static bool s_was_connected = false;
 static bool s_fallback_active = false;
+static bool s_server_ap_active = false;
+
+void notifyServerHeartbeat() {
+  s_last_server_heartbeat_ms = millis();
+}
 
 static wifi_power_t mapDbmToEnum(int dbm) {
   if (dbm <= 2)  return WIFI_POWER_2dBm;
@@ -32,9 +38,9 @@ static wifi_power_t mapDbmToEnum(int dbm) {
 
 static void applyRadioTuning() {
 #if !BOARD_HAS_CAMERA
-  // Battery-powered WROOM node: stay associated to Wi-Fi in Modem-Sleep to save power
-  WiFi.setSleep(WIFI_PS_MAX_MODEM);
-  esp_wifi_set_ps(WIFI_PS_MAX_MODEM);
+  // Battery-powered WROOM node: MIN_MODEM stays associated & wakes every beacon (100ms) for fast trigger
+  WiFi.setSleep(WIFI_PS_MIN_MODEM);
+  esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
 #else
   // Charger-powered CAM node: zero-latency Wi-Fi for fast wake & MJPEG streaming
   WiFi.setSleep(false);
@@ -121,8 +127,8 @@ void initWiFi() {
 }
 
 void updateWiFi() {
+  unsigned long now = millis();
   if (WiFi.status() != WL_CONNECTED) {
-    unsigned long now = millis();
     if (s_disconnected_since_ms == 0) s_disconnected_since_ms = now;
 
     if (!s_fallback_active && (now - s_disconnected_since_ms >= 12000)) {
@@ -130,6 +136,7 @@ void updateWiFi() {
 #if BOARD_HAS_CAMERA
       WiFi.mode(WIFI_AP_STA);
       WiFi.softAP("Sentinel-CAM", "sentinel123", 1);
+      s_server_ap_active = true;
       esp_wifi_set_channel(1, WIFI_SECOND_CHAN_NONE);
       logWarn("WIFI", "No Wi-Fi -> Fallback AP 'Sentinel-CAM' (192.168.4.1) + ESP-NOW Ch 1 active");
 #else
@@ -147,6 +154,22 @@ void updateWiFi() {
         WiFi.reconnect();
       }
     }
+  } else {
+#if BOARD_HAS_CAMERA
+    // Even when Wi-Fi STA is connected, start Fallback AP if dashboard server is unreachable (>15s)
+    bool server_alive = (s_last_server_heartbeat_ms > 0) && ((now - s_last_server_heartbeat_ms) < 15000UL);
+    if (!server_alive && now >= 15000UL && !s_server_ap_active) {
+      s_server_ap_active = true;
+      WiFi.mode(WIFI_AP_STA);
+      WiFi.softAP("Sentinel-CAM", "sentinel123");
+      logWarn("WIFI", "Server unreachable -> Fallback AP 'Sentinel-CAM' (192.168.4.1) started");
+    } else if (server_alive && s_server_ap_active) {
+      s_server_ap_active = false;
+      WiFi.softAPdisconnect(true);
+      WiFi.mode(WIFI_STA);
+      logInfo("WIFI", "Server reachable -> Fallback AP stopped");
+    }
+#endif
   }
 }
 

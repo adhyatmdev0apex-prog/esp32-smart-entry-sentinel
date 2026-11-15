@@ -1426,6 +1426,7 @@
             <button class="nav-tab" data-page="devices" onclick="switchPage('devices')">🔌 Devices</button>
             <button class="nav-tab" data-page="analytics" onclick="switchPage('analytics')">📊 Analytics</button>
             <button class="nav-tab" data-page="settings" onclick="switchPage('settings')">⚙️ Settings</button>
+            <button class="nav-tab" data-page="testing" onclick="switchPage('testing')">🧪 Testing</button>
         </nav>
 
         <!-- PAGE 1: OVERVIEW (SECURITY CONTROL CENTER) -->
@@ -1878,8 +1879,8 @@
                         <button class="btn btn-secondary btn-sm" id="quickFlashBtn" onclick="toggleQuickFlash()" title="Toggle onboard LED flashlight">
                             💡 Flash: Off
                         </button>
-                        <button class="btn btn-secondary btn-sm" id="camSensorToggleBtn" onclick="toggleCameraSensor()" title="Turn ESP32-CAM Optical Sensor ON or OFF (Low-Power Standby)">
-                            📷 Sensor: STANDBY
+                        <button class="btn btn-secondary btn-sm" id="camSensorToggleBtn" onclick="toggleCameraSensor()" title="Toggle ESP32-CAM Low-Power Standby Mode">
+                            🔋 Low-Power: ON
                         </button>
                         <button class="btn btn-secondary btn-sm" onclick="toggleCameraSettings()" title="Open camera controls">
                             ⚙️ Settings
@@ -1902,7 +1903,7 @@
                                 The sensor wakes automatically on door open, or you can activate it manually below.
                             </div>
                             <button id="overlayWakeCamBtn" class="btn btn-primary" onclick="setCameraSensor(true)" style="margin-top: 14px; width: 100%; background: linear-gradient(135deg, #10b981 0%, #059669 100%); font-weight: 600;">
-                                ⚡ Activate Camera Sensor
+                                ⚡ Wake from Low-Power
                             </button>
                         </div>
                     </div>
@@ -2350,6 +2351,64 @@
                 <button class="btn btn-danger btn-sm" onclick="if(confirm('Reset ALL enrolled identities and event history?')) fetch('/reset',{method:'POST'}).then(()=>location.reload())">🗑️ Reset All Data</button>
             </div>
         </div> <!-- /#page-settings -->
+
+        <!-- PAGE 9: TESTING & SIMULATIONS -->
+        <div id="page-testing" class="page-view">
+            <div class="card" style="padding: 20px; margin-bottom: 20px;">
+                <div class="card-header" style="margin-bottom: 12px;">
+                    <h2 style="margin: 0;">🧪 Hardware &amp; End-to-End Simulations</h2>
+                    <span class="stat-badge primary" id="testingLastLatency">Ready</span>
+                </div>
+                <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 16px;">
+                    Trigger real ESP32-WROOM, ESP32-CAM, UDP recording, Low-Power Standby, SPIFFS log, and 1.2s compressed image tests with live latency measurement.
+                </p>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-bottom: 18px;">
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px;">
+                        <h3 style="font-size: 0.92rem; margin-bottom: 10px; color: #f1f5f9;">🚪 Door &amp; Recording</h3>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <button class="btn btn-primary btn-sm" onclick="runSim('door_open')">🚪 Simulate Door OPEN (Wake + Record)</button>
+                            <button class="btn btn-secondary btn-sm" onclick="runSim('door_closed')">🔒 Simulate Door CLOSED (8s Auto-Standby)</button>
+                            <button class="btn btn-secondary btn-sm" onclick="runSim('udp_record_trigger')">⚡ Test UDP :5055 Record Trigger</button>
+                            <button class="btn btn-secondary btn-sm" onclick="runFullDoorCycleSim()">🔄 Full Cycle (Open → 3s → Close)</button>
+                        </div>
+                    </div>
+
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px;">
+                        <h3 style="font-size: 0.92rem; margin-bottom: 10px; color: #f1f5f9;">🔋 Low-Power &amp; Imaging</h3>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <button class="btn btn-primary btn-sm" onclick="runSim('low_power_off')" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">⚡ Low-Power OFF (Wake CAM)</button>
+                            <button class="btn btn-secondary btn-sm" onclick="runSim('low_power_on')">🌙 Low-Power ON (Standby)</button>
+                            <button class="btn btn-secondary btn-sm" onclick="runSim('cam_snapshot')">📸 Test CAM Snapshot (/capture)</button>
+                            <button class="btn btn-secondary btn-sm" onclick="runSim('wroom_saved_image')">🖼️ Fetch 1.2s WROOM SPIFFS Image</button>
+                        </div>
+                    </div>
+
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px;">
+                        <h3 style="font-size: 0.92rem; margin-bottom: 10px; color: #f1f5f9;">📡 Diagnostics &amp; Logs</h3>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <button class="btn btn-secondary btn-sm" onclick="runSim('ping_nodes')">📡 Ping Both ESP32s (RTT)</button>
+                            <button class="btn btn-secondary btn-sm" onclick="runSim('wroom_events')">📋 Fetch WROOM Events</button>
+                            <button class="btn btn-secondary btn-sm" onclick="runSim('cam_events')">📷 Fetch CAM Events</button>
+                            <button class="btn btn-secondary btn-sm" onclick="runSim('cam_spiffs_logs')">📜 Load CAM SPIFFS Logs</button>
+                            <button class="btn btn-secondary btn-sm" onclick="playDoorOpenAlertSound()">🔊 Test Alert Sound</button>
+                            <button class="btn btn-danger btn-sm" onclick="if(confirm('This will disconnect your laptop from current Wi-Fi and connect to Sentinel-CAM AP (192.168.4.1). Continue?')) runSim('connect_fallback_ap')">📶 Switch Laptop to Sentinel-CAM AP</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="testingImagePreviewWrap" style="display: none; margin-bottom: 14px;">
+                    <div style="font-size: 0.82rem; color: #94a3b8; margin-bottom: 6px;" id="testingImageMeta"></div>
+                    <img id="testingImagePreview" style="max-width: 360px; border-radius: 8px; border: 1px solid #334155;" />
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <span style="font-size: 0.84rem; color: #94a3b8;">Simulation Console</span>
+                    <button class="btn btn-secondary btn-sm" onclick="document.getElementById('testingConsole').textContent='Cleared.'">🗑️ Clear</button>
+                </div>
+                <pre id="testingConsole" style="background: #0b1120; border: 1px solid #1e293b; border-radius: 8px; padding: 12px; color: #cbd5e1; font-size: 0.8rem; max-height: 360px; overflow: auto; white-space: pre-wrap;">Click any simulation above to run...</pre>
+            </div>
+        </div> <!-- /#page-testing -->
     </div>
 
     <!-- WHO IS THIS PERSON? IDENTITY MODAL -->
@@ -4490,6 +4549,12 @@
                 }
 
                 updateCamSensorButton(isOnline || data.cam_sensor_active === true, data.recording_active === true);
+                if (typeof data.door_open_seq === 'number') {
+                    if (window._lastDoorOpenSeq !== undefined && data.door_open_seq > window._lastDoorOpenSeq) {
+                        playDoorOpenAlertSound();
+                    }
+                    window._lastDoorOpenSeq = data.door_open_seq;
+                }
 
                 // Update top stats & recognition telemetry (null-safe)
                 const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
@@ -4619,7 +4684,7 @@
         let currentSentinelPage = 'overview';
 
         function switchPage(pageId) {
-            const validPages = ['overview', 'camera', 'events', 'people', 'alerts', 'devices', 'analytics', 'settings'];
+            const validPages = ['overview', 'camera', 'events', 'people', 'alerts', 'devices', 'analytics', 'settings', 'testing'];
             if (!validPages.includes(pageId)) pageId = 'overview';
             currentSentinelPage = pageId;
 
@@ -4824,7 +4889,14 @@
                 const pill = document.getElementById('securityStatePill');
                 const dot = document.getElementById('securityStateDot');
                 const txt = document.getElementById('securityStateText');
-                const hasCrit = alerts.slice(0, 3).some(a => a.severity === 'critical' || a.event_type === 'UNKNOWN_PERSON');
+                const nowMs = Date.now();
+                const hasCrit = alerts.some(a => {
+                    if (a.acknowledged) return false;
+                    if (a.event_type === 'CAMERA_OFFLINE' && window._camSensorActive === false) return false;
+                    const tsMs = a.ts ? Date.parse(a.ts) : (a.created_at ? a.created_at * 1000 : nowMs);
+                    if (!isNaN(tsMs) && (nowMs - tsMs) > 15 * 60 * 1000) return false;
+                    return (a.severity === 'critical' || a.event_type === 'UNKNOWN_PERSON');
+                });
                 if (pill && dot && txt) {
                     pill.classList.toggle('alert', hasCrit);
                     dot.className = 'dot-ind ' + (hasCrit ? 'off' : 'on');
@@ -5054,15 +5126,15 @@
             const btn = document.getElementById('camSensorToggleBtn');
             if (!btn) return;
             if (active) {
-                btn.textContent = recording ? '📷 Sensor: ON (REC)' : '📷 Sensor: ON';
+                btn.textContent = recording ? '🔋 Low-Power: OFF (REC)' : '🔋 Low-Power: OFF';
                 btn.style.background = 'linear-gradient(135deg, #059669 0%, #10b981 100%)';
                 btn.style.color = '#ffffff';
                 btn.style.borderColor = '#10b981';
             } else {
-                btn.textContent = '📷 Sensor: OFF';
-                btn.style.background = '';
-                btn.style.color = '';
-                btn.style.borderColor = '';
+                btn.textContent = '🔋 Low-Power: ON';
+                btn.style.background = 'rgba(245, 158, 11, 0.18)';
+                btn.style.color = '#fbbf24';
+                btn.style.borderColor = 'rgba(245, 158, 11, 0.45)';
             }
         }
         async function setCameraSensor(active) {
@@ -5083,9 +5155,9 @@
                         window._offlineCounter = 0;
                         const img = document.getElementById('liveStreamImg');
                         if (img) setTimeout(() => { img.src = '/live?t=' + Date.now(); }, 150);
-                        showToast('Camera sensor activated!', 'success');
+                        showToast('Low-Power mode OFF — Camera live!', 'success');
                     } else {
-                        showToast('Camera sensor in low-power standby', 'info');
+                        showToast('Low-Power mode ON — Camera in standby', 'info');
                     }
                 } else {
                     showToast(d.error || 'Failed to toggle camera sensor', 'error');
@@ -5099,6 +5171,74 @@
         }
         function toggleCameraSensor() {
             setCameraSensor(!window._camSensorActive);
+        }
+
+        async function runSim(action) {
+            const con = document.getElementById('testingConsole');
+            const badge = document.getElementById('testingLastLatency');
+            const imgWrap = document.getElementById('testingImagePreviewWrap');
+            const imgEl = document.getElementById('testingImagePreview');
+            const imgMeta = document.getElementById('testingImageMeta');
+            if (badge) badge.textContent = 'Running ' + action + '...';
+            try {
+                const res = await fetch('/api/testing/simulate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action })
+                });
+                const d = await res.json();
+                if (badge) badge.textContent = (d.ok ? '✅ ' : '❌ ') + (d.latency_ms !== undefined ? d.latency_ms + ' ms' : 'Done');
+                if (d.image_data_url && imgWrap && imgEl) {
+                    imgEl.src = d.image_data_url;
+                    if (imgMeta) imgMeta.textContent = `${action} — ${d.bytes} bytes (${d.latency_ms} ms)`;
+                    imgWrap.style.display = 'block';
+                }
+                const ts = new Date().toLocaleTimeString();
+                const displayText = d.logs ? d.logs : JSON.stringify(d, (k, v) => k === 'image_data_url' ? '[base64 image]' : v, 2);
+                if (con) {
+                    con.textContent = `[${ts}] ${action} (${d.latency_ms} ms)\n${displayText}\n\n` + con.textContent.slice(0, 4000);
+                }
+            } catch (e) {
+                if (badge) badge.textContent = '❌ Error';
+                if (con) con.textContent = `Error running ${action}: ${e}\n\n` + con.textContent;
+            }
+        }
+        async function runFullDoorCycleSim() {
+            await runSim('door_open');
+            setTimeout(() => runSim('door_closed'), 3000);
+        }
+
+        function _getAlertAudioCtx() {
+            if (!window._sentinelAudioCtx) {
+                const Ctx = window.AudioContext || window.webkitAudioContext;
+                if (Ctx) window._sentinelAudioCtx = new Ctx();
+            }
+            if (window._sentinelAudioCtx && window._sentinelAudioCtx.state === 'suspended') {
+                window._sentinelAudioCtx.resume().catch(() => {});
+            }
+            return window._sentinelAudioCtx;
+        }
+        document.addEventListener('click', () => _getAlertAudioCtx(), { once: true });
+
+        function playDoorOpenAlertSound() {
+            try {
+                const ctx = _getAlertAudioCtx();
+                if (!ctx) return;
+                const notes = [880, 1174.66];
+                notes.forEach((freq, idx) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.16);
+                    gain.gain.setValueAtTime(0.001, ctx.currentTime + idx * 0.16);
+                    gain.gain.exponentialRampToValueAtTime(0.22, ctx.currentTime + idx * 0.16 + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.16 + 0.28);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(ctx.currentTime + idx * 0.16);
+                    osc.stop(ctx.currentTime + idx * 0.16 + 0.3);
+                });
+            } catch (e) {}
         }
     </script>
 </body>

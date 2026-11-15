@@ -43,17 +43,25 @@ bool initCamera(bool fast_wake) {
   if (s_camera_mutex == NULL) {
     s_camera_mutex = xSemaphoreCreateMutex();
   }
+  if (!takeCameraMutex(2000)) {
+    return false;
+  }
+  if (s_cam_ready) {
+    giveCameraMutex();
+    return true;
+  }
   s_cam_sensor_active = true;
+  s_last_retry_ms = millis();
 
   esp_log_level_set("*", ESP_LOG_INFO);
   esp_log_set_vprintf(cam_log_vprintf);
 
-  // Power-cycle the sensor via PWDN (fast 15ms wake from clean standby, full cycle on cold/recovery)
+  // Power-cycle the sensor via PWDN (fast 40ms wake from clean standby, full cycle on cold/recovery)
   if (PIN_CAM_PWDN >= 0) {
     pinMode(PIN_CAM_PWDN, OUTPUT);
     if (fast_wake) {
       digitalWrite(PIN_CAM_PWDN, LOW);
-      delay(15);
+      delay(40);
     } else {
       digitalWrite(PIN_CAM_PWDN, HIGH);
       delay(250);
@@ -117,6 +125,7 @@ bool initCamera(bool fast_wake) {
     esp_camera_deinit();
     logError("CAM", "Camera initialization failed (0x%x)", err);
     s_cam_ready = false;
+    giveCameraMutex();
     postEvent(EVENT_CAMERA_ERROR, "CAM", (int32_t)err);
     return false;
   }
@@ -133,6 +142,7 @@ bool initCamera(bool fast_wake) {
   }
 
   s_cam_ready = true;
+  giveCameraMutex();
   postEvent(EVENT_CAMERA_STARTED, "CAM", s_cam_pid);
   return true;
 }

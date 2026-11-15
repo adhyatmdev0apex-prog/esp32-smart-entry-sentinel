@@ -59,6 +59,7 @@ static esp_err_t reboot_handler(httpd_req_t* req) {
 }
 
 static esp_err_t status_handler(httpd_req_t* req) {
+  notifyServerHeartbeat();
   httpd_resp_set_type(req, "application/json");
   httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
 
@@ -332,15 +333,15 @@ static esp_err_t event_post_handler(httpd_req_t* req) {
 #if HAS_CAMERA_FEATURE
     setCameraSensorActive(true);
     scheduleDoorCapture1200ms();
+    scheduleAutoStandby(30000);
 #endif
     postEvent(EVENT_DOOR_OPEN, "PEER");
   } else if (strstr(buf, "DOOR_CLOSED")) {
+#if HAS_CAMERA_FEATURE
+    scheduleAutoStandby(8000);
+#endif
     postEvent(EVENT_DOOR_CLOSED, "PEER");
   } else if (strstr(buf, "MOTION_START")) {
-#if HAS_CAMERA_FEATURE
-    setCameraSensorActive(true);
-    scheduleDoorCapture1200ms();
-#endif
     postEvent(EVENT_MOTION_START, "PEER");
   } else if (strstr(buf, "MOTION_END")) {
     postEvent(EVENT_MOTION_END, "PEER");
@@ -375,6 +376,8 @@ static esp_err_t camera_power_handler(httpd_req_t* req) {
     }
   }
 
+  notifyServerHeartbeat();
+  if (target_active) cancelAutoStandby();
   bool ok = setCameraSensorActive(target_active);
   char resp[128];
   int len = snprintf(resp, sizeof(resp),
@@ -394,8 +397,8 @@ static const char FALLBACK_DASHBOARD_HTML[] PROGMEM =
   ".on{background:#10b981;color:#fff}.off{background:#475569;color:#fff}img{max-width:100%;border-radius:8px;background:#000}"
   "pre{background:#1e293b;padding:10px;border-radius:8px;overflow:auto;font-size:12px}</style></head><body>"
   "<h3>Sentinel Fallback Dashboard</h3><div>"
-  "<button class='on' onclick=\"fetch('/api/v1/camera/power?state=on').then(r=>r.json()).then(()=>setTimeout(ls,200))\">Sensor ON</button>"
-  "<button class='off' onclick=\"fetch('/api/v1/camera/power?state=off')\">Sensor OFF</button>"
+  "<button class='on' onclick=\"fetch('/api/v1/camera/power?state=on').then(r=>r.json()).then(()=>setTimeout(ls,200))\">Low-Power OFF (Live)</button>"
+  "<button class='off' onclick=\"fetch('/api/v1/camera/power?state=off')\">Low-Power ON</button>"
   "</div><p><img id='v' alt='Camera Standby'></p><h4>Recent Events</h4><pre id='e'>Loading...</pre>"
   "<script>function ls(){document.getElementById('v').src='http://'+location.hostname+':81/stream?t='+Date.now()}"
   "function le(){fetch('/events').then(r=>r.json()).then(d=>{document.getElementById('e').textContent="

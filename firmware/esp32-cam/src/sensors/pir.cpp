@@ -1,4 +1,5 @@
 #include "sensors/pir.h"
+#include "sensors/reed.h"
 #include "app_config.h"
 #include "core/events.h"
 #include "core/logger.h"
@@ -19,6 +20,12 @@ void initPirSensor() {
 }
 
 void updatePirSensor() {
+  // PIR only activates while the reed switch senses the door is OPEN
+  if (!isDoorOpen()) {
+    s_is_motion = false;
+    return;
+  }
+
   uint32_t now = millis();
   if (now - s_boot_ms < CFG_PIR_WARMUP_MS) {
     return; // Warmup guard

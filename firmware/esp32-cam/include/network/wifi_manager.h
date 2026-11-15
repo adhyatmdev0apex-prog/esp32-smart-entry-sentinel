@@ -13,6 +13,7 @@ void updateWiFi();
 
 bool isWiFiConnected();
 bool isWifiFallbackActive();
+void notifyServerHeartbeat();
 String getLocalIPString();
 int getWiFiRSSI();
 int getWiFiChannel();

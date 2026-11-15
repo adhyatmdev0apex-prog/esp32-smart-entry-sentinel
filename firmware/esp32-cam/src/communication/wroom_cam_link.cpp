@@ -7,6 +7,7 @@
 #include <HTTPClient.h>
 #include <WiFiUdp.h>
 #include <esp_now.h>
+#include <esp_wifi.h>
 #include <FS.h>
 #include <SPIFFS.h>
 
@@ -67,6 +68,8 @@ static volatile bool s_espnow_door_closed_rx = false;
 static volatile bool s_espnow_motion_rx = false;
 static bool s_door_snap_pending = false;
 static uint32_t s_door_snap_due_ms = 0;
+static bool s_auto_standby_pending = false;
+static uint32_t s_auto_standby_due_ms = 0;
 #else
 static bool s_wroom_spiffs_ready = false;
 static uint8_t* s_rx_img_buf = nullptr;
@@ -203,6 +206,15 @@ void scheduleDoorCapture1200ms() {
   s_door_snap_pending = true;
 }
 
+void scheduleAutoStandby(uint32_t delay_ms) {
+  s_auto_standby_due_ms = millis() + delay_ms;
+  s_auto_standby_pending = true;
+}
+
+void cancelAutoStandby() {
+  s_auto_standby_pending = false;
+}
+
 static void sendSuperCompressedImageToWroom(const uint8_t* jpg, size_t len) {
   if (!jpg || len == 0 || len > MAX_SUPER_JPG_BYTES) return;
 
@@ -327,21 +339,28 @@ void updateWroomCamLink() {
     s_espnow_door_open_rx = false;
     setCameraSensorActive(true);
     scheduleDoorCapture1200ms();
+    scheduleAutoStandby(30000);
     postEvent(EVENT_DOOR_OPEN, "ESPNOW");
   }
   if (s_espnow_motion_rx) {
     s_espnow_motion_rx = false;
-    setCameraSensorActive(true);
-    scheduleDoorCapture1200ms();
     postEvent(EVENT_MOTION_START, "ESPNOW");
   }
   if (s_espnow_door_closed_rx) {
     s_espnow_door_closed_rx = false;
+    if (s_auto_standby_pending) {
+      scheduleAutoStandby(8000);
+    }
     postEvent(EVENT_DOOR_CLOSED, "ESPNOW");
   }
   if (s_door_snap_pending && (int32_t)(millis() - s_door_snap_due_ms) >= 0) {
     s_door_snap_pending = false;
     captureAndSend1200msFrame();
+  }
+  if (s_auto_standby_pending && (int32_t)(millis() - s_auto_standby_due_ms) >= 0) {
+    s_auto_standby_pending = false;
+    setCameraSensorActive(false);
+    logInfo("CAM", "Auto-standby: returned camera to low-power mode");
   }
 #else
   if (s_rx_img_ready && s_rx_img_buf && s_rx_expected_len > 0) {
@@ -358,36 +377,59 @@ bool sendEventToPeer(const Event& event) {
     return ok;
   }
 
-  WiFiClient client;
-  HTTPClient http;
-  char url[128];
-  snprintf(url, sizeof(url), "http://%s:%d/api/v1/event", CFG_PEER_CAM_IP, CFG_HTTP_PORT);
+#if !BOARD_HAS_CAMERA
+  // Temporarily disable modem-sleep during burst for <15ms direct TCP trigger
+  esp_wifi_set_ps(WIFI_PS_NONE);
+#endif
 
-  http.setTimeout(CFG_LINK_TIMEOUT_MS);
-  if (!http.begin(client, url)) {
-    s_fail_count++;
-    return sendEspNowEvent((uint8_t)event.type, event.source, event.value);
-  }
-
-  http.addHeader("Content-Type", "application/json");
   char payload[160];
-  snprintf(payload, sizeof(payload),
-           "{\"event\":\"%s\",\"src\":\"%s\",\"val\":%d,\"time_ms\":%u}",
-           getEventTypeName(event.type),
-           event.source,
-           (int)event.value,
-           (unsigned int)event.timestamp_ms);
+  int plen = snprintf(payload, sizeof(payload),
+                      "{\"event\":\"%s\",\"src\":\"%s\",\"val\":%d,\"time_ms\":%u}",
+                      getEventTypeName(event.type),
+                      event.source,
+                      (int)event.value,
+                      (unsigned int)event.timestamp_ms);
 
-  int code = http.POST(payload);
-  http.end();
-
+  // Send 1-packet UDP fast-notify to LAN server (:5055) immediately
   WiFiUDP udp;
   if (udp.beginPacket(IPAddress(255, 255, 255, 255), 5055) == 1) {
-    udp.print(payload);
+    udp.write((const uint8_t*)payload, plen);
     udp.endPacket();
   }
 
-  if (code == HTTP_CODE_OK) {
+  // Direct TCP socket with TCP_NODELAY to CAM /api/v1/event (faster than HTTPClient)
+  WiFiClient client;
+  client.setTimeout(CFG_LINK_TIMEOUT_MS);
+  bool ok = false;
+  if (client.connect(CFG_PEER_CAM_IP, CFG_HTTP_PORT)) {
+    client.setNoDelay(true);
+    char hdr[192];
+    int hlen = snprintf(hdr, sizeof(hdr),
+                        "POST /api/v1/event HTTP/1.1\r\n"
+                        "Host: %s\r\n"
+                        "Content-Type: application/json\r\n"
+                        "Content-Length: %d\r\n"
+                        "Connection: close\r\n\r\n",
+                        CFG_PEER_CAM_IP, plen);
+    client.write((const uint8_t*)hdr, hlen);
+    client.write((const uint8_t*)payload, plen);
+    client.flush();
+    uint32_t wait_start = millis();
+    while (client.connected() && !client.available() && (millis() - wait_start < 400)) {
+      delay(1);
+    }
+    if (client.available()) {
+      String status_line = client.readStringUntil('\n');
+      ok = (status_line.indexOf("200") >= 0);
+    }
+    client.stop();
+  }
+
+#if !BOARD_HAS_CAMERA
+  esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
+#endif
+
+  if (ok) {
     s_sent_count++;
     return true;
   }

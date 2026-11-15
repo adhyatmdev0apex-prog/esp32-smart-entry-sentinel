@@ -1276,13 +1276,16 @@ door_recording_until = 0.0
 door_video_writer = None
 door_recording_path = None
 door_recording_frames = 0
+door_open_seq = 0
 
-def start_door_recording(duration_s=20.0):
+def start_door_recording(duration_s=20.0, bump_seq=True):
     """Arm live MJPEG recording immediately on DOOR_OPEN (<150ms target)."""
-    global door_recording_active, door_recording_until
+    global door_recording_active, door_recording_until, door_open_seq
     with door_recording_lock:
         door_recording_active = True
         door_recording_until = time.time() + float(duration_s)
+        if bump_seq:
+            door_open_seq += 1
     stream_wake_event.set()
     print(f"[REC] Door recording armed for up to {duration_s:.0f}s")
 
@@ -1333,6 +1336,7 @@ def mjpeg_consumer_thread():
     global stream_active, latest_jpeg, camera_online, active_camera_ip, stream_fps, last_frame_received_time
     print("Starting MJPEG consumer thread")
     socket.setdefaulttimeout(10.0)
+    last_standby_status_poll = 0.0
 
     while stream_active:
         candidate_urls = get_candidate_stream_urls()
@@ -1357,18 +1361,30 @@ def mjpeg_consumer_thread():
 
         if not resp:
             if camera_online:
-                notification_manager.emit(NotificationEvent(
-                    event_type='CAMERA_OFFLINE',
-                    title="Camera Offline",
-                    message="Unable to connect to ESP32-CAM MJPEG stream.",
-                    severity='critical',
-                    dedup_key="CAMERA_OFFLINE",
-                ))
+                board_alive = False
+                try:
+                    ping_ip = active_camera_ip or (CANDIDATE_IPS[0] if CANDIDATE_IPS else '192.168.29.10')
+                    with urllib.request.urlopen(f"http://{ping_ip}:80/ping", timeout=1.0) as pr:
+                        board_alive = (pr.status == 200)
+                except Exception:
+                    board_alive = False
+                if not board_alive:
+                    notification_manager.emit(NotificationEvent(
+                        event_type='CAMERA_OFFLINE',
+                        title="Camera Offline",
+                        message="Unable to reach ESP32-CAM.",
+                        severity='critical',
+                        dedup_key="CAMERA_OFFLINE",
+                    ))
             camera_online = False
             stream_fps = 0.0
             with door_recording_lock:
                 if door_video_writer is not None and not door_recording_active:
                     _close_recording_writer_locked()
+            now_poll = time.time()
+            if now_poll - last_standby_status_poll >= 4.0:
+                last_standby_status_poll = now_poll
+                threading.Thread(target=refresh_camera_hardware_status, daemon=True).start()
             stream_wake_event.wait(timeout=0.15)
             stream_wake_event.clear()
             continue
@@ -1800,6 +1816,7 @@ def stream_status():
         'sensor_ready': sensor_ready,
         'cam_sensor_active': sensor_active,
         'recording_active': door_recording_active,
+        'door_open_seq': door_open_seq,
         'ip': active_camera_ip if is_alive else None,
         'fps': round(stream_fps, 1) if is_alive else 0.0,
         'temp_c': cached_camera_settings.get('temp_c'),
@@ -3011,17 +3028,30 @@ def api_camera_sensor():
     else:
         state_param = 'toggle'
 
-    target_url = f"http://{cam_ip}:80/api/v1/camera/power?state={state_param}"
-    try:
-        req = urllib.request.Request(target_url, headers={'User-Agent': 'ESP32-Dashboard'})
-        with urllib.request.urlopen(req, timeout=3.0) as resp:
-            payload = json.loads(resp.read().decode('utf-8', errors='ignore'))
-        if payload.get('sensor_active'):
-            stream_wake_event.set()
-        threading.Thread(target=refresh_camera_hardware_status, daemon=True).start()
-        return jsonify(payload)
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 502
+    cam_ips = []
+    if active_camera_ip:
+        cam_ips.append(active_camera_ip)
+    for ip in CANDIDATE_IPS:
+        if ip and ip not in cam_ips:
+            cam_ips.append(ip)
+    if not cam_ips:
+        cam_ips = ['192.168.29.10']
+
+    last_err = 'No camera IP reachable'
+    for cam_ip in cam_ips:
+        target_url = f"http://{cam_ip}:80/api/v1/camera/power?state={state_param}"
+        try:
+            req = urllib.request.Request(target_url, headers={'User-Agent': 'ESP32-Dashboard'})
+            with urllib.request.urlopen(req, timeout=3.0) as resp:
+                payload = json.loads(resp.read().decode('utf-8', errors='ignore'))
+            if payload.get('sensor_active'):
+                stream_wake_event.set()
+            threading.Thread(target=refresh_camera_hardware_status, daemon=True).start()
+            return jsonify(payload)
+        except Exception as e:
+            last_err = str(e)
+            continue
+    return jsonify({'ok': False, 'error': f"ESP32-CAM unreachable ({last_err}). Ensure latest firmware is flashed."}), 502
 
 @app.route('/api/v1/event', methods=['POST'])
 def api_v1_event_push():
@@ -3035,6 +3065,119 @@ def api_v1_event_push():
         stop_door_recording_tail(tail_s=5.0)
         return jsonify({'ok': True, 'recording_tail_s': 5.0, 'event': 'DOOR_CLOSED'})
     return jsonify({'ok': True, 'event': ev_name})
+
+@app.route('/api/testing/simulate', methods=['POST'])
+def api_testing_simulate():
+    """Run real hardware/server simulations from the Dashboard Testing tab."""
+    global active_camera_ip
+    import base64
+    data = request.get_json(silent=True) or {}
+    action = str(data.get('action') or '').strip()
+    cam_ip = active_camera_ip or (CANDIDATE_IPS[0] if CANDIDATE_IPS else '192.168.29.10')
+    wroom_ip = WROOM_NODE_IP
+    t0 = time.time()
+
+    def _http_call(url, method='GET', payload=None, timeout=3.0):
+        req_data = json.dumps(payload).encode('utf-8') if payload is not None else None
+        headers = {'User-Agent': 'Sentinel-Testing'}
+        if payload is not None:
+            headers['Content-Type'] = 'application/json'
+        req = urllib.request.Request(url, data=req_data, headers=headers, method=method)
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return r.status, r.read()
+
+    try:
+        if action in ('door_open', 'door_closed'):
+            ev = 'DOOR_OPEN' if action == 'door_open' else 'DOOR_CLOSED'
+            if ev == 'DOOR_OPEN':
+                start_door_recording(duration_s=20.0)
+            else:
+                stop_door_recording_tail(tail_s=5.0)
+            status, raw = _http_call(f"http://{cam_ip}:80/api/v1/event", method='POST',
+                                     payload={'event': ev, 'src': 'SIM', 'val': 1}, timeout=4.0)
+            return jsonify({'ok': True, 'action': action, 'latency_ms': round((time.time() - t0) * 1000, 1),
+                            'http_status': status, 'cam_response': json.loads(raw.decode('utf-8', 'ignore'))})
+
+        if action in ('low_power_on', 'low_power_off'):
+            state = 'off' if action == 'low_power_on' else 'on'
+            status, raw = _http_call(f"http://{cam_ip}:80/api/v1/camera/power?state={state}", timeout=4.0)
+            res = json.loads(raw.decode('utf-8', 'ignore'))
+            if res.get('sensor_active'):
+                stream_wake_event.set()
+            return jsonify({'ok': bool(res.get('ok', True)), 'action': action,
+                            'latency_ms': round((time.time() - t0) * 1000, 1), 'cam_response': res})
+
+        if action == 'udp_record_trigger':
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            sock.sendto(b'{"event":"DOOR_OPEN","src":"SIM_UDP"}', ('127.0.0.1', 5055))
+            sock.close()
+            time.sleep(0.05)
+            return jsonify({'ok': True, 'action': action, 'latency_ms': round((time.time() - t0) * 1000, 1),
+                            'recording_active': door_recording_active})
+
+        if action == 'ping_nodes':
+            out = {}
+            for name, ip in (('cam', cam_ip), ('wroom', wroom_ip)):
+                nt0 = time.time()
+                try:
+                    st, body = _http_call(f"http://{ip}:80/ping", timeout=2.0)
+                    out[name] = {'ip': ip, 'online': st == 200, 'rtt_ms': round((time.time() - nt0) * 1000, 1),
+                                 'body': body.decode('utf-8', 'ignore')}
+                except Exception as e:
+                    out[name] = {'ip': ip, 'online': False, 'error': str(e)}
+            return jsonify({'ok': True, 'action': action, 'latency_ms': round((time.time() - t0) * 1000, 1), 'nodes': out})
+
+        if action in ('cam_events', 'wroom_events'):
+            ip = cam_ip if action == 'cam_events' else wroom_ip
+            st, body = _http_call(f"http://{ip}:80/events", timeout=2.5)
+            return jsonify({'ok': st == 200, 'action': action, 'latency_ms': round((time.time() - t0) * 1000, 1),
+                            'data': json.loads(body.decode('utf-8', 'ignore'))})
+
+        if action == 'cam_spiffs_logs':
+            st, body = _http_call(f"http://{cam_ip}:80/logs", timeout=2.5)
+            return jsonify({'ok': st == 200, 'action': action, 'latency_ms': round((time.time() - t0) * 1000, 1),
+                            'logs': body.decode('utf-8', 'ignore')})
+
+        if action in ('cam_snapshot', 'wroom_saved_image'):
+            url = f"http://{cam_ip}:80/capture" if action == 'cam_snapshot' else f"http://{wroom_ip}:80/api/v1/image"
+            st, img_bytes = _http_call(url, timeout=4.0)
+            b64 = base64.b64encode(img_bytes).decode('ascii')
+            return jsonify({'ok': st == 200, 'action': action, 'latency_ms': round((time.time() - t0) * 1000, 1),
+                            'bytes': len(img_bytes), 'image_data_url': f"data:image/jpeg;base64,{b64}"})
+
+        if action == 'connect_fallback_ap':
+            import subprocess, tempfile
+            ssid = 'Sentinel-CAM'
+            xml = (
+                '<?xml version="1.0"?>'
+                '<WLANProfile xmlns="http://www.microsoft.com/networking/WLAN/profile/v1">'
+                f'<name>{ssid}</name><SSIDConfig><SSID><name>{ssid}</name></SSID></SSIDConfig>'
+                '<connectionType>ESS</connectionType><connectionMode>manual</connectionMode>'
+                '<MSM><security><authEncryption><authentication>WPA2PSK</authentication>'
+                '<encryption>AES</encryption><useOneX>false</useOneX></authEncryption>'
+                '<sharedKey><keyType>passPhrase</keyType><protected>false</protected>'
+                '<keyMaterial>sentinel123</keyMaterial></sharedKey></security></MSM></WLANProfile>'
+            )
+            with tempfile.NamedTemporaryFile('w', suffix='.xml', delete=False, encoding='utf-8') as tf:
+                tf.write(xml)
+                xml_path = tf.name
+            try:
+                subprocess.run(['netsh', 'wlan', 'add', 'profile', f'filename={xml_path}'], capture_output=True, text=True, timeout=5)
+                subprocess.run(['netsh', 'wlan', 'disconnect'], capture_output=True, text=True, timeout=5)
+                res = subprocess.run(['netsh', 'wlan', 'connect', f'name={ssid}', f'ssid={ssid}'], capture_output=True, text=True, timeout=8)
+                active_camera_ip = '192.168.4.1'
+                return jsonify({'ok': res.returncode == 0, 'action': action, 'ap_ip': '192.168.4.1',
+                                'stdout': res.stdout.strip(), 'stderr': res.stderr.strip(),
+                                'latency_ms': round((time.time() - t0) * 1000, 1)})
+            finally:
+                try:
+                    os.remove(xml_path)
+                except Exception:
+                    pass
+
+        return jsonify({'ok': False, 'error': f'Unknown simulation action: {action}'}), 400
+    except Exception as e:
+        return jsonify({'ok': False, 'action': action, 'latency_ms': round((time.time() - t0) * 1000, 1), 'error': str(e)}), 502
 
 @app.route('/upload', methods=['POST'])
 def upload_image():
@@ -3543,6 +3686,8 @@ def _wroom_event_poller_thread():
     seen_keys = []
     max_time_ms = -1
     first_poll = True
+    wroom_was_online = False
+    wroom_fail_streak = 0
     recent_reasons = set()
     try:
         existing = event_db.query_events(limit=50, event_type='wroom').get('items', [])
@@ -3558,6 +3703,8 @@ def _wroom_event_poller_thread():
             )
             with urllib.request.urlopen(req, timeout=1.5) as resp:
                 if resp.status == 200:
+                    wroom_was_online = True
+                    wroom_fail_streak = 0
                     payload = json.loads(resp.read().decode('utf-8', errors='ignore'))
                     events = payload.get('events') or []
                     if events:
@@ -3585,6 +3732,10 @@ def _wroom_event_poller_thread():
                             if first_poll and (label, reason) in recent_reasons:
                                 continue
 
+                            if not first_poll and ev_type == 'DOOR_OPEN':
+                                global door_open_seq
+                                with door_recording_lock:
+                                    door_open_seq += 1
                             event_db.log_recognition_event(
                                 event_type='wroom',
                                 person_id='ESP32-WROOM',
@@ -3595,7 +3746,32 @@ def _wroom_event_poller_thread():
                             )
                         first_poll = False
         except Exception:
-            pass
+            if wroom_was_online:
+                wroom_fail_streak += 1
+                if wroom_fail_streak >= 16:
+                    # WROOM went offline unexpectedly (~8s): record 10s safety clip once
+                    wroom_was_online = False
+                    wroom_fail_streak = 0
+                    print("[SAFETY] ESP32-WROOM went offline unexpectedly -> recording 10s safety clip")
+                    notification_manager.emit(NotificationEvent(
+                        event_type='WROOM_OFFLINE',
+                        title="WROOM Offline / Tamper Alert",
+                        message="ESP32-WROOM went offline unexpectedly — saving 10s safety recording.",
+                        severity='critical',
+                        dedup_key="WROOM_OFFLINE",
+                    ))
+                    cam_ip = active_camera_ip or (CANDIDATE_IPS[0] if CANDIDATE_IPS else '192.168.29.10')
+                    try:
+                        urllib.request.urlopen(f"http://{cam_ip}:80/api/v1/camera/power?state=on", timeout=2.5).read()
+                    except Exception:
+                        pass
+                    start_door_recording(duration_s=10.0, bump_seq=False)
+                    def _restore_standby(ip=cam_ip):
+                        try:
+                            urllib.request.urlopen(f"http://{ip}:80/api/v1/camera/power?state=off", timeout=2.5).read()
+                        except Exception:
+                            pass
+                    threading.Timer(11.0, _restore_standby).start()
         time.sleep(0.5)
 
 
