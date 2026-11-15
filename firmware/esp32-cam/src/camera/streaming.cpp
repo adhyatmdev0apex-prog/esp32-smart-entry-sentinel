@@ -101,8 +101,9 @@ static void mjpegStreamTask(void* pvParameters) {
   logInfo("STREAM", "MJPEG Server listening on port %d", CFG_STREAM_PORT);
 
   while (true) {
-    if (s_paused) {
-      vTaskDelay(pdMS_TO_TICKS(200));
+    if (s_paused || !isCameraSensorActive() || !isCameraReady()) {
+      s_stream_stage = "standby";
+      vTaskDelay(pdMS_TO_TICKS(50));
       continue;
     }
 
@@ -131,7 +132,7 @@ static void mjpegStreamTask(void* pvParameters) {
     const uint32_t target_interval_ms = 40; // ~25 FPS max
 
     while (true) {
-      if (s_paused) break;
+      if (s_paused || !isCameraSensorActive() || !isCameraReady()) break;
 
       uint32_t frame_start = millis();
 

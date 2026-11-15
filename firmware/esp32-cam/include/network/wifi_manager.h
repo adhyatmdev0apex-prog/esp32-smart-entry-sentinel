@@ -12,6 +12,7 @@ void initWiFi();
 void updateWiFi();
 
 bool isWiFiConnected();
+bool isWifiFallbackActive();
 String getLocalIPString();
 int getWiFiRSSI();
 int getWiFiChannel();

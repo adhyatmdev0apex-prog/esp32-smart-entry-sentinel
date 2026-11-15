@@ -1267,6 +1267,67 @@ def process_frame(jpg_bytes):
         import traceback
         traceback.print_exc()
 
+RECORDINGS_FOLDER = os.path.join(DATA_FOLDER, 'recordings')
+os.makedirs(RECORDINGS_FOLDER, exist_ok=True)
+stream_wake_event = threading.Event()
+door_recording_lock = threading.Lock()
+door_recording_active = False
+door_recording_until = 0.0
+door_video_writer = None
+door_recording_path = None
+door_recording_frames = 0
+
+def start_door_recording(duration_s=20.0):
+    """Arm live MJPEG recording immediately on DOOR_OPEN (<150ms target)."""
+    global door_recording_active, door_recording_until
+    with door_recording_lock:
+        door_recording_active = True
+        door_recording_until = time.time() + float(duration_s)
+    stream_wake_event.set()
+    print(f"[REC] Door recording armed for up to {duration_s:.0f}s")
+
+def stop_door_recording_tail(tail_s=5.0):
+    """Keep recording briefly after DOOR_CLOSED, then finalize video."""
+    global door_recording_until
+    with door_recording_lock:
+        if door_recording_active:
+            door_recording_until = min(door_recording_until, time.time() + float(tail_s))
+
+def _close_recording_writer_locked():
+    global door_video_writer, door_recording_active, door_recording_path, door_recording_frames
+    if door_video_writer is not None:
+        try:
+            door_video_writer.release()
+        except Exception:
+            pass
+        print(f"[REC] Saved recording ({door_recording_frames} frames): {door_recording_path}")
+        door_video_writer = None
+    door_recording_active = False
+    door_recording_path = None
+    door_recording_frames = 0
+
+def _write_recording_frame(img):
+    global door_video_writer, door_recording_path, door_recording_frames
+    with door_recording_lock:
+        if not door_recording_active:
+            if door_video_writer is not None:
+                _close_recording_writer_locked()
+            return
+        if time.time() > door_recording_until:
+            _close_recording_writer_locked()
+            return
+        if door_video_writer is None:
+            ts = datetime.now().strftime('%Y%m%d_%H%M%S_%f')[:-3]
+            door_recording_path = os.path.join(RECORDINGS_FOLDER, f"door_{ts}.avi")
+            h, w = img.shape[:2]
+            fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+            door_video_writer = cv2.VideoWriter(door_recording_path, fourcc, 15.0, (w, h))
+            door_recording_frames = 0
+            print(f"[REC] Started live recording -> {door_recording_path} ({w}x{h})")
+        if door_video_writer is not None and door_video_writer.isOpened():
+            door_video_writer.write(img)
+            door_recording_frames += 1
+
 def mjpeg_consumer_thread():
     """Background thread to consume MJPEG stream from ESP32-CAM and buffer validated frames"""
     global stream_active, latest_jpeg, camera_online, active_camera_ip, stream_fps, last_frame_received_time
@@ -1305,7 +1366,11 @@ def mjpeg_consumer_thread():
                 ))
             camera_online = False
             stream_fps = 0.0
-            time.sleep(1.0)
+            with door_recording_lock:
+                if door_video_writer is not None and not door_recording_active:
+                    _close_recording_writer_locked()
+            stream_wake_event.wait(timeout=0.15)
+            stream_wake_event.clear()
             continue
 
         try:
@@ -1355,6 +1420,8 @@ def mjpeg_consumer_thread():
                         if img is not None and img.shape[0] >= 60 and img.shape[1] >= 60:
                             latest_valid_jpg = candidate_jpg
                             frame_count += 1
+                            if door_recording_active:
+                                _write_recording_frame(img)
 
                 if latest_valid_jpg is not None:
                     now = time.time()
@@ -1725,11 +1792,14 @@ def stream_status():
         recog_on = recognition_enabled
         cam_info = cached_camera_settings.get('camera', {})
         sensor_ready = bool(cam_info.get('ready', False)) if isinstance(cam_info, dict) else False
+        sensor_active = bool(cam_info.get('sensor_active', is_alive)) if isinstance(cam_info, dict) else is_alive
 
     return jsonify({
         'active': stream_active,
         'camera_online': is_alive,
         'sensor_ready': sensor_ready,
+        'cam_sensor_active': sensor_active,
+        'recording_active': door_recording_active,
         'ip': active_camera_ip if is_alive else None,
         'fps': round(stream_fps, 1) if is_alive else 0.0,
         'temp_c': cached_camera_settings.get('temp_c'),
@@ -2916,6 +2986,56 @@ def set_camera_setting():
         return jsonify({'status': 'error', 'var': var_name,
                         'error': f'Camera setting was not confirmed: {e}'}), 502
 
+@app.route('/api/camera/sensor', methods=['GET', 'POST'])
+def api_camera_sensor():
+    """Get or toggle ESP32-CAM optical sensor power (low-power standby vs active)."""
+    cam_ip = get_current_camera_ip()
+    if request.method == 'GET':
+        with state_lock:
+            cam_info = cached_camera_settings.get('camera', {})
+            sensor_active = bool(cam_info.get('sensor_active', camera_online)) if isinstance(cam_info, dict) else camera_online
+        return jsonify({
+            'ok': True,
+            'sensor_active': sensor_active,
+            'camera_online': camera_online,
+            'recording_active': door_recording_active,
+            'recording_path': door_recording_path,
+        })
+
+    req_data = request.get_json(silent=True) or {}
+    active_val = req_data.get('active', 'toggle')
+    if active_val is True or str(active_val).lower() in ('on', '1', 'true'):
+        state_param = 'on'
+    elif active_val is False or str(active_val).lower() in ('off', '0', 'false'):
+        state_param = 'off'
+    else:
+        state_param = 'toggle'
+
+    target_url = f"http://{cam_ip}:80/api/v1/camera/power?state={state_param}"
+    try:
+        req = urllib.request.Request(target_url, headers={'User-Agent': 'ESP32-Dashboard'})
+        with urllib.request.urlopen(req, timeout=3.0) as resp:
+            payload = json.loads(resp.read().decode('utf-8', errors='ignore'))
+        if payload.get('sensor_active'):
+            stream_wake_event.set()
+        threading.Thread(target=refresh_camera_hardware_status, daemon=True).start()
+        return jsonify(payload)
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 502
+
+@app.route('/api/v1/event', methods=['POST'])
+def api_v1_event_push():
+    """Fast HTTP push endpoint for DOOR_OPEN / DOOR_CLOSED recording triggers."""
+    data = request.get_json(silent=True) or {}
+    ev_name = str(data.get('event') or request.get_data(as_text=True) or '').upper()
+    if 'DOOR_OPEN' in ev_name or 'MOTION_START' in ev_name:
+        start_door_recording(duration_s=20.0)
+        return jsonify({'ok': True, 'recording_armed': True, 'event': 'DOOR_OPEN'})
+    if 'DOOR_CLOSED' in ev_name:
+        stop_door_recording_tail(tail_s=5.0)
+        return jsonify({'ok': True, 'recording_tail_s': 5.0, 'event': 'DOOR_CLOSED'})
+    return jsonify({'ok': True, 'event': ev_name})
+
 @app.route('/upload', methods=['POST'])
 def upload_image():
     """HTTP POST endpoint for direct frame upload compatibility"""
@@ -3574,8 +3694,35 @@ mjpeg_thread.start()
 ai_thread = threading.Thread(target=ai_worker_thread, daemon=True)
 ai_thread.start()
 
+def _door_udp_listener_thread():
+    """Listen on UDP port 5055 for sub-millisecond DOOR_OPEN/DOOR_CLOSED triggers from WROOM."""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        sock.bind(('0.0.0.0', 5055))
+        sock.settimeout(1.0)
+    except Exception as e:
+        print(f"[UDP] Door listener bind failed on :5055: {e}")
+        return
+
+    while stream_active:
+        try:
+            data, _addr = sock.recvfrom(512)
+            msg = data.decode('utf-8', errors='ignore').upper()
+            if 'DOOR_OPEN' in msg or 'MOTION_START' in msg:
+                start_door_recording(duration_s=20.0)
+            elif 'DOOR_CLOSED' in msg:
+                stop_door_recording_tail(tail_s=5.0)
+        except socket.timeout:
+            continue
+        except Exception:
+            time.sleep(0.1)
+
 wroom_poller_thread = threading.Thread(target=_wroom_event_poller_thread, daemon=True)
 wroom_poller_thread.start()
+
+door_udp_thread = threading.Thread(target=_door_udp_listener_thread, daemon=True)
+door_udp_thread.start()
 
 if __name__ == '__main__':
     print("=" * 65)
@@ -3597,6 +3744,11 @@ if __name__ == '__main__':
     print("=" * 65)
 
     try:
+        from waitress import serve
+        print(f"WSGI Server:   Waitress production server (threads=16)")
+        print("=" * 65)
+        serve(app, host='0.0.0.0', port=PORT, threads=16, channel_timeout=120)
+    except ImportError:
         app.run(host='0.0.0.0', port=PORT, debug=False, threaded=True)
     finally:
         stream_active = False

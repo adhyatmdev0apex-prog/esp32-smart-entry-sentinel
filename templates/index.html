@@ -1878,6 +1878,9 @@
                         <button class="btn btn-secondary btn-sm" id="quickFlashBtn" onclick="toggleQuickFlash()" title="Toggle onboard LED flashlight">
                             💡 Flash: Off
                         </button>
+                        <button class="btn btn-secondary btn-sm" id="camSensorToggleBtn" onclick="toggleCameraSensor()" title="Turn ESP32-CAM Optical Sensor ON or OFF (Low-Power Standby)">
+                            📷 Sensor: STANDBY
+                        </button>
                         <button class="btn btn-secondary btn-sm" onclick="toggleCameraSettings()" title="Open camera controls">
                             ⚙️ Settings
                         </button>
@@ -1895,9 +1898,12 @@
                             <h3>ESP-CAM Video Stream Offline</h3>
                             <p style="margin-bottom: 10px;">Waiting for MJPEG video stream on port 81 (<code>http://192.168.29.10:81/stream</code>).</p>
                             <div style="font-size: 0.82rem; background: rgba(255,255,255,0.06); padding: 10px 14px; border-radius: 8px; color: #94a3b8; text-align: left; line-height: 1.45;">
-                                <strong style="color: #f1f5f9;">Hardware Status:</strong> The board connected to USB COM11 is the <strong>ESP32-WROOM</strong> running in <code>WROOM_ONLY</code> mode at <code>192.168.29.20</code>.<br>
-                                To activate the video stream, power on the <strong>AI-Thinker ESP32-CAM</strong> at <code>192.168.29.10</code>.
+                                <strong style="color: #f1f5f9;">Hardware Status:</strong> ESP32-WROOM is in low-power Wi-Fi Modem-Sleep at <code>192.168.29.20</code> and ESP32-CAM is in Camera Sensor Standby at <code>192.168.29.10</code>.<br>
+                                The sensor wakes automatically on door open, or you can activate it manually below.
                             </div>
+                            <button id="overlayWakeCamBtn" class="btn btn-primary" onclick="setCameraSensor(true)" style="margin-top: 14px; width: 100%; background: linear-gradient(135deg, #10b981 0%, #059669 100%); font-weight: 600;">
+                                ⚡ Activate Camera Sensor
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -4483,6 +4489,8 @@
                     }
                 }
 
+                updateCamSensorButton(isOnline || data.cam_sensor_active === true, data.recording_active === true);
+
                 // Update top stats & recognition telemetry (null-safe)
                 const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
                 setTxt('statTotalPersons', data.total_persons);
@@ -5038,6 +5046,59 @@
             const d = await res.json();
             showToast(d.ok ? `New API Key generated (${d.api_key_preview})` : 'Failed', d.ok ? 'success' : 'error');
             loadSecurityHealthz();
+        }
+
+        window._camSensorActive = false;
+        function updateCamSensorButton(active, recording) {
+            window._camSensorActive = !!active;
+            const btn = document.getElementById('camSensorToggleBtn');
+            if (!btn) return;
+            if (active) {
+                btn.textContent = recording ? '📷 Sensor: ON (REC)' : '📷 Sensor: ON';
+                btn.style.background = 'linear-gradient(135deg, #059669 0%, #10b981 100%)';
+                btn.style.color = '#ffffff';
+                btn.style.borderColor = '#10b981';
+            } else {
+                btn.textContent = '📷 Sensor: OFF';
+                btn.style.background = '';
+                btn.style.color = '';
+                btn.style.borderColor = '';
+            }
+        }
+        async function setCameraSensor(active) {
+            const overlayBtn = document.getElementById('overlayWakeCamBtn');
+            const toggleBtn = document.getElementById('camSensorToggleBtn');
+            if (overlayBtn) overlayBtn.disabled = true;
+            if (toggleBtn) toggleBtn.disabled = true;
+            try {
+                const res = await fetch('/api/camera/sensor', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ active })
+                });
+                const d = await res.json();
+                if (d.ok) {
+                    updateCamSensorButton(d.sensor_active, false);
+                    if (d.sensor_active) {
+                        window._offlineCounter = 0;
+                        const img = document.getElementById('liveStreamImg');
+                        if (img) setTimeout(() => { img.src = '/live?t=' + Date.now(); }, 150);
+                        showToast('Camera sensor activated!', 'success');
+                    } else {
+                        showToast('Camera sensor in low-power standby', 'info');
+                    }
+                } else {
+                    showToast(d.error || 'Failed to toggle camera sensor', 'error');
+                }
+            } catch (e) {
+                showToast('Error contacting server: ' + e, 'error');
+            } finally {
+                if (overlayBtn) overlayBtn.disabled = false;
+                if (toggleBtn) toggleBtn.disabled = false;
+            }
+        }
+        function toggleCameraSensor() {
+            setCameraSensor(!window._camSensorActive);
         }
     </script>
 </body>

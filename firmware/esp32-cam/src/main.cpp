@@ -26,18 +26,23 @@ static void onSystemEvent(const Event& event) {
 }
 
 #if !BOARD_HAS_CAMERA
+extern void setReedNotifyTask(void* task_handle);
 static void sensorTaskCore0(void* param) {
+  setReedNotifyTask(xTaskGetCurrentTaskHandle());
   for (;;) {
     updateReedSensor();
     updatePirSensor();
     updateBuzzer();
-    vTaskDelay(pdMS_TO_TICKS(5));
+    ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(50));
   }
 }
 #endif
 
 void setup() {
   initSystem();
+#if !BOARD_HAS_CAMERA
+  setCpuFrequencyMhz(80);
+#endif
   initLogger(115200);
 
   logInfo("MAIN", "==================================================");
@@ -60,9 +65,9 @@ void setup() {
   initPirSensor();
   initBuzzer();
 
-  // 4. Camera & Cooling (CAM modes only)
+  // 4. Camera & Cooling (CAM modes only) - start camera sensor in low-power standby
 #if HAS_CAMERA_FEATURE
-  initCamera();
+  initCameraStandby();
   initCooling();
 #endif
 

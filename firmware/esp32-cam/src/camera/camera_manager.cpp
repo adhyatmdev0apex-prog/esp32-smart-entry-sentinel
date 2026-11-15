@@ -8,6 +8,7 @@
 #include <stdarg.h>
 
 static bool s_cam_ready = false;
+static volatile bool s_cam_sensor_active = false;
 static int s_cam_pid = -1;
 static int s_cam_framesize = -1;
 static int s_cam_pixformat = -1;
@@ -38,21 +39,27 @@ static int cam_log_vprintf(const char* fmt, va_list args) {
   return vprintf(fmt, args);
 }
 
-bool initCamera() {
+bool initCamera(bool fast_wake) {
   if (s_camera_mutex == NULL) {
     s_camera_mutex = xSemaphoreCreateMutex();
   }
+  s_cam_sensor_active = true;
 
   esp_log_level_set("*", ESP_LOG_INFO);
   esp_log_set_vprintf(cam_log_vprintf);
 
-  // Power-cycle the sensor via PWDN so warm/OTA reboots clear any latched DVP/VSYNC state.
+  // Power-cycle the sensor via PWDN (fast 15ms wake from clean standby, full cycle on cold/recovery)
   if (PIN_CAM_PWDN >= 0) {
     pinMode(PIN_CAM_PWDN, OUTPUT);
-    digitalWrite(PIN_CAM_PWDN, HIGH);
-    delay(250);
-    digitalWrite(PIN_CAM_PWDN, LOW);
-    delay(100);
+    if (fast_wake) {
+      digitalWrite(PIN_CAM_PWDN, LOW);
+      delay(15);
+    } else {
+      digitalWrite(PIN_CAM_PWDN, HIGH);
+      delay(250);
+      digitalWrite(PIN_CAM_PWDN, LOW);
+      delay(100);
+    }
   }
 
   camera_config_t config = {};
@@ -130,19 +137,62 @@ bool initCamera() {
   return true;
 }
 
+void initCameraStandby() {
+  if (s_camera_mutex == NULL) {
+    s_camera_mutex = xSemaphoreCreateMutex();
+  }
+  s_cam_sensor_active = false;
+  s_cam_ready = false;
+  if (PIN_CAM_PWDN >= 0) {
+    pinMode(PIN_CAM_PWDN, OUTPUT);
+    digitalWrite(PIN_CAM_PWDN, HIGH);
+  }
+  logInfo("CAM", "Camera sensor in low-power STANDBY (PWDN=HIGH)");
+}
+
 void updateCamera() {
-  if (!s_cam_ready) {
+  if (s_cam_sensor_active && !s_cam_ready) {
     uint32_t now = millis();
     if (now - s_last_retry_ms >= 4000) {
       s_last_retry_ms = now;
       logWarn("CAM", "Retrying camera sensor recovery...");
-      initCamera();
+      initCamera(false);
     }
   }
 }
 
 bool isCameraReady() {
   return s_cam_ready;
+}
+
+bool isCameraSensorActive() {
+  return s_cam_sensor_active;
+}
+
+bool setCameraSensorActive(bool active) {
+  if (active) {
+    if (s_cam_sensor_active && s_cam_ready) return true;
+    uint32_t t0 = millis();
+    bool ok = initCamera(true);
+    if (!ok) {
+      ok = initCamera(false);
+    }
+    logInfo("CAM", "Camera sensor WAKE %s in %u ms", ok ? "OK" : "FAILED", (unsigned)(millis() - t0));
+    return ok;
+  } else {
+    if (!s_cam_sensor_active && !s_cam_ready) return true;
+    s_cam_sensor_active = false;
+    s_cam_ready = false;
+    takeCameraMutex(600);
+    esp_camera_deinit();
+    if (PIN_CAM_PWDN >= 0) {
+      pinMode(PIN_CAM_PWDN, OUTPUT);
+      digitalWrite(PIN_CAM_PWDN, HIGH);
+    }
+    giveCameraMutex();
+    logInfo("CAM", "Camera sensor entered low-power STANDBY");
+    return true;
+  }
 }
 
 bool takeCameraMutex(uint32_t timeout_ms) {
@@ -216,9 +266,10 @@ void recordCaptureMetrics(bool ok, size_t len) {
 void getCameraDiagnosticsJson(char* buf, size_t max_len) {
   sensor_t* s = esp_camera_sensor_get();
   snprintf(buf, max_len,
-           "\"camera\":{\"ready\":%s,\"xclk_mhz\":%d,\"cam_pid\":%d,\"framesize\":%d,"
+           "\"camera\":{\"ready\":%s,\"sensor_active\":%s,\"xclk_mhz\":%d,\"cam_pid\":%d,\"framesize\":%d,"
            "\"cap_ok\":%u,\"cap_fail\":%u,\"last_len\":%u,\"cam_log\":\"%s\"}",
            s_cam_ready ? "true" : "false",
+           s_cam_sensor_active ? "true" : "false",
            s_xclk_mhz,
            s_cam_pid,
            s ? (int)s->status.framesize : -1,

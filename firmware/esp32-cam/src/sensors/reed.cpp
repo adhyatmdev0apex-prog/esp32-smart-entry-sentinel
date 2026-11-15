@@ -12,6 +12,21 @@ static uint32_t s_last_debounce_ms = 0;
 static uint32_t s_last_state_change_ms = 0;
 static uint32_t s_open_count = 0;
 static bool s_timeout_reported = false;
+static TaskHandle_t s_reed_notify_task = nullptr;
+
+static void IRAM_ATTR onReedIsr() {
+  BaseType_t woken = pdFALSE;
+  if (s_reed_notify_task != nullptr) {
+    vTaskNotifyGiveFromISR(s_reed_notify_task, &woken);
+  }
+  if (woken) {
+    portYIELD_FROM_ISR();
+  }
+}
+
+void setReedNotifyTask(void* task_handle) {
+  s_reed_notify_task = (TaskHandle_t)task_handle;
+}
 
 void initReedSensor() {
   pinMode(s_reed_pin, INPUT_PULLUP);
@@ -20,33 +35,47 @@ void initReedSensor() {
   s_last_raw_state = raw;
   s_last_debounce_ms = millis();
   s_last_state_change_ms = millis();
-  logInfo("REED", "Initialized on GPIO %d (Door state: %s)", s_reed_pin, s_is_open ? "OPEN" : "CLOSED");
+  attachInterrupt(digitalPinToInterrupt(s_reed_pin), onReedIsr, CHANGE);
+  logInfo("REED", "Initialized on GPIO %d with ISR wakeup (Door state: %s)", s_reed_pin, s_is_open ? "OPEN" : "CLOSED");
 }
 
 void updateReedSensor() {
   int raw = digitalRead(s_reed_pin);
   uint32_t now = millis();
+  bool current_open = (raw != CFG_REED_ACTIVE_LEVEL);
 
-  if (raw != s_last_raw_state) {
+  // Leading-edge instant trigger for DOOR_OPEN (zero debounce wait on first open edge)
+  if (current_open && !s_is_open && (now - s_last_state_change_ms) >= CFG_REED_DEBOUNCE_MS) {
+    s_is_open = true;
     s_last_raw_state = raw;
     s_last_debounce_ms = now;
-  }
+    s_last_state_change_ms = now;
+    s_timeout_reported = false;
+    s_open_count++;
+    logInfo("REED", "Door OPENED instant (count: %u)", s_open_count);
+    postEvent(EVENT_DOOR_OPEN, "REED", (int32_t)s_open_count);
+  } else {
+    if (raw != s_last_raw_state) {
+      s_last_raw_state = raw;
+      s_last_debounce_ms = now;
+    }
 
-  if ((now - s_last_debounce_ms) >= CFG_REED_DEBOUNCE_MS) {
-    bool current_open = (raw != CFG_REED_ACTIVE_LEVEL);
-    if (current_open != s_is_open) {
-      s_is_open = current_open;
-      s_last_state_change_ms = now;
-      s_timeout_reported = false;
+    if ((now - s_last_debounce_ms) >= CFG_REED_DEBOUNCE_MS) {
+      if (current_open != s_is_open) {
+        s_is_open = current_open;
+        uint32_t prev_change = s_last_state_change_ms;
+        s_last_state_change_ms = now;
+        s_timeout_reported = false;
 
-      if (s_is_open) {
-        s_open_count++;
-        logInfo("REED", "Door OPENED (count: %u)", s_open_count);
-        postEvent(EVENT_DOOR_OPEN, "REED", (int32_t)s_open_count);
-      } else {
-        uint32_t duration_s = (now - s_last_state_change_ms) / 1000;
-        logInfo("REED", "Door CLOSED (was open for %u sec)", duration_s);
-        postEvent(EVENT_DOOR_CLOSED, "REED", (int32_t)duration_s);
+        if (s_is_open) {
+          s_open_count++;
+          logInfo("REED", "Door OPENED (count: %u)", s_open_count);
+          postEvent(EVENT_DOOR_OPEN, "REED", (int32_t)s_open_count);
+        } else {
+          uint32_t duration_s = (now - prev_change) / 1000;
+          logInfo("REED", "Door CLOSED (was open for %u sec)", duration_s);
+          postEvent(EVENT_DOOR_CLOSED, "REED", (int32_t)duration_s);
+        }
       }
     }
   }

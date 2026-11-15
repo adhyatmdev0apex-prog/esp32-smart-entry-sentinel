@@ -8,10 +8,13 @@
 #include "camera/camera_manager.h"
 #include "camera/streaming.h"
 #include "camera/cooling.h"
+#include "communication/wroom_cam_link.h"
 #include "app_config.h"
 
 #include <esp_http_server.h>
 #include <ArduinoOTA.h>
+#include <FS.h>
+#include <SPIFFS.h>
 
 static httpd_handle_t s_httpd = NULL;
 static uint8_t s_flash_level = 0;
@@ -193,6 +196,12 @@ static esp_err_t control_handler(httpd_req_t* req) {
     return httpd_resp_send(req, "OK", 2);
   }
 
+  if (!strcmp(variable, "cam_sensor")) {
+    bool ok = setCameraSensorActive(val != 0);
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    return ok ? httpd_resp_send(req, "OK", 2) : httpd_resp_send_500(req);
+  }
+
   sensor_t* s = esp_camera_sensor_get();
   if (s) {
     int res = 0;
@@ -320,10 +329,18 @@ static esp_err_t event_post_handler(httpd_req_t* req) {
   logInfo("HTTP", "Received peer event: %s", buf);
 
   if (strstr(buf, "DOOR_OPEN")) {
+#if HAS_CAMERA_FEATURE
+    setCameraSensorActive(true);
+    scheduleDoorCapture1200ms();
+#endif
     postEvent(EVENT_DOOR_OPEN, "PEER");
   } else if (strstr(buf, "DOOR_CLOSED")) {
     postEvent(EVENT_DOOR_CLOSED, "PEER");
   } else if (strstr(buf, "MOTION_START")) {
+#if HAS_CAMERA_FEATURE
+    setCameraSensorActive(true);
+    scheduleDoorCapture1200ms();
+#endif
     postEvent(EVENT_MOTION_START, "PEER");
   } else if (strstr(buf, "MOTION_END")) {
     postEvent(EVENT_MOTION_END, "PEER");
@@ -337,13 +354,118 @@ static esp_err_t event_post_handler(httpd_req_t* req) {
   return httpd_resp_send(req, resp, strlen(resp));
 }
 
+#if HAS_CAMERA_FEATURE
+static esp_err_t camera_power_handler(httpd_req_t* req) {
+  bool target_active = !isCameraSensorActive();
+  char* qbuf = NULL;
+  if (httpd_req_get_url_query_len(req) > 0 && parse_get_query(req, &qbuf) == ESP_OK) {
+    char state[16] = {0};
+    if (httpd_query_key_value(qbuf, "state", state, sizeof(state)) == ESP_OK) {
+      if (!strcmp(state, "on") || !strcmp(state, "1") || !strcmp(state, "true")) target_active = true;
+      else if (!strcmp(state, "off") || !strcmp(state, "0") || !strcmp(state, "false")) target_active = false;
+    }
+    free(qbuf);
+  } else if (req->content_len > 0 && req->content_len < 128) {
+    char body[128] = {0};
+    int r = httpd_req_recv(req, body, sizeof(body) - 1);
+    if (r > 0) {
+      body[r] = '\0';
+      if (strstr(body, "true") || strstr(body, "\"on\"") || strstr(body, ":1")) target_active = true;
+      else if (strstr(body, "false") || strstr(body, "\"off\"") || strstr(body, ":0")) target_active = false;
+    }
+  }
+
+  bool ok = setCameraSensorActive(target_active);
+  char resp[128];
+  int len = snprintf(resp, sizeof(resp),
+                     "{\"ok\":%s,\"sensor_active\":%s,\"ready\":%s}",
+                     ok ? "true" : "false",
+                     isCameraSensorActive() ? "true" : "false",
+                     isCameraReady() ? "true" : "false");
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+  return httpd_resp_send(req, resp, len);
+}
+
+static const char FALLBACK_DASHBOARD_HTML[] PROGMEM =
+  "<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
+  "<title>Sentinel Fallback</title><style>body{font-family:sans-serif;background:#0f172a;color:#e2e8f0;margin:16px}"
+  "button{padding:8px 14px;border:0;border-radius:6px;margin-right:8px;cursor:pointer;font-weight:700}"
+  ".on{background:#10b981;color:#fff}.off{background:#475569;color:#fff}img{max-width:100%;border-radius:8px;background:#000}"
+  "pre{background:#1e293b;padding:10px;border-radius:8px;overflow:auto;font-size:12px}</style></head><body>"
+  "<h3>Sentinel Fallback Dashboard</h3><div>"
+  "<button class='on' onclick=\"fetch('/api/v1/camera/power?state=on').then(r=>r.json()).then(()=>setTimeout(ls,200))\">Sensor ON</button>"
+  "<button class='off' onclick=\"fetch('/api/v1/camera/power?state=off')\">Sensor OFF</button>"
+  "</div><p><img id='v' alt='Camera Standby'></p><h4>Recent Events</h4><pre id='e'>Loading...</pre>"
+  "<script>function ls(){document.getElementById('v').src='http://'+location.hostname+':81/stream?t='+Date.now()}"
+  "function le(){fetch('/events').then(r=>r.json()).then(d=>{document.getElementById('e').textContent="
+  "(d.events||[]).slice(0,12).map(x=>x.type+' ['+x.src+'] '+x.time_ms+'ms').join('\\n')||'No events'}).catch(()=>{})}"
+  "ls();le();setInterval(le,2000);</script></body></html>";
+
+static esp_err_t fallback_dashboard_handler(httpd_req_t* req) {
+  httpd_resp_set_type(req, "text/html");
+  return httpd_resp_send(req, FALLBACK_DASHBOARD_HTML, strlen_P(FALLBACK_DASHBOARD_HTML));
+}
+
+static esp_err_t logs_handler(httpd_req_t* req) {
+  char* buf = (char*)malloc(4096);
+  if (!buf) return httpd_resp_send_500(req);
+  size_t len = readSpiffsLogs(buf, 4096);
+  httpd_resp_set_type(req, "text/plain");
+  httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+  esp_err_t err = httpd_resp_send(req, len > 0 ? buf : "No logs yet", len > 0 ? len : 11);
+  free(buf);
+  return err;
+}
+#else
+static esp_err_t image_post_handler(httpd_req_t* req) {
+  if (req->content_len <= 0 || req->content_len > 32768) {
+    httpd_resp_send_404(req);
+    return ESP_FAIL;
+  }
+  uint8_t* buf = (uint8_t*)malloc(req->content_len);
+  if (!buf) return httpd_resp_send_500(req);
+  int received = 0;
+  while (received < (int)req->content_len) {
+    int r = httpd_req_recv(req, (char*)buf + received, req->content_len - received);
+    if (r <= 0) {
+      free(buf);
+      return httpd_resp_send_500(req);
+    }
+    received += r;
+  }
+  bool ok = saveDoorImageToSpiffs(buf, received);
+  free(buf);
+  httpd_resp_set_type(req, "application/json");
+  return httpd_resp_send(req, ok ? "{\"ok\":true}" : "{\"ok\":false}", ok ? 11 : 12);
+}
+
+static esp_err_t image_get_handler(httpd_req_t* req) {
+  if (!SPIFFS.exists("/door_last.jpg")) {
+    httpd_resp_send_404(req);
+    return ESP_FAIL;
+  }
+  File f = SPIFFS.open("/door_last.jpg", FILE_READ);
+  if (!f) return httpd_resp_send_500(req);
+  size_t sz = f.size();
+  uint8_t* buf = (uint8_t*)malloc(sz);
+  if (!buf) { f.close(); return httpd_resp_send_500(req); }
+  f.read(buf, sz);
+  f.close();
+  httpd_resp_set_type(req, "image/jpeg");
+  esp_err_t err = httpd_resp_send(req, (const char*)buf, sz);
+  free(buf);
+  return err;
+}
+#endif
+
 void initWebApi() {
   if (s_httpd == NULL) {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.server_port = CFG_HTTP_PORT;
     config.core_id = 1;
     config.stack_size = 8192;
-    config.max_uri_handlers = 16;
+    config.max_uri_handlers = 20;
     config.lru_purge_enable = true;
 
     static const httpd_uri_t uri_ping        = { .uri = "/ping",           .method = HTTP_GET,  .handler = ping_handler,       .user_ctx = NULL };
@@ -357,8 +479,16 @@ void initWebApi() {
     static const httpd_uri_t uri_post_event2 = { .uri = "/event",          .method = HTTP_POST, .handler = event_post_handler, .user_ctx = NULL };
 
 #if HAS_CAMERA_FEATURE
-    static const httpd_uri_t uri_capture  = { .uri = "/capture",         .method = HTTP_GET,  .handler = capture_handler,    .user_ctx = NULL };
-    static const httpd_uri_t uri_capture2 = { .uri = "/api/v1/snapshot", .method = HTTP_GET,  .handler = capture_handler,    .user_ctx = NULL };
+    static const httpd_uri_t uri_root        = { .uri = "/",                    .method = HTTP_GET,  .handler = fallback_dashboard_handler, .user_ctx = NULL };
+    static const httpd_uri_t uri_logs        = { .uri = "/logs",                .method = HTTP_GET,  .handler = logs_handler,               .user_ctx = NULL };
+    static const httpd_uri_t uri_logs2       = { .uri = "/api/v1/logs",         .method = HTTP_GET,  .handler = logs_handler,               .user_ctx = NULL };
+    static const httpd_uri_t uri_capture     = { .uri = "/capture",             .method = HTTP_GET,  .handler = capture_handler,            .user_ctx = NULL };
+    static const httpd_uri_t uri_capture2    = { .uri = "/api/v1/snapshot",     .method = HTTP_GET,  .handler = capture_handler,            .user_ctx = NULL };
+    static const httpd_uri_t uri_cam_pwr_get = { .uri = "/api/v1/camera/power", .method = HTTP_GET,  .handler = camera_power_handler,       .user_ctx = NULL };
+    static const httpd_uri_t uri_cam_pwr_pst = { .uri = "/api/v1/camera/power", .method = HTTP_POST, .handler = camera_power_handler,       .user_ctx = NULL };
+#else
+    static const httpd_uri_t uri_img_post    = { .uri = "/api/v1/image",        .method = HTTP_POST, .handler = image_post_handler,         .user_ctx = NULL };
+    static const httpd_uri_t uri_img_get     = { .uri = "/api/v1/image",        .method = HTTP_GET,  .handler = image_get_handler,          .user_ctx = NULL };
 #endif
 
     if (httpd_start(&s_httpd, &config) == ESP_OK) {
@@ -373,8 +503,16 @@ void initWebApi() {
       httpd_register_uri_handler(s_httpd, &uri_post_event2);
 
 #if HAS_CAMERA_FEATURE
+      httpd_register_uri_handler(s_httpd, &uri_root);
+      httpd_register_uri_handler(s_httpd, &uri_logs);
+      httpd_register_uri_handler(s_httpd, &uri_logs2);
       httpd_register_uri_handler(s_httpd, &uri_capture);
       httpd_register_uri_handler(s_httpd, &uri_capture2);
+      httpd_register_uri_handler(s_httpd, &uri_cam_pwr_get);
+      httpd_register_uri_handler(s_httpd, &uri_cam_pwr_pst);
+#else
+      httpd_register_uri_handler(s_httpd, &uri_img_post);
+      httpd_register_uri_handler(s_httpd, &uri_img_get);
 #endif
       logInfo("HTTP", "Web API server started on port %d", CFG_HTTP_PORT);
     }

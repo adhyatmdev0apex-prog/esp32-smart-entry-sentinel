@@ -5,6 +5,8 @@
 void initWroomCamLink();
 void updateWroomCamLink();
 
-// WROOM -> CAM: sends an event over Wi-Fi (e.g., DOOR_OPEN -> triggers CAM snapshot)
+// WROOM -> CAM: sends an event over Wi-Fi or ESP-NOW fallback
 bool sendEventToPeer(const Event& event);
+void scheduleDoorCapture1200ms();
+bool saveDoorImageToSpiffs(const uint8_t* data, size_t len);
 void getLinkDiagnosticsJson(char* buf, size_t max_len);

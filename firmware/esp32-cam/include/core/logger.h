@@ -9,6 +9,7 @@
  */
 
 void initLogger(unsigned long baud_rate = 115200);
+size_t readSpiffsLogs(char* out, size_t max_len);
 
 void logInfo(const char* tag, const char* fmt, ...);
 void logWarn(const char* tag, const char* fmt, ...);
