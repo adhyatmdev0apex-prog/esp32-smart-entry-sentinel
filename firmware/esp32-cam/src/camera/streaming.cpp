@@ -130,6 +130,7 @@ static void mjpegStreamTask(void* pvParameters) {
 
     char part_hdr[80];
     const uint32_t target_interval_ms = 40; // ~25 FPS max
+    int consecutive_null_fb = 0;
 
     while (true) {
       if (s_paused || !isCameraSensorActive() || !isCameraReady()) break;
@@ -147,9 +148,16 @@ static void mjpegStreamTask(void* pvParameters) {
       if (!fb || fb->len == 0 || fb->len > STAGE_BUF_CAPACITY) {
         if (fb) esp_camera_fb_return(fb);
         giveCameraMutex();
+        if (++consecutive_null_fb >= 5) {
+          logWarn("STREAM", "DVP DMA stall (5 NULL frames) -> power-cycling sensor");
+          setCameraSensorActive(false);
+          setCameraSensorActive(true);
+          break;
+        }
         vTaskDelay(pdMS_TO_TICKS(10));
         continue;
       }
+      consecutive_null_fb = 0;
 
       s_stream_stage = "stage";
       // Stage copy in PSRAM

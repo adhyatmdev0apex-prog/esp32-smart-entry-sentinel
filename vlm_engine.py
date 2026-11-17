@@ -75,15 +75,11 @@ class ObjectDetectionEngine:
         self.caption_history = []
         self.task_queue = queue.Queue(maxsize=4)
 
-        if self.use_gpu and "DmlExecutionProvider" in AVAILABLE_PROVIDERS:
-            self.providers = ["DmlExecutionProvider", "CPUExecutionProvider"]
-            self.active_provider = "DirectML (AMD Radeon 840M GPU)"
-        elif "CUDAExecutionProvider" in AVAILABLE_PROVIDERS:
-            self.providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
-            self.active_provider = "CUDA GPU"
-        else:
-            self.providers = ["CPUExecutionProvider"]
-            self.active_provider = "CPU (Fallback)"
+        from npu import get_execution_providers
+        self.providers, self.active_provider = get_execution_providers(
+            AVAILABLE_PROVIDERS, use_gpu=self.use_gpu, use_npu=True
+        )
+        self.device_label = self.active_provider
 
         self._load_model()
 
@@ -207,7 +203,17 @@ class ObjectDetectionEngine:
             t0 = time.perf_counter()
             self.last_inference_time = time.time()
             blob, scale, pad_x, pad_y, orig_w, orig_h = self._letterbox(img)
-            outputs = self.session.run(None, {self.input_name: blob})[0]
+            try:
+                outputs = self.session.run(None, {self.input_name: blob})[0]
+            except Exception as infer_err:
+                if self.providers != ["CPUExecutionProvider"]:
+                    print(f"[!] ObjectDetector EP error ({infer_err}), falling back to CPUExecutionProvider")
+                    self.providers = ["CPUExecutionProvider"]
+                    self.active_provider = "CPU (Fallback)"
+                    self._load_model()
+                    outputs = self.session.run(None, {self.input_name: blob})[0]
+                else:
+                    raise
             infer_ms = (time.perf_counter() - t0) * 1000.0
             self.last_infer_ms = infer_ms
             if prev_t > 0:

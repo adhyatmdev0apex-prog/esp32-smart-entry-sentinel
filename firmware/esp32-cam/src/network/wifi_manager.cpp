@@ -38,9 +38,14 @@ static wifi_power_t mapDbmToEnum(int dbm) {
 
 static void applyRadioTuning() {
 #if !BOARD_HAS_CAMERA
-  // Battery-powered WROOM node: MIN_MODEM stays associated & wakes every beacon (100ms) for fast trigger
-  WiFi.setSleep(WIFI_PS_MIN_MODEM);
-  esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
+  // Use full power while connecting; switch to MIN_MODEM once IP is obtained
+  if (WiFi.status() == WL_CONNECTED) {
+    WiFi.setSleep(WIFI_PS_MIN_MODEM);
+    esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
+  } else {
+    WiFi.setSleep(false);
+    esp_wifi_set_ps(WIFI_PS_NONE);
+  }
 #else
   // Charger-powered CAM node: zero-latency Wi-Fi for fast wake & MJPEG streaming
   WiFi.setSleep(false);
@@ -131,7 +136,7 @@ void updateWiFi() {
   if (WiFi.status() != WL_CONNECTED) {
     if (s_disconnected_since_ms == 0) s_disconnected_since_ms = now;
 
-    if (!s_fallback_active && (now - s_disconnected_since_ms >= 12000)) {
+    if (!s_fallback_active && (now - s_disconnected_since_ms >= 20000)) {
       s_fallback_active = true;
 #if BOARD_HAS_CAMERA
       WiFi.mode(WIFI_AP_STA);
@@ -140,19 +145,16 @@ void updateWiFi() {
       esp_wifi_set_channel(1, WIFI_SECOND_CHAN_NONE);
       logWarn("WIFI", "No Wi-Fi -> Fallback AP 'Sentinel-CAM' (192.168.4.1) + ESP-NOW Ch 1 active");
 #else
-      WiFi.disconnect(false);
       esp_wifi_set_channel(1, WIFI_SECOND_CHAN_NONE);
       logWarn("WIFI", "No Wi-Fi -> ESP-NOW peer fallback Ch 1 active");
 #endif
     }
 
-    unsigned long interval = s_fallback_active ? 60000UL : CFG_WIFI_RECONNECT_INTERVAL;
+    unsigned long interval = s_fallback_active ? 30000UL : CFG_WIFI_RECONNECT_INTERVAL;
     if (now - s_last_reconnect_attempt >= interval) {
       s_last_reconnect_attempt = now;
-      if (!s_fallback_active) {
-        logWarn("WIFI", "Reconnecting to Wi-Fi...");
-        WiFi.reconnect();
-      }
+      logWarn("WIFI", "Reconnecting to Wi-Fi...");
+      WiFi.begin(SECRET_WIFI_SSID, SECRET_WIFI_PASSWORD);
     }
   } else {
 #if BOARD_HAS_CAMERA

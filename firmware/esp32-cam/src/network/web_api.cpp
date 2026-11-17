@@ -63,7 +63,7 @@ static esp_err_t status_handler(httpd_req_t* req) {
   httpd_resp_set_type(req, "application/json");
   httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
 
-  static char sys_diag[160];
+  static char sys_diag[224];
   getSystemDiagnosticsJson(sys_diag, sizeof(sys_diag));
 
   static char wifi_diag[128];
@@ -88,8 +88,9 @@ static esp_err_t status_handler(httpd_req_t* req) {
   sensor_t* s = esp_camera_sensor_get();
   static char buf[1536];
   int len = snprintf(buf, sizeof(buf),
-    "{\"status\":\"ok\",\"device\":\"%s\",\"mode\":\"%s\",%s,%s,%s,%s,%s,%s,%s,"
+    "{\"status\":\"ok\",\"schema\":1,\"fw_version\":\"%s\",\"device\":\"%s\",\"mode\":\"%s\",%s,%s,%s,%s,%s,%s,%s,"
     "\"framesize\":%d,\"quality\":%d,\"flash\":%u}",
+    FRAMEWORK_VERSION,
     CFG_DEVICE_ID,
     SYSTEM_MODE_NAME,
     sys_diag,
@@ -105,7 +106,8 @@ static esp_err_t status_handler(httpd_req_t* req) {
 #else
   static char buf[1024];
   int len = snprintf(buf, sizeof(buf),
-    "{\"status\":\"ok\",\"device\":\"%s\",\"mode\":\"%s\",%s,%s,%s,%s}",
+    "{\"status\":\"ok\",\"schema\":1,\"fw_version\":\"%s\",\"device\":\"%s\",\"mode\":\"%s\",%s,%s,%s,%s}",
+    FRAMEWORK_VERSION,
     CFG_DEVICE_ID,
     SYSTEM_MODE_NAME,
     sys_diag,
@@ -250,6 +252,9 @@ static esp_err_t control_handler(httpd_req_t* req) {
 
 #if HAS_CAMERA_FEATURE
 static esp_err_t capture_handler(httpd_req_t* req) {
+  if (!isCameraSensorActive()) {
+    setCameraSensorActive(true);
+  }
   size_t max_cap = psramFound() ? 131072 : 32768;
   uint8_t* snap_buf = (uint8_t*)heap_caps_malloc(max_cap, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
   if (!snap_buf) {
@@ -331,7 +336,7 @@ static esp_err_t event_post_handler(httpd_req_t* req) {
 
   if (strstr(buf, "DOOR_OPEN")) {
 #if HAS_CAMERA_FEATURE
-    setCameraSensorActive(true);
+    requestCameraWakeAsync();
     scheduleDoorCapture1200ms();
     scheduleAutoStandby(30000);
 #endif

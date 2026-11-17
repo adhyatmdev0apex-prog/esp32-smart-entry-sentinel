@@ -12,6 +12,7 @@ void updateCamera();
 bool isCameraReady();
 bool isCameraSensorActive();
 bool setCameraSensorActive(bool active);
+void requestCameraWakeAsync();
 camera_fb_t* captureSnapshotFb();
 void returnSnapshotFb(camera_fb_t* fb);
 
@@ -31,6 +32,7 @@ inline void updateCamera() {}
 inline bool isCameraReady() { return false; }
 inline bool isCameraSensorActive() { return false; }
 inline bool setCameraSensorActive(bool) { return false; }
+inline void requestCameraWakeAsync() {}
 inline void autoTuneCameraXclk(int) {}
 inline void getCameraDiagnosticsJson(char* buf, size_t max_len) {
   snprintf(buf, max_len, "\"camera\":{\"enabled\":false}");

@@ -13,6 +13,9 @@ static uint32_t s_last_state_change_ms = 0;
 static uint32_t s_open_count = 0;
 static bool s_timeout_reported = false;
 static TaskHandle_t s_reed_notify_task = nullptr;
+static uint32_t s_chatter_win_start_ms = 0;
+static uint16_t s_chatter_edges = 0;
+static bool s_chatter_reported = false;
 
 static void IRAM_ATTR onReedIsr() {
   BaseType_t woken = pdFALSE;
@@ -58,6 +61,15 @@ void updateReedSensor() {
     if (raw != s_last_raw_state) {
       s_last_raw_state = raw;
       s_last_debounce_ms = now;
+      if (now - s_chatter_win_start_ms > 3000) {
+        s_chatter_win_start_ms = now;
+        s_chatter_edges = 1;
+        s_chatter_reported = false;
+      } else if (++s_chatter_edges > 8 && !s_chatter_reported) {
+        s_chatter_reported = true;
+        logWarn("REED", "Chatter/tamper detected (%u edges in 3s)", (unsigned)s_chatter_edges);
+        postEvent(EVENT_CUSTOM, "REED", (int32_t)s_chatter_edges, "TAMPER_CHATTER");
+      }
     }
 
     if ((now - s_last_debounce_ms) >= CFG_REED_DEBOUNCE_MS) {

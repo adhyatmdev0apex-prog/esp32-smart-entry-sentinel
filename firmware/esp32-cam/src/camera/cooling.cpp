@@ -1,4 +1,5 @@
 #include "camera/cooling.h"
+#include "camera/camera_manager.h"
 #include "app_config.h"
 #include "core/logger.h"
 
@@ -162,6 +163,13 @@ static void evaluateCooling(bool force_reeval) {
   s_last_temp_valid = temp_valid;
 
   uint8_t target_duty = calculateDutyForPolicy(s_active_policy, raw_temp, temp_valid);
+  float cal_temp = raw_temp - 26.0f;
+  if (!isCameraSensorActive() && temp_valid && cal_temp < 52.0f) {
+    target_duty = 0; // Silent fan during Low-Power Standby
+  } else if (temp_valid && cal_temp > 78.0f) {
+    target_duty = 100;
+    logWarn("COOLING", "Thermal guard: high die temp %.1f°C -> fan 100%%", cal_temp);
+  }
   s_target_duty_pct = target_duty;
 
   if (s_current_duty_pct == 0 && target_duty > 0 && target_duty < 100) {

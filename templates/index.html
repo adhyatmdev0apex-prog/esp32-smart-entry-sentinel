@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sentinel — Smart Door Entry &amp; Security Control Center</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%236366f1'/%3E%3Cstop offset='100%25' stop-color='%2310b981'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M32 4L8 14v18c0 15.2 10.2 28.6 24 32 13.8-3.4 24-16.8 24-32V14L32 4z' fill='%230f172a' stroke='url(%23g)' stroke-width='4'/%3E%3Ccircle cx='32' cy='31' r='9' fill='none' stroke='%2338bdf8' stroke-width='3.5'/%3E%3Ccircle cx='32' cy='31' r='3.5' fill='%2310b981'/%3E%3C/svg%3E">
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%236366f1'/%3E%3Cstop offset='100%25' stop-color='%2310b981'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M32 4L8 14v18c0 15.2 10.2 28.6 24 32 13.8-3.4 24-16.8 24-32V14L32 4z' fill='%230f172a' stroke='url(%23g)' stroke-width='4'/%3E%3Ccircle cx='32' cy='31' r='9' fill='none' stroke='%2338bdf8' stroke-width='3.5'/%3E%3Ccircle cx='32' cy='31' r='3.5' fill='%2310b981'/%3E%3C/svg%3E">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         :root {
@@ -288,13 +290,31 @@
         }
 
         @keyframes pulse-green {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.45; transform: scale(1.25); }
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.45;
+                transform: scale(1.25);
+            }
         }
 
         @keyframes pulse-red {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.35; transform: scale(1.3); }
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.35;
+                transform: scale(1.3);
+            }
         }
 
         .offline-overlay {
@@ -381,10 +401,21 @@
             font-size: 0.83rem;
         }
 
-        .event-item.recognized { border-left-color: var(--accent-success); }
-        .event-item.inconclusive { border-left-color: var(--accent-warning); }
-        .event-item.unknown_pending { border-left-color: var(--accent-secondary); }
-        .event-item.unusable_quality { border-left-color: var(--accent-danger); }
+        .event-item.recognized {
+            border-left-color: var(--accent-success);
+        }
+
+        .event-item.inconclusive {
+            border-left-color: var(--accent-warning);
+        }
+
+        .event-item.unknown_pending {
+            border-left-color: var(--accent-secondary);
+        }
+
+        .event-item.unusable_quality {
+            border-left-color: var(--accent-danger);
+        }
 
         .event-item img {
             width: 38px;
@@ -724,7 +755,8 @@
             transition: all 0.2s ease;
         }
 
-        .chart-btn:hover, .chart-btn.active {
+        .chart-btn:hover,
+        .chart-btn.active {
             background: var(--accent-primary);
             border-color: var(--accent-primary);
             color: white;
@@ -1118,11 +1150,11 @@
             border-radius: 50%;
         }
 
-        input:checked + .toggle-slider {
+        input:checked+.toggle-slider {
             background-color: var(--accent-primary);
         }
 
-        input:checked + .toggle-slider:before {
+        input:checked+.toggle-slider:before {
             transform: translateX(20px);
         }
 
@@ -1162,30 +1194,35 @@
             border: 1px solid rgba(148, 163, 184, 0.2);
             border-radius: 14px;
             margin-bottom: 14px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
             flex-wrap: wrap;
         }
+
         .sentinel-brand {
             display: flex;
             align-items: center;
             gap: 12px;
         }
+
         .sentinel-logo {
             font-size: 1.35rem;
             font-weight: 800;
             letter-spacing: 0.12em;
             color: #f8fafc;
         }
+
         .sentinel-sub {
             font-size: 0.78rem;
             color: #94a3b8;
         }
+
         .sentinel-status-right {
             display: flex;
             align-items: center;
             gap: 14px;
             flex-wrap: wrap;
         }
+
         .security-state-pill {
             display: inline-flex;
             align-items: center;
@@ -1199,17 +1236,20 @@
             color: #34d399;
             border: 1px solid rgba(16, 185, 129, 0.35);
         }
+
         .security-state-pill.alert {
             background: rgba(239, 68, 68, 0.16);
             color: #f87171;
             border-color: rgba(239, 68, 68, 0.45);
         }
+
         .sentinel-clock {
             font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
             font-size: 0.92rem;
             font-weight: 600;
             color: #cbd5e1;
         }
+
         .sentinel-nav {
             display: flex;
             gap: 6px;
@@ -1220,6 +1260,7 @@
             border-radius: 12px;
             margin-bottom: 18px;
         }
+
         .nav-tab {
             background: transparent;
             border: 1px solid transparent;
@@ -1234,17 +1275,25 @@
             align-items: center;
             gap: 6px;
         }
+
         .nav-tab:hover {
             color: #f1f5f9;
             background: rgba(148, 163, 184, 0.1);
         }
+
         .nav-tab.active {
             background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
             color: #ffffff;
             box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
         }
-        .page-view { display: none; }
-        .page-view.active { display: block; }
+
+        .page-view {
+            display: none;
+        }
+
+        .page-view.active {
+            display: block;
+        }
 
         .overview-top-grid {
             display: grid;
@@ -1252,16 +1301,21 @@
             gap: 16px;
             margin-bottom: 16px;
         }
+
         .overview-bottom-grid {
             display: grid;
             grid-template-columns: 270px 1fr 240px;
             gap: 16px;
         }
+
         @media (max-width: 980px) {
-            .overview-top-grid, .overview-bottom-grid {
+
+            .overview-top-grid,
+            .overview-bottom-grid {
                 grid-template-columns: 1fr;
             }
         }
+
         .panel-title-sm {
             font-size: 0.78rem;
             font-weight: 700;
@@ -1273,6 +1327,7 @@
             justify-content: space-between;
             align-items: center;
         }
+
         .status-row {
             display: flex;
             justify-content: space-between;
@@ -1285,6 +1340,7 @@
             font-size: 0.86rem;
             font-weight: 600;
         }
+
         .dot-ind {
             width: 9px;
             height: 9px;
@@ -1293,15 +1349,29 @@
             margin-right: 8px;
             background: #64748b;
         }
-        .dot-ind.on { background: #10b981; box-shadow: 0 0 8px #10b981; }
-        .dot-ind.off { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
-        .dot-ind.warn { background: #f59e0b; box-shadow: 0 0 8px #f59e0b; }
+
+        .dot-ind.on {
+            background: #10b981;
+            box-shadow: 0 0 8px #10b981;
+        }
+
+        .dot-ind.off {
+            background: #ef4444;
+            box-shadow: 0 0 8px #ef4444;
+        }
+
+        .dot-ind.warn {
+            background: #f59e0b;
+            box-shadow: 0 0 8px #f59e0b;
+        }
+
         .devices-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 16px;
             margin-bottom: 18px;
         }
+
         /* Identity modal & Family hover dropdown */
         .identity-pill {
             display: inline-flex;
@@ -1315,6 +1385,7 @@
             color: #a5b4fc;
             border: 1px solid rgba(99, 102, 241, 0.35);
         }
+
         .identity-choice-btn {
             width: 100%;
             display: flex;
@@ -1330,13 +1401,16 @@
             cursor: pointer;
             transition: all 0.15s ease;
         }
+
         .identity-choice-btn:hover {
             border-color: #6366f1;
             background: rgba(99, 102, 241, 0.18);
         }
+
         .identity-family-wrap {
             position: relative;
         }
+
         .identity-family-btn {
             width: 100%;
             display: flex;
@@ -1352,15 +1426,18 @@
             cursor: default;
             user-select: none;
         }
+
         .identity-family-arrow::after {
             content: '▾';
             font-size: 1rem;
             color: #94a3b8;
         }
+
         .identity-family-wrap:hover .identity-family-arrow::after {
             content: '▴';
             color: #a5b4fc;
         }
+
         .identity-family-dropdown {
             display: none;
             margin-top: 6px;
@@ -1370,15 +1447,18 @@
             background: rgba(15, 23, 42, 0.96);
             box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
         }
+
         .identity-family-wrap:hover .identity-family-dropdown {
             display: block;
         }
+
         .family-role-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 6px;
             margin-bottom: 8px;
         }
+
         .family-role-btn {
             padding: 7px 10px;
             border-radius: 7px;
@@ -1390,12 +1470,14 @@
             cursor: pointer;
             text-align: center;
         }
+
         .family-role-btn:hover {
             background: #4f46e5;
             border-color: #6366f1;
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <!-- SENTINEL SECURITY CONTROL CENTER TOPBAR -->
@@ -1404,7 +1486,8 @@
                 <span style="font-size: 1.5rem;">🛡️</span>
                 <div>
                     <div class="sentinel-logo">SENTINEL</div>
-                    <div class="sentinel-sub">Smart Door Entry &amp; Security Control Center (ESP32-CAM + ESP32-WROOM)</div>
+                    <div class="sentinel-sub">Smart Door Entry &amp; Security Control Center (ESP32-CAM + ESP32-WROOM)
+                    </div>
                 </div>
             </div>
             <div class="sentinel-status-right">
@@ -1421,11 +1504,13 @@
             <button class="nav-tab active" data-page="overview" onclick="switchPage('overview')">🛡️ Overview</button>
             <button class="nav-tab" data-page="camera" onclick="switchPage('camera')">📹 Live Camera</button>
             <button class="nav-tab" data-page="events" onclick="switchPage('events')">📋 Events</button>
-            <button class="nav-tab" data-page="people" onclick="switchPage('people')">👤 People <span class="badge-count" id="navPeopleCount">{{ total_persons }}</span></button>
+            <button class="nav-tab" data-page="people" onclick="switchPage('people')">👤 People <span
+                    class="badge-count" id="navPeopleCount">{{ total_persons }}</span></button>
             <button class="nav-tab" data-page="alerts" onclick="switchPage('alerts')">🔔 Alerts</button>
             <button class="nav-tab" data-page="devices" onclick="switchPage('devices')">🔌 Devices</button>
             <button class="nav-tab" data-page="analytics" onclick="switchPage('analytics')">📊 Analytics</button>
             <button class="nav-tab" data-page="settings" onclick="switchPage('settings')">⚙️ Settings</button>
+            <button class="nav-tab" data-page="models" onclick="switchPage('models')">🧠 Models</button>
             <button class="nav-tab" data-page="testing" onclick="switchPage('testing')">🧪 Testing</button>
         </nav>
 
@@ -1435,7 +1520,8 @@
                 <div class="card" style="padding: 16px;">
                     <div class="panel-title-sm">
                         <span>LIVE STATUS</span>
-                        <button class="btn btn-secondary btn-sm" onclick="refreshControlCenterHealth(true)" style="padding:2px 8px; font-size:0.72rem;">🔄</button>
+                        <button class="btn btn-secondary btn-sm" onclick="refreshControlCenterHealth(true)"
+                            style="padding:2px 8px; font-size:0.72rem;">🔄</button>
                     </div>
                     <div class="status-row">
                         <span><span class="dot-ind" id="ovDotWroom"></span>WROOM</span>
@@ -1454,8 +1540,10 @@
                         <span id="ovTxtDb" style="font-size:0.78rem; color:#34d399;">SQLite OK</span>
                     </div>
                     <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
-                        <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="switchPage('devices')">🔌 Devices</button>
-                        <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="switchPage('camera')">📹 Full View</button>
+                        <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="switchPage('devices')">🔌
+                            Devices</button>
+                        <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="switchPage('camera')">📹 Full
+                            View</button>
                     </div>
                 </div>
 
@@ -1468,7 +1556,8 @@
                 <div class="card" style="padding: 16px;">
                     <div class="panel-title-sm">
                         <span>ALERTS</span>
-                        <button class="btn btn-secondary btn-sm" onclick="switchPage('alerts')" style="padding:2px 8px; font-size:0.72rem;">View All</button>
+                        <button class="btn btn-secondary btn-sm" onclick="switchPage('alerts')"
+                            style="padding:2px 8px; font-size:0.72rem;">View All</button>
                     </div>
                     <div id="ovAlertsSummary" style="font-size:0.84rem; display:flex; flex-direction:column; gap:8px;">
                         <div style="color:#64748b;">Loading alerts...</div>
@@ -1478,7 +1567,8 @@
                 <div class="card" style="padding: 16px;">
                     <div class="panel-title-sm">
                         <span>RECENT ACTIVITY</span>
-                        <button class="btn btn-secondary btn-sm" onclick="switchPage('events')" style="padding:2px 8px; font-size:0.72rem;">All Events</button>
+                        <button class="btn btn-secondary btn-sm" onclick="switchPage('events')"
+                            style="padding:2px 8px; font-size:0.72rem;">All Events</button>
                     </div>
                     <div id="ovRecentActivity" style="font-size:0.84rem; max-height:190px; overflow-y:auto;">
                         <div style="color:#64748b;">Loading recent activity...</div>
@@ -1508,24 +1598,31 @@
         </div>
 
         <!-- DUAL AI RECOGNITION ENGINES HUB (moved to #settingsAiSlot on load) -->
-        <div class="card" id="dualAiHubCard" style="margin-bottom: 24px; border: 1px solid rgba(99, 102, 241, 0.35); background: linear-gradient(180deg, rgba(30, 27, 75, 0.45) 0%, rgba(17, 24, 39, 0.85) 100%); box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+        <div class="card" id="dualAiHubCard"
+            style="margin-bottom: 24px; border: 1px solid rgba(99, 102, 241, 0.35); background: linear-gradient(180deg, rgba(30, 27, 75, 0.45) 0%, rgba(17, 24, 39, 0.85) 100%); box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
             <div class="card-header" style="border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 14px;">
                 <div>
                     <h2 style="display: flex; align-items: center; gap: 10px; margin: 0; font-size: 1.25rem;">
                         <span>⚡ Dual AI Recognition Architecture</span>
-                        <span class="badge" style="background: rgba(99, 102, 241, 0.2); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.4); font-size: 0.75rem; padding: 3px 10px; border-radius: 9999px;">
+                        <span class="badge"
+                            style="background: rgba(99, 102, 241, 0.2); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.4); font-size: 0.75rem; padding: 3px 10px; border-radius: 9999px;">
                             Active Dual-Engine Hub
                         </span>
                     </h2>
                     <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">
-                        Simultaneous operation of lightweight facial identity matching alongside deep vision-language scene comprehension.
+                        Simultaneous operation of lightweight facial identity matching alongside deep vision-language
+                        scene comprehension.
                     </div>
                 </div>
                 <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                    <button class="btn btn-primary btn-sm recog-toggle-btn" id="hubRecogToggleBtn" onclick="toggleRecognitionPipeline()" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
+                    <button class="btn btn-primary btn-sm recog-toggle-btn" id="hubRecogToggleBtn"
+                        onclick="toggleRecognitionPipeline()"
+                        style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
                         👤 Face Engine: ON
                     </button>
-                    <button class="btn btn-primary btn-sm vlm-toggle-btn" id="hubVlmToggleBtn" onclick="toggleVlmPipeline()" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);">
+                    <button class="btn btn-primary btn-sm vlm-toggle-btn" id="hubVlmToggleBtn"
+                        onclick="toggleVlmPipeline()"
+                        style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);">
                         🌐 Universal VLM: ON
                     </button>
                     <button class="btn btn-secondary btn-sm" id="hubVlmDescribeBtn" onclick="triggerVlmDescribe()">
@@ -1535,74 +1632,100 @@
             </div>
 
             <!-- Two Engine Grid -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-top: 16px;">
+            <div
+                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-top: 16px;">
                 <!-- Engine 1: Face Recognition -->
-                <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 16px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <div style="font-weight: 700; color: #34d399; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
+                <div
+                    style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 16px;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <div
+                            style="font-weight: 700; color: #34d399; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
                             <span>👤 Engine 1: Face Recognition</span>
                         </div>
-                        <span id="faceEngineBadge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.78rem; padding: 2px 8px; border-radius: 6px;">
+                        <span id="faceEngineBadge"
+                            style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.78rem; padding: 2px 8px; border-radius: 6px;">
                             ● Active (YuNet + MobileFaceNet)
                         </span>
                     </div>
                     <div style="font-size: 0.85rem; color: #94a3b8; line-height: 1.45; margin-bottom: 12px;">
-                        <strong>Model:</strong> OpenCV YuNet (36px min detection) + InsightFace MobileFaceNet 512-D ArcFace embedding.<br>
-                        <strong>Function:</strong> Fast 1:N identity verification, candidate track accumulator, anti-fragmentation gallery.
+                        <strong>Model:</strong> OpenCV YuNet (36px min detection) + InsightFace MobileFaceNet 512-D
+                        ArcFace embedding.<br>
+                        <strong>Function:</strong> Fast 1:N identity verification, candidate track accumulator,
+                        anti-fragmentation gallery.
                     </div>
                     <div style="display: flex; gap: 12px; font-size: 0.82rem;">
-                        <div style="background: rgba(255, 255, 255, 0.04); padding: 6px 12px; border-radius: 8px; flex: 1;">
-                            <span style="color: #64748b;">Match Threshold:</span> <strong style="color: #34d399;">0.33 Cosine</strong>
+                        <div
+                            style="background: rgba(255, 255, 255, 0.04); padding: 6px 12px; border-radius: 8px; flex: 1;">
+                            <span style="color: #64748b;">Match Threshold:</span> <strong style="color: #34d399;">0.33
+                                Cosine</strong>
                         </div>
-                        <div style="background: rgba(255, 255, 255, 0.04); padding: 6px 12px; border-radius: 8px; flex: 1;">
-                            <span style="color: #64748b;">Pending Tracks:</span> <strong id="hubPendingCount" style="color: #38bdf8;">0</strong>
+                        <div
+                            style="background: rgba(255, 255, 255, 0.04); padding: 6px 12px; border-radius: 8px; flex: 1;">
+                            <span style="color: #64748b;">Pending Tracks:</span> <strong id="hubPendingCount"
+                                style="color: #38bdf8;">0</strong>
                         </div>
                     </div>
                 </div>
 
                 <!-- Engine 2: Live Object Detection (DirectML GPU) -->
-                <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(129, 140, 248, 0.3); border-radius: 12px; padding: 16px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <div style="font-weight: 700; color: #a5b4fc; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
+                <div
+                    style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(129, 140, 248, 0.3); border-radius: 12px; padding: 16px;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <div
+                            style="font-weight: 700; color: #a5b4fc; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
                             <span>📦 Engine 2: Object Detection (YOLOv8n)</span>
                         </div>
-                        <span id="vlmEngineBadge" style="background: rgba(99, 102, 241, 0.15); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.3); font-size: 0.78rem; padding: 2px 8px; border-radius: 6px;">
+                        <span id="vlmEngineBadge"
+                            style="background: rgba(99, 102, 241, 0.15); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.3); font-size: 0.78rem; padding: 2px 8px; border-radius: 6px;">
                             ● DirectML • AMD Radeon 840M
                         </span>
                     </div>
                     <div style="font-size: 0.85rem; color: #94a3b8; line-height: 1.45; margin-bottom: 12px;">
-                        <strong>Hardware Compute:</strong> DirectML DirectX 12 GPU inference (&le; 40% total CPU cap).<br>
-                        <strong>Function:</strong> Real-time bounding boxes &amp; class names (80 COCO objects) overlaid on live video.
+                        <strong>Hardware Compute:</strong> DirectML DirectX 12 GPU inference (&le; 40% total CPU
+                        cap).<br>
+                        <strong>Function:</strong> Real-time bounding boxes &amp; class names (80 COCO objects) overlaid
+                        on live video.
                     </div>
                     <div style="display: flex; gap: 12px; font-size: 0.82rem;">
-                        <div style="background: rgba(255, 255, 255, 0.04); padding: 6px 12px; border-radius: 8px; flex: 1;">
-                            <span style="color: #64748b;">Model:</span> <strong style="color: #a5b4fc;">YOLOv8n-320 ONNX (12.1 MB)</strong>
+                        <div
+                            style="background: rgba(255, 255, 255, 0.04); padding: 6px 12px; border-radius: 8px; flex: 1;">
+                            <span style="color: #64748b;">Model:</span> <strong style="color: #a5b4fc;">YOLOv8n-320 ONNX
+                                (12.1 MB)</strong>
                         </div>
-                        <div style="background: rgba(255, 255, 255, 0.04); padding: 6px 12px; border-radius: 8px; flex: 1;">
-                            <span style="color: #64748b;">CPU Guard:</span> <strong style="color: #fbbf24;">0.45s Pace (&le; 40% CPU)</strong>
+                        <div
+                            style="background: rgba(255, 255, 255, 0.04); padding: 6px 12px; border-radius: 8px; flex: 1;">
+                            <span style="color: #64748b;">CPU Guard:</span> <strong style="color: #fbbf24;">0.45s Pace
+                                (&le; 40% CPU)</strong>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Real-Time Object Detection Output Banner -->
-            <div style="margin-top: 14px; background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(129, 140, 248, 0.25); border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+            <div
+                style="margin-top: 14px; background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(129, 140, 248, 0.25); border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px;">
                 <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
                     <span style="font-size: 1.3rem;">📦</span>
                     <div>
-                        <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #818cf8; font-weight: 600;">
+                        <div
+                            style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #818cf8; font-weight: 600;">
                             Detected Objects &amp; Bounding Boxes (DirectML GPU)
                         </div>
-                        <div id="vlmLatestCaption" style="font-size: 0.95rem; color: #f1f5f9; font-weight: 500; margin-top: 2px;">
+                        <div id="vlmLatestCaption"
+                            style="font-size: 0.95rem; color: #f1f5f9; font-weight: 500; margin-top: 2px;">
                             Scanning for objects...
                         </div>
                     </div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <span id="vlmProviderTag" style="font-size: 0.75rem; color: #38bdf8; background: rgba(56, 189, 248, 0.1); padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.2);">
+                    <span id="vlmProviderTag"
+                        style="font-size: 0.75rem; color: #38bdf8; background: rgba(56, 189, 248, 0.1); padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.2);">
                         DirectML GPU (Radeon 840M)
                     </span>
-                    <button class="btn btn-secondary btn-sm" onclick="triggerVlmDescribe()" title="Scan current view now" style="padding: 4px 10px; font-size: 0.8rem;">
+                    <button class="btn btn-secondary btn-sm" onclick="triggerVlmDescribe()"
+                        title="Scan current view now" style="padding: 4px 10px; font-size: 0.8rem;">
                         🔄 Scan
                     </button>
                 </div>
@@ -1614,12 +1737,14 @@
             <div class="card-header">
                 <h2>⚙️ Camera Hardware Controls & Onboard Flash (GPIO 4)</h2>
                 <div style="display: flex; gap: 10px; align-items: center;">
-                    <span id="settingsSaveStatus" style="font-size: 0.82rem; color: #34d399; font-weight: 600; display: none;">✔ Synced</span>
+                    <span id="settingsSaveStatus"
+                        style="font-size: 0.82rem; color: #34d399; font-weight: 600; display: none;">✔ Synced</span>
                     <button class="btn btn-secondary btn-sm" onclick="toggleCameraSettings()">✖ Close</button>
                 </div>
             </div>
             <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 14px;">
-                Direct hardware register adjustments applied in real-time to the ESP32-CAM (AI-Thinker OV2640). Controls resolution, JPEG compression, onboard illumination LED, and sensor digital signal processing.
+                Direct hardware register adjustments applied in real-time to the ESP32-CAM (AI-Thinker OV2640). Controls
+                resolution, JPEG compression, onboard illumination LED, and sensor digital signal processing.
             </p>
 
             <div class="settings-grid">
@@ -1633,7 +1758,8 @@
                                 <span class="setting-desc">Toggle onboard high-power LED</span>
                             </div>
                             <label class="toggle-switch">
-                                <input type="checkbox" id="setting_flash_toggle" onchange="onFlashToggleChange(this.checked)">
+                                <input type="checkbox" id="setting_flash_toggle"
+                                    onchange="onFlashToggleChange(this.checked)">
                                 <span class="toggle-slider"></span>
                             </label>
                         </div>
@@ -1646,8 +1772,8 @@
                             </div>
                             <div class="slider-wrap">
                                 <input type="range" id="setting_flash_slider" min="0" max="255" value="0"
-                                       oninput="onSettingSliderInput('flash', this.value, '%')"
-                                       onchange="applyCameraSetting('flash', this.value)">
+                                    oninput="onSettingSliderInput('flash', this.value, '%')"
+                                    onchange="applyCameraSetting('flash', this.value)">
                                 <span class="slider-val-badge" id="val_badge_flash">0%</span>
                             </div>
                         </div>
@@ -1668,7 +1794,8 @@
                             <span class="setting-label">Frame Size / Resolution</span>
                             <span class="setting-desc">OV2640 sensor windowing</span>
                         </div>
-                        <select class="select-dark" id="setting_framesize" onchange="applyCameraSetting('framesize', this.value)">
+                        <select class="select-dark" id="setting_framesize"
+                            onchange="applyCameraSetting('framesize', this.value)">
                             <option value="8">VGA (640x480) — ⭐ Recommended (Fast & Cool, ~15-20 FPS)</option>
                             <option value="9">SVGA (800x600) — ⭐ Best Quality/Speed (~12-15 FPS)</option>
                             <option value="10">XGA (1024x768) — High Detail (~8-10 FPS)</option>
@@ -1687,8 +1814,8 @@
                         </div>
                         <div class="slider-wrap">
                             <input type="range" id="setting_quality" min="10" max="63" value="12"
-                                   oninput="onSettingSliderInput('quality', this.value)"
-                                   onchange="applyCameraSetting('quality', this.value)">
+                                oninput="onSettingSliderInput('quality', this.value)"
+                                onchange="applyCameraSetting('quality', this.value)">
                             <span class="slider-val-badge" id="val_badge_quality">12</span>
                         </div>
                     </div>
@@ -1701,8 +1828,8 @@
                         <span class="setting-label">Brightness</span>
                         <div class="slider-wrap">
                             <input type="range" id="setting_brightness" min="-2" max="2" value="0"
-                                   oninput="onSettingSliderInput('brightness', this.value)"
-                                   onchange="applyCameraSetting('brightness', this.value)">
+                                oninput="onSettingSliderInput('brightness', this.value)"
+                                onchange="applyCameraSetting('brightness', this.value)">
                             <span class="slider-val-badge" id="val_badge_brightness">0</span>
                         </div>
                     </div>
@@ -1711,8 +1838,8 @@
                         <span class="setting-label">Contrast</span>
                         <div class="slider-wrap">
                             <input type="range" id="setting_contrast" min="-2" max="2" value="0"
-                                   oninput="onSettingSliderInput('contrast', this.value)"
-                                   onchange="applyCameraSetting('contrast', this.value)">
+                                oninput="onSettingSliderInput('contrast', this.value)"
+                                onchange="applyCameraSetting('contrast', this.value)">
                             <span class="slider-val-badge" id="val_badge_contrast">0</span>
                         </div>
                     </div>
@@ -1721,15 +1848,16 @@
                         <span class="setting-label">Saturation</span>
                         <div class="slider-wrap">
                             <input type="range" id="setting_saturation" min="-2" max="2" value="0"
-                                   oninput="onSettingSliderInput('saturation', this.value)"
-                                   onchange="applyCameraSetting('saturation', this.value)">
+                                oninput="onSettingSliderInput('saturation', this.value)"
+                                onchange="applyCameraSetting('saturation', this.value)">
                             <span class="slider-val-badge" id="val_badge_saturation">0</span>
                         </div>
                     </div>
 
                     <div class="setting-row">
                         <span class="setting-label">Special Effect</span>
-                        <select class="select-dark" id="setting_special_effect" onchange="applyCameraSetting('special_effect', this.value)">
+                        <select class="select-dark" id="setting_special_effect"
+                            onchange="applyCameraSetting('special_effect', this.value)">
                             <option value="0">No Effect (Normal)</option>
                             <option value="1">Negative</option>
                             <option value="2">Grayscale</option>
@@ -1750,7 +1878,8 @@
                             <span class="setting-desc">Flip frame upside down</span>
                         </div>
                         <label class="toggle-switch">
-                            <input type="checkbox" id="setting_vflip" onchange="applyCameraSetting('vflip', this.checked ? 1 : 0)">
+                            <input type="checkbox" id="setting_vflip"
+                                onchange="applyCameraSetting('vflip', this.checked ? 1 : 0)">
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
@@ -1761,7 +1890,8 @@
                             <span class="setting-desc">Mirror image horizontally</span>
                         </div>
                         <label class="toggle-switch">
-                            <input type="checkbox" id="setting_hmirror" onchange="applyCameraSetting('hmirror', this.checked ? 1 : 0)">
+                            <input type="checkbox" id="setting_hmirror"
+                                onchange="applyCameraSetting('hmirror', this.checked ? 1 : 0)">
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
@@ -1772,7 +1902,8 @@
                             <span class="setting-desc">Automatic color temperature</span>
                         </div>
                         <label class="toggle-switch">
-                            <input type="checkbox" id="setting_awb" onchange="applyCameraSetting('awb', this.checked ? 1 : 0)">
+                            <input type="checkbox" id="setting_awb"
+                                onchange="applyCameraSetting('awb', this.checked ? 1 : 0)">
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
@@ -1783,7 +1914,8 @@
                             <span class="setting-desc">Sensor automatic exposure control</span>
                         </div>
                         <label class="toggle-switch">
-                            <input type="checkbox" id="setting_aec" onchange="applyCameraSetting('aec', this.checked ? 1 : 0)">
+                            <input type="checkbox" id="setting_aec"
+                                onchange="applyCameraSetting('aec', this.checked ? 1 : 0)">
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
@@ -1791,10 +1923,12 @@
 
                 <!-- System & Device Reboot Controls -->
                 <div style="margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(148, 163, 184, 0.2);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                         <div>
                             <span class="setting-label">🔄 System &amp; Device Reboot Controls</span>
-                            <span class="setting-desc" id="rebootStatusMsg">Reboot ESP32-CAM (192.168.29.10), ESP32-WROOM (192.168.29.20), or run a Full System Reboot</span>
+                            <span class="setting-desc" id="rebootStatusMsg">Reboot ESP32-CAM (192.168.29.10),
+                                ESP32-WROOM (192.168.29.20), or run a Full System Reboot</span>
                         </div>
                         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                             <button class="btn btn-secondary btn-sm" id="btnRebootCam" onclick="rebootCamDevice()">
@@ -1803,7 +1937,8 @@
                             <button class="btn btn-secondary btn-sm" id="btnRebootWroom" onclick="rebootWroomDevice()">
                                 📡 Reboot WROOM
                             </button>
-                            <button class="btn btn-danger btn-sm" id="btnFullReboot" onclick="fullSystemReboot()" style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); color: #fff;">
+                            <button class="btn btn-danger btn-sm" id="btnFullReboot" onclick="fullSystemReboot()"
+                                style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); color: #fff;">
                                 ⚡ Full Reboot (All + Models + Refresh)
                             </button>
                         </div>
@@ -1819,7 +1954,9 @@
                 <button class="btn btn-secondary btn-sm" onclick="toggleDuplicateReview()">✖ Close</button>
             </div>
             <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 18px;">
-                Candidates below are identified strictly from 128-D facial embeddings and landmark-aligned similarity metrics (never clothing or timestamps). Choose which profile should be kept as the <strong>Canonical Identity</strong> and preview changes before merging.
+                Candidates below are identified strictly from 128-D facial embeddings and landmark-aligned similarity
+                metrics (never clothing or timestamps). Choose which profile should be kept as the <strong>Canonical
+                    Identity</strong> and preview changes before merging.
             </p>
             <div id="duplicateCandidatesContainer">
                 <p style="color: var(--text-secondary);">Analyzing facial embeddings across profiles...</p>
@@ -1833,17 +1970,21 @@
                 <button class="btn btn-secondary btn-sm" onclick="toggleMergeMode()">✖ Cancel</button>
             </div>
             <p style="color: var(--text-secondary); font-size: 0.9rem;">
-                Select the duplicate profile to retire (<strong>Merge FROM</strong>) and the canonical profile to preserve (<strong>Merge INTO</strong>).
+                Select the duplicate profile to retire (<strong>Merge FROM</strong>) and the canonical profile to
+                preserve (<strong>Merge INTO</strong>).
             </p>
 
             <div class="merge-selector">
                 <div>
-                    <strong style="color: #fca5a5; display: block; margin-bottom: 8px;">Retire Profile (Merge FROM):</strong>
+                    <strong style="color: #fca5a5; display: block; margin-bottom: 8px;">Retire Profile (Merge
+                        FROM):</strong>
                     <div class="person-select" id="sourcePersons"></div>
                 </div>
-                <div style="font-size: 2rem; color: var(--accent-secondary); align-self: center; padding-top: 20px;">➔</div>
+                <div style="font-size: 2rem; color: var(--accent-secondary); align-self: center; padding-top: 20px;">➔
+                </div>
                 <div>
-                    <strong style="color: #6ee7b7; display: block; margin-bottom: 8px;">Canonical Profile (Merge INTO):</strong>
+                    <strong style="color: #6ee7b7; display: block; margin-bottom: 8px;">Canonical Profile (Merge
+                        INTO):</strong>
                     <div class="person-select" id="targetPersons"></div>
                 </div>
             </div>
@@ -1851,7 +1992,8 @@
             <div class="merge-preview-box" id="manualMergePreview"></div>
 
             <div style="display: flex; gap: 12px; margin-top: 18px;">
-                <button class="btn btn-primary" id="mergeExecuteBtn" onclick="executeMerge()" disabled style="flex: 1; justify-content: center;">
+                <button class="btn btn-primary" id="mergeExecuteBtn" onclick="executeMerge()" disabled
+                    style="flex: 1; justify-content: center;">
                     ✅ Confirm & Merge Selected Profiles
                 </button>
                 <button class="btn btn-secondary" onclick="toggleMergeMode()">Cancel</button>
@@ -1860,237 +2002,293 @@
 
         <!-- PAGE 2: LIVE CAMERA & TELEMETRY -->
         <div id="page-camera" class="page-view">
-        <div id="cameraPageSettingsSlot"></div>
-        <div class="live-grid">
-            <div id="cameraPageSlot">
-            <div class="card" id="liveStreamCard">
-                <div class="card-header">
-                    <h2>📹 Live ESP32-CAM Feed</h2>
-                    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                        <button class="btn btn-primary btn-sm recog-toggle-btn" id="toggleRecognitionBtn" onclick="toggleRecognitionPipeline()" title="Toggle Face Recognition Pipeline" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
-                            🧠 Recognition: ON
-                        </button>
-                        <button class="btn btn-primary btn-sm vlm-toggle-btn" id="liveObjToggleBtn" onclick="toggleVlmPipeline()" title="Toggle Object Identification Pipeline" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);">
-                            📦 Objects: ON
-                        </button>
-                        <button class="btn btn-secondary btn-sm" id="toggleOverlayBtn" onclick="toggleFaceOverlay()" title="Toggle live face &amp; object bounding boxes">
-                            🔲 Boxes: ON
-                        </button>
-                        <button class="btn btn-secondary btn-sm" id="quickFlashBtn" onclick="toggleQuickFlash()" title="Toggle onboard LED flashlight">
-                            💡 Flash: Off
-                        </button>
-                        <button class="btn btn-secondary btn-sm" id="camSensorToggleBtn" onclick="toggleCameraSensor()" title="Toggle ESP32-CAM Low-Power Standby Mode">
-                            🔋 Low-Power: ON
-                        </button>
-                        <button class="btn btn-secondary btn-sm" onclick="toggleCameraSettings()" title="Open camera controls">
-                            ⚙️ Settings
-                        </button>
-                        <span id="cameraStatusBadge" class="status-badge-live offline">
-                            <span class="status-dot"></span>
-                            <span id="cameraStatusText">ESP-CAM Connecting...</span>
-                        </span>
-                    </div>
-                </div>
-                <div class="stream-container">
-                    <img id="liveStreamImg" src="/live" alt="Live Stream" onerror="handleStreamError()" />
-                    <div id="offlineOverlay" class="offline-overlay" style="display: none;">
-                        <div class="offline-badge-box" style="max-width: 440px;">
-                            <div class="offline-icon">📡</div>
-                            <h3>ESP-CAM Video Stream Offline</h3>
-                            <p style="margin-bottom: 10px;">Waiting for MJPEG video stream on port 81 (<code>http://192.168.29.10:81/stream</code>).</p>
-                            <div style="font-size: 0.82rem; background: rgba(255,255,255,0.06); padding: 10px 14px; border-radius: 8px; color: #94a3b8; text-align: left; line-height: 1.45;">
-                                <strong style="color: #f1f5f9;">Hardware Status:</strong> ESP32-WROOM is in low-power Wi-Fi Modem-Sleep at <code>192.168.29.20</code> and ESP32-CAM is in Camera Sensor Standby at <code>192.168.29.10</code>.<br>
-                                The sensor wakes automatically on door open, or you can activate it manually below.
+            <div id="cameraPageSettingsSlot"></div>
+            <div class="live-grid">
+                <div id="cameraPageSlot">
+                    <div class="card" id="liveStreamCard">
+                        <div class="card-header">
+                            <h2>📹 Live ESP32-CAM Feed</h2>
+                            <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                                <button class="btn btn-primary btn-sm recog-toggle-btn" id="toggleRecognitionBtn"
+                                    onclick="toggleRecognitionPipeline()" title="Toggle Face Recognition Pipeline"
+                                    style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
+                                    🧠 Recognition: ON
+                                </button>
+                                <button class="btn btn-primary btn-sm vlm-toggle-btn" id="liveObjToggleBtn"
+                                    onclick="toggleVlmPipeline()" title="Toggle Object Identification Pipeline"
+                                    style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);">
+                                    📦 Objects: ON
+                                </button>
+                                <button class="btn btn-secondary btn-sm" id="toggleOverlayBtn"
+                                    onclick="toggleFaceOverlay()" title="Toggle live face &amp; object bounding boxes">
+                                    🔲 Boxes: ON
+                                </button>
+                                <button class="btn btn-secondary btn-sm" id="quickFlashBtn" onclick="toggleQuickFlash()"
+                                    title="Toggle onboard LED flashlight">
+                                    💡 Flash: Off
+                                </button>
+                                <button class="btn btn-secondary btn-sm" id="camSensorToggleBtn"
+                                    onclick="toggleCameraSensor()" title="Toggle ESP32-CAM Low-Power Standby Mode">
+                                    🔋 Low-Power: ON
+                                </button>
+                                <button class="btn btn-secondary btn-sm" onclick="toggleCameraSettings()"
+                                    title="Open camera controls">
+                                    ⚙️ Settings
+                                </button>
+                                <span id="cameraStatusBadge" class="status-badge-live offline"
+                                    style="white-space: nowrap; font-size: 0.76rem; padding: 4px 10px;">
+                                    <span class="status-dot"></span>
+                                    <span id="cameraStatusText">ESP-CAM Connecting...</span>
+                                </span>
                             </div>
-                            <button id="overlayWakeCamBtn" class="btn btn-primary" onclick="setCameraSensor(true)" style="margin-top: 14px; width: 100%; background: linear-gradient(135deg, #10b981 0%, #059669 100%); font-weight: 600;">
-                                ⚡ Wake from Low-Power
+                        </div>
+                        <div class="stream-container">
+                            <img id="liveStreamImg" src="/live" alt="Live Stream" onerror="handleStreamError()" />
+                            <div id="offlineOverlay" class="offline-overlay" style="display: none;">
+                                <div class="offline-badge-box" style="max-width: 440px;">
+                                    <div class="offline-icon">📡</div>
+                                    <h3 id="offlineOverlayTitle">ESP-CAM Video Stream Offline</h3>
+                                    <p style="margin-bottom: 10px;">Waiting for MJPEG video stream on port 81
+                                        (<code>http://192.168.29.10:81/stream</code>).</p>
+                                    <div
+                                        style="font-size: 0.82rem; background: rgba(255,255,255,0.06); padding: 10px 14px; border-radius: 8px; color: #94a3b8; text-align: left; line-height: 1.45;">
+                                        <strong style="color: #f1f5f9;">Hardware Status:</strong> ESP32-WROOM is in
+                                        low-power Wi-Fi Modem-Sleep at <code>192.168.29.20</code> and ESP32-CAM is in
+                                        Camera Sensor Standby at <code>192.168.29.10</code>.<br>
+                                        The sensor wakes automatically on door open, or you can activate it manually
+                                        below.
+                                    </div>
+                                    <button id="overlayWakeCamBtn" class="btn btn-primary"
+                                        onclick="setCameraSensor(true)"
+                                        style="margin-top: 14px; width: 100%; background: linear-gradient(135deg, #10b981 0%, #059669 100%); font-weight: 600;">
+                                        ⚡ Wake from Low-Power
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div> <!-- /#cameraPageSlot -->
+
+                <div class="card" id="liveTelemetryCard">
+                    <div class="card-header">
+                        <h2>🧠 Live Recognition Telemetry</h2>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <button class="btn btn-primary btn-sm recog-toggle-btn" id="telemetryRecogToggleBtn"
+                                onclick="toggleRecognitionPipeline()" title="Toggle Recognition Pipeline"
+                                style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
+                                🧠 Recognition: ON
                             </button>
+                            <span class="stat-badge primary" id="pendingTrackBadge">0 Pending Tracks</span>
+                        </div>
+                    </div>
+
+                    <div class="telemetry-status-banner" id="lastRecognitionBanner">
+                        Waiting for face detections...
+                    </div>
+
+                    <div class="telemetry-counters">
+                        <div class="telemetry-pill">
+                            <span style="color: #34d399;">✔ Recognized</span>
+                            <strong id="cntRecognized">0</strong>
+                        </div>
+                        <div class="telemetry-pill">
+                            <span style="color: #38bdf8;">⏳ Unknown (Verifying)</span>
+                            <strong id="cntUnknownPending">0</strong>
+                        </div>
+                        <div class="telemetry-pill">
+                            <span style="color: #fbbf24;">⚠ Inconclusive</span>
+                            <strong id="cntInconclusive">0</strong>
+                        </div>
+                        <div class="telemetry-pill">
+                            <span style="color: #f87171;">✖ Low Quality Rejected</span>
+                            <strong id="cntUnusable">0</strong>
+                        </div>
+                    </div>
+
+                    <h4
+                        style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+                        Recent Recognition & Quality Decisions
+                    </h4>
+                    <div class="events-list" id="recentEventsList">
+                        <div style="color: var(--text-muted); font-size: 0.85rem; padding: 12px;">
+                            No recognition events recorded in this session yet.
                         </div>
                     </div>
                 </div>
             </div>
-            </div> <!-- /#cameraPageSlot -->
-
-            <div class="card" id="liveTelemetryCard">
-                <div class="card-header">
-                    <h2>🧠 Live Recognition Telemetry</h2>
-                    <div style="display: flex; gap: 8px; align-items: center;">
-                        <button class="btn btn-primary btn-sm recog-toggle-btn" id="telemetryRecogToggleBtn" onclick="toggleRecognitionPipeline()" title="Toggle Recognition Pipeline" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
-                            🧠 Recognition: ON
-                        </button>
-                        <span class="stat-badge primary" id="pendingTrackBadge">0 Pending Tracks</span>
-                    </div>
-                </div>
-
-                <div class="telemetry-status-banner" id="lastRecognitionBanner">
-                    Waiting for face detections...
-                </div>
-
-                <div class="telemetry-counters">
-                    <div class="telemetry-pill">
-                        <span style="color: #34d399;">✔ Recognized</span>
-                        <strong id="cntRecognized">0</strong>
-                    </div>
-                    <div class="telemetry-pill">
-                        <span style="color: #38bdf8;">⏳ Unknown (Verifying)</span>
-                        <strong id="cntUnknownPending">0</strong>
-                    </div>
-                    <div class="telemetry-pill">
-                        <span style="color: #fbbf24;">⚠ Inconclusive</span>
-                        <strong id="cntInconclusive">0</strong>
-                    </div>
-                    <div class="telemetry-pill">
-                        <span style="color: #f87171;">✖ Low Quality Rejected</span>
-                        <strong id="cntUnusable">0</strong>
-                    </div>
-                </div>
-
-                <h4 style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
-                    Recent Recognition & Quality Decisions
-                </h4>
-                <div class="events-list" id="recentEventsList">
-                    <div style="color: var(--text-muted); font-size: 0.85rem; padding: 12px;">
-                        No recognition events recorded in this session yet.
-                    </div>
-                </div>
-            </div>
-        </div>
         </div> <!-- /#page-camera -->
 
         <!-- PAGE 3: EVENTS & AUDIT LOG -->
         <div id="page-events" class="page-view">
-        <!-- PHASE 9: PERSISTENT EVENT DATABASE & AUDIT LOG -->
-        <div class="card" style="margin-top: 0;">
-            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-                <h2>🗄️ Event Database &amp; Audit Log (SQLite)</h2>
-                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                    <input id="dbSearchInput" type="text" placeholder="Search person, reason, object..." oninput="if(this._t)clearTimeout(this._t);this._t=setTimeout(loadEventDb,300);" style="background:#0f172a; color:#f1f5f9; border:1px solid rgba(148,163,184,0.3); border-radius:8px; padding:5px 10px; font-size:0.82rem; min-width:200px;">
-                    <select id="dbEventFilter" onchange="loadEventDb()" style="background:#0f172a; color:#f1f5f9; border:1px solid rgba(148,163,184,0.3); border-radius:8px; padding:5px 10px; font-size:0.82rem;">
-                        <option value="all">All Events</option>
-                        <option value="wroom">WROOM Sensors</option>
-                        <option value="recognized">Recognized</option>
-                        <option value="inconclusive">Inconclusive</option>
-                        <option value="unknown_pending">Unknown</option>
-                        <option value="unusable_quality">Low Quality</option>
-                    </select>
-                    <button class="btn btn-secondary btn-sm" id="btnDbModeEvents" onclick="switchDbTab('events')">📋 Events</button>
-                    <button class="btn btn-secondary btn-sm" id="btnDbModeAudit" onclick="switchDbTab('audit')">🛡️ Audit Log</button>
-                    <button class="btn btn-secondary btn-sm" onclick="refreshPhase9Db()">🔄 Refresh</button>
+            <!-- PHASE 9: PERSISTENT EVENT DATABASE & AUDIT LOG -->
+            <div class="card" style="margin-top: 0;">
+                <div class="card-header"
+                    style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <h2>🗄️ Event Database &amp; Audit Log (SQLite)</h2>
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        <input id="dbSearchInput" type="text" placeholder="Search person, reason, object..."
+                            oninput="if(this._t)clearTimeout(this._t);this._t=setTimeout(loadEventDb,300);"
+                            style="background:#0f172a; color:#f1f5f9; border:1px solid rgba(148,163,184,0.3); border-radius:8px; padding:5px 10px; font-size:0.82rem; min-width:200px;">
+                        <select id="dbEventFilter" onchange="loadEventDb()"
+                            style="background:#0f172a; color:#f1f5f9; border:1px solid rgba(148,163,184,0.3); border-radius:8px; padding:5px 10px; font-size:0.82rem;">
+                            <option value="all">All Events</option>
+                            <option value="wroom">WROOM Sensors</option>
+                            <option value="recognized">Recognized</option>
+                            <option value="inconclusive">Inconclusive</option>
+                            <option value="unknown_pending">Unknown</option>
+                            <option value="unusable_quality">Low Quality</option>
+                        </select>
+                        <button class="btn btn-secondary btn-sm" id="btnDbModeEvents" onclick="switchDbTab('events')">📋
+                            Events</button>
+                        <button class="btn btn-secondary btn-sm" id="btnDbModeAudit" onclick="switchDbTab('audit')">🛡️
+                            Audit Log</button>
+                        <button class="btn btn-secondary btn-sm" onclick="refreshPhase9Db()">🔄 Refresh</button>
+                    </div>
+                </div>
+                <div id="dbAnalyticsSummary"
+                    style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px; font-size:0.82rem; color:#94a3b8;">
+                    Loading analytics...
+                </div>
+                <div id="dbRecordsContainer"
+                    style="max-height:420px; overflow-y:auto; border:1px solid rgba(148,163,184,0.18); border-radius:10px; padding:10px; background:rgba(15,23,42,0.45); font-size:0.84rem;">
+                    Loading persistent records...
                 </div>
             </div>
-            <div id="dbAnalyticsSummary" style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px; font-size:0.82rem; color:#94a3b8;">
-                Loading analytics...
-            </div>
-            <div id="dbRecordsContainer" style="max-height:420px; overflow-y:auto; border:1px solid rgba(148,163,184,0.18); border-radius:10px; padding:10px; background:rgba(15,23,42,0.45); font-size:0.84rem;">
-                Loading persistent records...
-            </div>
-        </div>
         </div> <!-- /#page-events -->
 
         <!-- PAGE 5: ALERTS & NOTIFICATION CENTER -->
         <div id="page-alerts" class="page-view">
-        <!-- PHASE 10: NOTIFICATION & ALERT CENTER -->
-        <div class="card" style="margin-top: 0; padding: 20px;" id="phase10NotifyCard">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
-                <h2 style="font-size:1.25rem; font-weight:700; margin:0; display:flex; align-items:center; gap:8px;">
-                    <span>🔔 Notification & Alert Center</span>
-                    <span id="notifyQueueBadge" style="font-size:0.75rem; padding:2px 8px; border-radius:999px; background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3);">Queue: 0</span>
-                </h2>
-                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-                    <button class="btn btn-secondary btn-sm" id="btnWebPushPerm" onclick="requestWebPushPermission()">🖥️ Enable Browser Push</button>
-                    <button class="btn btn-secondary btn-sm" onclick="toggleNotifyConfigPanel()">⚙️ Providers</button>
-                    <button class="btn btn-primary btn-sm" onclick="sendTestNotification()">🧪 Test Alert</button>
-                    <button class="btn btn-secondary btn-sm" onclick="refreshPhase10Notifications()">🔄</button>
-                </div>
-            </div>
-
-            <div id="notifyProviderPills" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; font-size:0.8rem;">
-                Loading providers...
-            </div>
-
-            <div id="notifyConfigPanel" style="display:none; margin-bottom:14px; padding:12px; border-radius:10px; border:1px solid rgba(148,163,184,0.22); background:rgba(15,23,42,0.6);">
-                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px; font-size:0.82rem;">
-                    <div>
-                        <label style="display:flex; align-items:center; gap:6px; font-weight:600; margin-bottom:4px;">
-                            <input type="checkbox" id="cfgWebhookEnabled"> 🌐 Webhook
-                        </label>
-                        <input id="cfgWebhookUrl" type="text" placeholder="https://example.com/webhook" style="width:100%; padding:6px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
-                    </div>
-                    <div>
-                        <label style="display:flex; align-items:center; gap:6px; font-weight:600; margin-bottom:4px;">
-                            <input type="checkbox" id="cfgMqttEnabled"> 📡 MQTT Broker
-                        </label>
-                        <input id="cfgMqttHost" type="text" placeholder="127.0.0.1:1883" style="width:100%; padding:6px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
-                    </div>
-                    <div>
-                        <label style="display:flex; align-items:center; gap:6px; font-weight:600; margin-bottom:4px;">
-                            <input type="checkbox" id="cfgTelegramEnabled"> ✈️ Telegram
-                        </label>
-                        <input id="cfgTelegramToken" type="password" placeholder="Bot Token" style="width:100%; padding:6px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; margin-bottom:4px;">
-                        <input id="cfgTelegramChat" type="text" placeholder="Chat ID" style="width:100%; padding:6px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
-                    </div>
-                    <div>
-                        <label style="display:flex; align-items:center; gap:6px; font-weight:600; margin-bottom:4px;">
-                            <input type="checkbox" id="cfgPushEnabled"> 📱 Device Push (ntfy)
-                        </label>
-                        <input id="cfgPushTopic" type="text" placeholder="ntfy topic (e.g. sentinel-door)" style="width:100%; padding:6px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
-                    </div>
-                    <div>
-                        <label style="display:flex; align-items:center; gap:6px; font-weight:600; margin-bottom:4px;">
-                            <input type="checkbox" id="cfgWhatsappEnabled"> 💬 WhatsApp Gateway
-                        </label>
-                        <input id="cfgWhatsappUrl" type="text" placeholder="Gateway API URL" style="width:100%; padding:6px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+            <!-- PHASE 10: NOTIFICATION & ALERT CENTER -->
+            <div class="card" style="margin-top: 0; padding: 20px;" id="phase10NotifyCard">
+                <div
+                    style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+                    <h2
+                        style="font-size:1.25rem; font-weight:700; margin:0; display:flex; align-items:center; gap:8px;">
+                        <span>🔔 Notification & Alert Center</span>
+                        <span id="notifyQueueBadge"
+                            style="font-size:0.75rem; padding:2px 8px; border-radius:999px; background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3);">Queue:
+                            0</span>
+                    </h2>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                        <button class="btn btn-secondary btn-sm" id="btnWebPushPerm"
+                            onclick="requestWebPushPermission()">🖥️ Enable Browser Push</button>
+                        <button class="btn btn-secondary btn-sm" onclick="toggleNotifyConfigPanel()">⚙️
+                            Providers</button>
+                        <button class="btn btn-primary btn-sm" onclick="sendTestNotification()">🧪 Test Alert</button>
+                        <button class="btn btn-secondary btn-sm" onclick="refreshPhase10Notifications()">🔄</button>
                     </div>
                 </div>
-                <div style="margin-top:10px; display:flex; justify-content:flex-end; gap:8px;">
-                    <button class="btn btn-primary btn-sm" onclick="saveNotifyConfig()">💾 Save Provider Config</button>
+
+                <div id="notifyProviderPills"
+                    style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; font-size:0.8rem;">
+                    Loading providers...
+                </div>
+
+                <div id="notifyConfigPanel"
+                    style="display:none; margin-bottom:14px; padding:12px; border-radius:10px; border:1px solid rgba(148,163,184,0.22); background:rgba(15,23,42,0.6);">
+                    <div
+                        style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px; font-size:0.82rem;">
+                        <div>
+                            <label
+                                style="display:flex; align-items:center; gap:6px; font-weight:600; margin-bottom:4px;">
+                                <input type="checkbox" id="cfgWebhookEnabled"> 🌐 Webhook
+                            </label>
+                            <input id="cfgWebhookUrl" type="text" placeholder="https://example.com/webhook"
+                                style="width:100%; padding:6px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+                        </div>
+                        <div>
+                            <label
+                                style="display:flex; align-items:center; gap:6px; font-weight:600; margin-bottom:4px;">
+                                <input type="checkbox" id="cfgMqttEnabled"> 📡 MQTT Broker
+                            </label>
+                            <input id="cfgMqttHost" type="text" placeholder="127.0.0.1:1883"
+                                style="width:100%; padding:6px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+                        </div>
+                        <div>
+                            <label
+                                style="display:flex; align-items:center; gap:6px; font-weight:600; margin-bottom:4px;">
+                                <input type="checkbox" id="cfgTelegramEnabled"> ✈️ Telegram
+                            </label>
+                            <input id="cfgTelegramToken" type="password" placeholder="Bot Token"
+                                style="width:100%; padding:6px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; margin-bottom:4px;">
+                            <input id="cfgTelegramChat" type="text" placeholder="Chat ID"
+                                style="width:100%; padding:6px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+                        </div>
+                        <div>
+                            <label
+                                style="display:flex; align-items:center; gap:6px; font-weight:600; margin-bottom:4px;">
+                                <input type="checkbox" id="cfgPushEnabled"> 📱 Device Push (ntfy)
+                            </label>
+                            <input id="cfgPushTopic" type="text" placeholder="ntfy topic (e.g. sentinel-door)"
+                                style="width:100%; padding:6px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+                        </div>
+                        <div>
+                            <label
+                                style="display:flex; align-items:center; gap:6px; font-weight:600; margin-bottom:4px;">
+                                <input type="checkbox" id="cfgWhatsappEnabled"> 💬 WhatsApp Gateway
+                            </label>
+                            <input id="cfgWhatsappUrl" type="text" placeholder="Gateway API URL"
+                                style="width:100%; padding:6px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+                        </div>
+                    </div>
+                    <div style="margin-top:10px; display:flex; justify-content:flex-end; gap:8px;">
+                        <button class="btn btn-primary btn-sm" onclick="saveNotifyConfig()">💾 Save Provider
+                            Config</button>
+                    </div>
+                </div>
+
+                <div id="notifyAlertsList"
+                    style="max-height:360px; overflow-y:auto; border:1px solid rgba(148,163,184,0.18); border-radius:10px; padding:10px; background:rgba(15,23,42,0.45); font-size:0.84rem;">
+                    Loading recent alerts...
                 </div>
             </div>
-
-            <div id="notifyAlertsList" style="max-height:360px; overflow-y:auto; border:1px solid rgba(148,163,184,0.18); border-radius:10px; padding:10px; background:rgba(15,23,42,0.45); font-size:0.84rem;">
-                Loading recent alerts...
-            </div>
-        </div>
         </div> <!-- /#page-alerts -->
 
         <!-- PAGE 4: PEOPLE (ENROLLED IDENTITIES) -->
         <div id="page-people" class="page-view">
-        <div id="peopleDupMergeSlot"></div>
-        <!-- ENROLLED PERSON PROFILES -->
-        <div style="display:flex; justify-content:space-between; align-items:center; margin: 4px 0 16px; flex-wrap:wrap; gap:10px;">
-            <h2 style="font-size:1.4rem; font-weight:700; color:var(--text-primary); margin:0; display:flex; align-items:center; gap:8px;">
-                <span>👤 Enrolled Identities</span>
-                <span class="badge-count" style="font-size:0.85rem; padding: 2px 8px;">{{ total_persons }}</span>
-            </h2>
-            <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                <button class="btn btn-warning btn-sm" onclick="toggleDuplicateReview()">
-                    🔍 Duplicates <span class="badge-count" id="dupCountBadge">{{ duplicate_count }}</span>
-                </button>
-                <button class="btn btn-primary btn-sm" onclick="toggleMergeMode()">🔀 Merge</button>
-                <button class="btn btn-primary btn-sm" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);" onclick="openAddPersonModal()">
-                    ➕ Enroll New Person
-                </button>
+            <div id="peopleDupMergeSlot"></div>
+            <!-- ENROLLED PERSON PROFILES -->
+            <div
+                style="display:flex; justify-content:space-between; align-items:center; margin: 4px 0 16px; flex-wrap:wrap; gap:10px;">
+                <h2
+                    style="font-size:1.4rem; font-weight:700; color:var(--text-primary); margin:0; display:flex; align-items:center; gap:8px;">
+                    <span>👤 Enrolled Identities</span>
+                    <span class="badge-count" style="font-size:0.85rem; padding: 2px 8px;">{{ total_persons }}</span>
+                </h2>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <button class="btn btn-warning btn-sm" onclick="toggleDuplicateReview()">
+                        🔍 Duplicates <span class="badge-count" id="dupCountBadge">{{ duplicate_count }}</span>
+                    </button>
+                    <button class="btn btn-primary btn-sm" onclick="toggleMergeMode()">🔀 Merge</button>
+                    <button class="btn btn-primary btn-sm"
+                        style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);"
+                        onclick="openAddPersonModal()">
+                        ➕ Enroll New Person
+                    </button>
+                </div>
             </div>
-        </div>
-        {% if persons %}
+            {% if persons %}
             {% for person in persons %}
             <div class="person-card" id="card-{{ person.id }}">
                 <div class="person-header">
                     <div class="person-title">
                         <h2 id="person-heading-{{ person.id }}">{{ person.label if person.label else person.id }}</h2>
-                        <span class="person-id-badge" id="id-badge-{{ person.id }}" style="{% if not person.label %}display:none;{% endif %}">
+                        <span class="person-id-badge" id="id-badge-{{ person.id }}"
+                            style="{% if not person.label %}display:none;{% endif %}">
                             {{ person.id }}
                         </span>
                         {% if not person.enrolled %}
                         <span class="unenrolled-tag">Identity Unenrolled (Embeddings Removed)</span>
                         {% endif %}
-                        <button class="btn btn-secondary btn-sm btn-edit-name" data-person-id="{{ person.id }}" data-current-label="{{ person.label or '' }}" onclick="openNameModal('{{ person.id }}')">
+                        <button class="btn btn-secondary btn-sm btn-edit-name" data-person-id="{{ person.id }}"
+                            data-current-label="{{ person.label or '' }}" onclick="openNameModal('{{ person.id }}')">
                             ✏️ Name
                         </button>
                         {% set id_cat = (person.identity.category if person.identity else '') %}
                         {% set id_role = (person.identity.role if person.identity else '') %}
                         {% set id_disp = (id_cat ~ ': ' ~ id_role) if (id_cat and id_role) else id_cat %}
-                        <span class="identity-pill" id="identity-pill-{{ person.id }}" style="{% if not id_disp %}display:none;{% endif %}">
+                        <span class="identity-pill" id="identity-pill-{{ person.id }}"
+                            style="{% if not id_disp %}display:none;{% endif %}">
                             🪪 {{ id_disp }}
                         </span>
                     </div>
@@ -2105,7 +2303,8 @@
                         <button class="btn btn-secondary btn-sm" onclick="openSamplesModal('{{ person.id }}')">
                             🖼️ Inspect Samples
                         </button>
-                        <button class="btn btn-secondary btn-sm" id="btn-identity-{{ person.id }}" onclick="openIdentityModal('{{ person.id }}')">
+                        <button class="btn btn-secondary btn-sm" id="btn-identity-{{ person.id }}"
+                            onclick="openIdentityModal('{{ person.id }}')">
                             🪪 Identity
                         </button>
                         <button class="btn btn-danger btn-sm" onclick="openDeleteModal('{{ person.id }}')">
@@ -2117,7 +2316,8 @@
                 {% if person.last_seen %}
                 <div class="last-seen">
                     Last seen: {{ person.last_seen.strftime('%Y-%m-%d %H:%M:%S') }}
-                    ({{ ((now - person.last_seen).total_seconds() / 3600) | int }}h {{ (((now - person.last_seen).total_seconds() % 3600) / 60) | int }}m ago)
+                    ({{ ((now - person.last_seen).total_seconds() / 3600) | int }}h {{ (((now -
+                    person.last_seen).total_seconds() % 3600) / 60) | int }}m ago)
                 </div>
                 {% endif %}
 
@@ -2148,11 +2348,11 @@
                 </div>
             </div>
             {% endfor %}
-        {% else %}
+            {% else %}
             <div class="no-persons">
                 <p>No enrolled identities yet. Waiting for verified face detections...</p>
             </div>
-        {% endif %}
+            {% endif %}
         </div> <!-- /#page-people -->
 
         <!-- PAGE 6: DEVICES (ESP32-WROOM, ESP32-CAM & AI SERVER) -->
@@ -2161,46 +2361,64 @@
                 <div class="card" style="padding: 18px;">
                     <div class="card-header" style="margin-bottom: 10px;">
                         <h2 style="margin:0;">📡 ESP32-WROOM Node</h2>
-                        <span id="devWroomBadge" class="status-badge-live offline"><span class="status-dot"></span><span id="devWroomBadgeTxt">Checking...</span></span>
+                        <span id="devWroomBadge" class="status-badge-live offline"><span class="status-dot"></span><span
+                                id="devWroomBadgeTxt">Checking...</span></span>
                     </div>
                     <p style="color:#94a3b8; font-size:0.86rem; margin-bottom:12px;">
-                        Door reed sensor, PIR motion, local buzzer &amp; hardware event relay (<code>192.168.29.20</code>).
+                        Door reed sensor, PIR motion, local buzzer &amp; hardware event relay
+                        (<code>192.168.29.20</code>).
                     </p>
-                    <div id="devWroomMeta" style="font-size:0.83rem; color:#cbd5e1; margin-bottom:14px;">IP: 192.168.29.20</div>
+                    <div id="devWroomMeta" style="font-size:0.83rem; color:#cbd5e1; margin-bottom:14px;">IP:
+                        192.168.29.20</div>
                     <div style="display:flex; gap:8px; flex-wrap:wrap;">
                         <button class="btn btn-secondary btn-sm" onclick="rebootWroomDevice()">🔄 Reboot WROOM</button>
-                        <button class="btn btn-primary btn-sm" onclick="simulateWroomEvent('DOOR_OPEN')">🚪 Test Door Open</button>
-                        <button class="btn btn-secondary btn-sm" onclick="simulateWroomEvent('MOTION_DETECTED')">🏃 Test Motion</button>
+                        <button class="btn btn-primary btn-sm" onclick="simulateWroomEvent('DOOR_OPEN')">🚪 Test Door
+                            Open</button>
+                        <button class="btn btn-secondary btn-sm" onclick="simulateWroomEvent('MOTION_DETECTED')">🏃 Test
+                            Motion</button>
                     </div>
                 </div>
 
                 <div class="card" style="padding: 18px;">
                     <div class="card-header" style="margin-bottom: 10px;">
                         <h2 style="margin:0;">📹 ESP32-CAM Node</h2>
-                        <span id="devCamBadge" class="status-badge-live offline"><span class="status-dot"></span><span id="devCamBadgeTxt">Checking...</span></span>
+                        <span id="devCamBadge" class="status-badge-live offline"><span class="status-dot"></span><span
+                                id="devCamBadgeTxt">Checking...</span></span>
                     </div>
                     <p style="color:#94a3b8; font-size:0.86rem; margin-bottom:12px;">
                         AI-Thinker OV2640 MJPEG video stream (port 81) &amp; onboard GPIO 4 flash controller.
                     </p>
-                    <div id="devCamMeta" style="font-size:0.83rem; color:#cbd5e1; margin-bottom:14px;">IP: 192.168.29.10 | FPS: -- | Temp: -- °C</div>
+                    <div id="devCamMeta" style="font-size:0.83rem; color:#cbd5e1; margin-bottom:14px;">IP: 192.168.29.10
+                        | FPS: -- | Temp: -- °C</div>
                     <div style="display:flex; gap:8px; flex-wrap:wrap;">
                         <button class="btn btn-secondary btn-sm" onclick="rebootCamDevice()">🔄 Reboot CAM</button>
-                        <button class="btn btn-secondary btn-sm" onclick="fetch('/stream/reconnect', {method:'POST'}).then(()=>showToast('Reconnecting stream...','info'))">🔌 Reconnect Stream</button>
+                        <button class="btn btn-secondary btn-sm"
+                            onclick="fetch('/stream/reconnect', {method:'POST'}).then(()=>showToast('Reconnecting stream...','info'))">🔌
+                            Reconnect Stream</button>
+                        <button class="btn btn-danger btn-sm"
+                            onclick="if(confirm('This will disconnect your laptop from current Wi-Fi and connect to Sentinel-CAM AP (192.168.4.1). Continue?')) runSim('connect_fallback_ap')">📶
+                            Switch to Sentinel-CAM AP</button>
                     </div>
                 </div>
 
                 <div class="card" style="padding: 18px;">
                     <div class="card-header" style="margin-bottom: 10px;">
                         <h2 style="margin:0;">🧠 AI Server &amp; Cluster</h2>
-                        <span class="status-badge-live online"><span class="status-dot"></span><span>ONLINE</span></span>
+                        <span class="status-badge-live online"><span
+                                class="status-dot"></span><span>ONLINE</span></span>
                     </div>
                     <p style="color:#94a3b8; font-size:0.86rem; margin-bottom:12px;">
-                        Face Recognition (YuNet + MobileFaceNet 512-D), Object Detection (YOLOv8n DirectML), SQLite EventDB &amp; Notification Manager.
+                        Face Recognition (YuNet + MobileFaceNet 512-D), Object Detection (YOLOv8n DirectML), SQLite
+                        EventDB &amp; Notification Manager.
                     </p>
-                    <div id="devAiMeta" style="font-size:0.83rem; color:#cbd5e1; margin-bottom:14px;">Enrolled: {{ total_persons }} | Frames: {{ total_images }}</div>
+                    <div id="devAiMeta" style="font-size:0.83rem; color:#cbd5e1; margin-bottom:14px;">Enrolled: {{
+                        total_persons }} | Frames: {{ total_images }}</div>
                     <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                        <button class="btn btn-danger btn-sm" onclick="fullSystemReboot()" style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); color:#fff;">⚡ Full Reboot (CAM + WROOM + Models)</button>
-                        <button class="btn btn-secondary btn-sm" onclick="refreshControlCenterHealth(true)">🔄 Refresh Health</button>
+                        <button class="btn btn-danger btn-sm" onclick="fullSystemReboot()"
+                            style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); color:#fff;">⚡ Full
+                            Reboot (CAM + WROOM + Models)</button>
+                        <button class="btn btn-secondary btn-sm" onclick="refreshControlCenterHealth(true)">🔄 Refresh
+                            Health</button>
                     </div>
                 </div>
             </div>
@@ -2211,26 +2429,45 @@
         <!-- PAGE 7: ANALYTICS (PHASE 9 DATABASE) -->
         <div id="page-analytics" class="page-view">
             <div class="card" style="padding: 20px;">
-                <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <div class="card-header"
+                    style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                     <h2 style="margin:0;">📊 Security &amp; Visitor Analytics (Phase 9 SQLite)</h2>
-                    <button class="btn btn-secondary btn-sm" onclick="renderAnalyticsPage()">🔄 Refresh Analytics</button>
+                    <button class="btn btn-secondary btn-sm" onclick="renderAnalyticsPage()">🔄 Refresh
+                        Analytics</button>
                 </div>
-                <div id="analyticsKpis" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px; margin:14px 0;">
-                    <div class="stat-box"><h3 id="anaTotalEvents">--</h3><p>Total DB Events</p></div>
-                    <div class="stat-box"><h3 id="anaRecognized">--</h3><p>Recognized (7d)</p></div>
-                    <div class="stat-box"><h3 id="anaUnknown">--</h3><p>Unknown / Pending (7d)</p></div>
-                    <div class="stat-box"><h3 id="anaTopVisitor">--</h3><p>Top Visitor (7d)</p></div>
+                <div id="analyticsKpis"
+                    style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px; margin:14px 0;">
+                    <div class="stat-box">
+                        <h3 id="anaTotalEvents">--</h3>
+                        <p>Total DB Events</p>
+                    </div>
+                    <div class="stat-box">
+                        <h3 id="anaRecognized">--</h3>
+                        <p>Recognized (7d)</p>
+                    </div>
+                    <div class="stat-box">
+                        <h3 id="anaUnknown">--</h3>
+                        <p>Unknown / Pending (7d)</p>
+                    </div>
+                    <div class="stat-box">
+                        <h3 id="anaTopVisitor">--</h3>
+                        <p>Top Visitor (7d)</p>
+                    </div>
                 </div>
-                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-top:14px;">
-                    <div style="padding:14px; border-radius:10px; border:1px solid rgba(148,163,184,0.18); background:rgba(15,23,42,0.5);">
+                <div
+                    style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-top:14px;">
+                    <div
+                        style="padding:14px; border-radius:10px; border:1px solid rgba(148,163,184,0.18); background:rgba(15,23,42,0.5);">
                         <div class="panel-title-sm"><span>24h Hourly Activity</span></div>
                         <div id="analyticsHourlyChart" style="font-size:0.82rem; color:#cbd5e1;">Loading...</div>
                     </div>
-                    <div style="padding:14px; border-radius:10px; border:1px solid rgba(148,163,184,0.18); background:rgba(15,23,42,0.5);">
+                    <div
+                        style="padding:14px; border-radius:10px; border:1px solid rgba(148,163,184,0.18); background:rgba(15,23,42,0.5);">
                         <div class="panel-title-sm"><span>Daily Trend (Last 7 Days)</span></div>
                         <div id="analyticsDailyChart" style="font-size:0.82rem; color:#cbd5e1;">Loading...</div>
                     </div>
-                    <div style="padding:14px; border-radius:10px; border:1px solid rgba(148,163,184,0.18); background:rgba(15,23,42,0.5);">
+                    <div
+                        style="padding:14px; border-radius:10px; border:1px solid rgba(148,163,184,0.18); background:rgba(15,23,42,0.5);">
                         <div class="panel-title-sm"><span>Top Visitors</span></div>
                         <div id="analyticsTopVisitors" style="font-size:0.82rem; color:#cbd5e1;">Loading...</div>
                     </div>
@@ -2243,7 +2480,8 @@
             <div id="settingsAiSlot"></div>
 
             <div class="card" style="padding: 20px; margin-bottom: 20px; border: 1px solid rgba(16, 185, 129, 0.3);">
-                <div class="card-header" style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                <div class="card-header"
+                    style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
                     <h2 style="margin:0;">🛡️ Security Hardening &amp; Industrial Readiness</h2>
                     <button class="btn btn-secondary btn-sm" onclick="loadSecurityHealthz()">🔄 Refresh</button>
                 </div>
@@ -2251,11 +2489,13 @@
                     Loading security &amp; readiness telemetry...
                 </div>
                 <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-                    <input id="secPinInput" type="password" placeholder="Set Admin PIN (min 4 chars)" style="padding:7px 10px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; font-size:0.84rem;">
+                    <input id="secPinInput" type="password" placeholder="Set User Password / Admin PIN (min 4 chars)"
+                        style="min-width:250px; padding:7px 10px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; font-size:0.84rem;">
                     <label style="display:flex; align-items:center; gap:6px; font-size:0.84rem;">
                         <input type="checkbox" id="secLockLocalhost"> Lock Localhost Too
                     </label>
-                    <button class="btn btn-primary btn-sm" onclick="saveAdminPin()">🔐 Save PIN / Lock</button>
+                    <button class="btn btn-primary btn-sm" onclick="saveAdminPin()">🔐 Save Password / PIN</button>
+                    <button class="btn btn-secondary btn-sm" onclick="clearUserPassword()">🔓 Clear Password</button>
                     <button class="btn btn-secondary btn-sm" onclick="rotateApiKey()">🔑 Rotate API Key</button>
                 </div>
             </div>
@@ -2265,12 +2505,16 @@
                     <h2 style="margin:0;">📷 Default Camera Settings (Persisted &amp; Auto-Applied)</h2>
                 </div>
                 <p style="color:#94a3b8; font-size:0.86rem; margin-bottom:14px;">
-                    Any changes saved here are stored as the permanent default in <code>data/camera_defaults.json</code>, applied immediately to the ESP32-CAM, and automatically re-applied whenever the camera boots or reconnects.
+                    Any changes saved here are stored as the permanent default in
+                    <code>data/camera_defaults.json</code>, applied immediately to the ESP32-CAM, and automatically
+                    re-applied whenever the camera boots or reconnects.
                 </p>
-                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:12px; font-size:0.84rem;">
+                <div
+                    style="display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:12px; font-size:0.84rem;">
                     <div>
                         <label style="display:block; color:#94a3b8; margin-bottom:4px;">Resolution (framesize)</label>
-                        <select id="defCamFramesize" style="width:100%; padding:7px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+                        <select id="defCamFramesize"
+                            style="width:100%; padding:7px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
                             <option value="5">QVGA (320x240)</option>
                             <option value="6">CIF (400x296)</option>
                             <option value="8">VGA (640x480)</option>
@@ -2283,51 +2527,43 @@
                     </div>
                     <div>
                         <label style="display:block; color:#94a3b8; margin-bottom:4px;">JPEG Quality (10-63)</label>
-                        <input id="defCamQuality" type="number" min="10" max="63" value="12" style="width:100%; padding:7px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+                        <input id="defCamQuality" type="number" min="10" max="63" value="12"
+                            style="width:100%; padding:7px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
                     </div>
                     <div>
                         <label style="display:block; color:#94a3b8; margin-bottom:4px;">Flash LED (0-255)</label>
-                        <input id="defCamFlash" type="number" min="0" max="255" value="0" style="width:100%; padding:7px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+                        <input id="defCamFlash" type="number" min="0" max="255" value="0"
+                            style="width:100%; padding:7px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
                     </div>
                     <div>
                         <label style="display:block; color:#94a3b8; margin-bottom:4px;">Brightness (-2 to 2)</label>
-                        <input id="defCamBrightness" type="number" min="-2" max="2" value="0" style="width:100%; padding:7px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+                        <input id="defCamBrightness" type="number" min="-2" max="2" value="0"
+                            style="width:100%; padding:7px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
                     </div>
                     <div>
                         <label style="display:block; color:#94a3b8; margin-bottom:4px;">Contrast (-2 to 2)</label>
-                        <input id="defCamContrast" type="number" min="-2" max="2" value="0" style="width:100%; padding:7px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+                        <input id="defCamContrast" type="number" min="-2" max="2" value="0"
+                            style="width:100%; padding:7px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
                     </div>
                     <div>
                         <label style="display:block; color:#94a3b8; margin-bottom:4px;">Saturation (-2 to 2)</label>
-                        <input id="defCamSaturation" type="number" min="-2" max="2" value="0" style="width:100%; padding:7px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+                        <input id="defCamSaturation" type="number" min="-2" max="2" value="0"
+                            style="width:100%; padding:7px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
                     </div>
                 </div>
                 <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:12px; font-size:0.84rem;">
-                    <label style="display:flex; align-items:center; gap:6px;"><input type="checkbox" id="defCamVflip"> V-Flip</label>
-                    <label style="display:flex; align-items:center; gap:6px;"><input type="checkbox" id="defCamHmirror"> H-Mirror</label>
-                    <label style="display:flex; align-items:center; gap:6px;"><input type="checkbox" id="defCamAwb" checked> Auto White Balance</label>
-                    <label style="display:flex; align-items:center; gap:6px;"><input type="checkbox" id="defCamAec" checked> Auto Exposure</label>
+                    <label style="display:flex; align-items:center; gap:6px;"><input type="checkbox" id="defCamVflip">
+                        V-Flip</label>
+                    <label style="display:flex; align-items:center; gap:6px;"><input type="checkbox" id="defCamHmirror">
+                        H-Mirror</label>
+                    <label style="display:flex; align-items:center; gap:6px;"><input type="checkbox" id="defCamAwb"
+                            checked> Auto White Balance</label>
+                    <label style="display:flex; align-items:center; gap:6px;"><input type="checkbox" id="defCamAec"
+                            checked> Auto Exposure</label>
                 </div>
                 <div style="margin-top:14px; display:flex; justify-content:flex-end;">
-                    <button class="btn btn-primary btn-sm" onclick="saveCameraDefaults()">💾 Save &amp; Apply as Default Camera Settings</button>
-                </div>
-            </div>
-
-            <div class="card" style="padding: 20px; margin-bottom: 20px; border: 1px solid rgba(16, 185, 129, 0.3);">
-                <div class="card-header" style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-                    <h2 style="margin:0;">🛡️ Security Hardening &amp; Industrial Readiness</h2>
-                    <button class="btn btn-secondary btn-sm" onclick="loadSecurityHealthz()">🔄 Refresh</button>
-                </div>
-                <div id="securityPostureGrid" style="font-size:0.83rem; color:#cbd5e1; margin-bottom:14px;">
-                    Loading security &amp; readiness telemetry...
-                </div>
-                <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-                    <input id="secPinInput" type="password" placeholder="Set Admin PIN (min 4 chars)" style="padding:7px 10px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; font-size:0.84rem;">
-                    <label style="display:flex; align-items:center; gap:6px; font-size:0.84rem;">
-                        <input type="checkbox" id="secLockLocalhost"> Lock Localhost Too
-                    </label>
-                    <button class="btn btn-primary btn-sm" onclick="saveAdminPin()">🔐 Save PIN / Lock</button>
-                    <button class="btn btn-secondary btn-sm" onclick="rotateApiKey()">🔑 Rotate API Key</button>
+                    <button class="btn btn-primary btn-sm" onclick="saveCameraDefaults()">💾 Save &amp; Apply as Default
+                        Camera Settings</button>
                 </div>
             </div>
 
@@ -2336,7 +2572,8 @@
                     <h2 style="margin:0;">🔔 Notification Providers &amp; Secrets (Backend-Only)</h2>
                 </div>
                 <p style="color:#94a3b8; font-size:0.86rem; margin-bottom:12px;">
-                    Configure Webhook, MQTT, Telegram, Device Push (ntfy), and WhatsApp Gateway. Credentials are stored only on the Python backend (<code>data/notification_config.json</code>), never on ESP32 hardware.
+                    Configure Webhook, MQTT, Telegram, Device Push (ntfy), and WhatsApp Gateway. Credentials are stored
+                    only on the Python backend (<code>data/notification_config.json</code>), never on ESP32 hardware.
                 </p>
                 <div id="settingsNotifySlot"></div>
             </div>
@@ -2346,9 +2583,12 @@
                     <h2 style="margin:0; color:#f87171;">⚠️ System Maintenance</h2>
                 </div>
                 <p style="color:#94a3b8; font-size:0.86rem; margin-bottom:12px;">
-                    Face recognition matching threshold is currently <strong>{{ tolerance }}</strong>. Use the action below only if you want to wipe all enrolled profiles and event history.
+                    Face recognition matching threshold is currently <strong>{{ tolerance }}</strong>. Use the action
+                    below only if you want to wipe all enrolled profiles and event history.
                 </p>
-                <button class="btn btn-danger btn-sm" onclick="if(confirm('Reset ALL enrolled identities and event history?')) fetch('/reset',{method:'POST'}).then(()=>location.reload())">🗑️ Reset All Data</button>
+                <button class="btn btn-danger btn-sm"
+                    onclick="if(confirm('Reset ALL enrolled identities and event history?')) fetch('/reset',{method:'POST'}).then(()=>location.reload())">🗑️
+                    Reset All Data</button>
             </div>
         </div> <!-- /#page-settings -->
 
@@ -2360,55 +2600,129 @@
                     <span class="stat-badge primary" id="testingLastLatency">Ready</span>
                 </div>
                 <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 16px;">
-                    Trigger real ESP32-WROOM, ESP32-CAM, UDP recording, Low-Power Standby, SPIFFS log, and 1.2s compressed image tests with live latency measurement.
+                    Trigger real ESP32-WROOM, ESP32-CAM, UDP recording, Low-Power Standby, SPIFFS log, and 1.2s
+                    compressed image tests with live latency measurement.
                 </p>
 
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-bottom: 18px;">
-                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px;">
-                        <h3 style="font-size: 0.92rem; margin-bottom: 10px; color: #f1f5f9;">🚪 Door &amp; Recording</h3>
+                <div
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 16px;">
+                    <div
+                        style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px;">
+                        <h3 style="font-size: 0.92rem; margin-bottom: 10px; color: #f1f5f9;">🚪 Door &amp; Recording
+                        </h3>
                         <div style="display: flex; flex-direction: column; gap: 8px;">
-                            <button class="btn btn-primary btn-sm" onclick="runSim('door_open')">🚪 Simulate Door OPEN (Wake + Record)</button>
-                            <button class="btn btn-secondary btn-sm" onclick="runSim('door_closed')">🔒 Simulate Door CLOSED (8s Auto-Standby)</button>
-                            <button class="btn btn-secondary btn-sm" onclick="runSim('udp_record_trigger')">⚡ Test UDP :5055 Record Trigger</button>
-                            <button class="btn btn-secondary btn-sm" onclick="runFullDoorCycleSim()">🔄 Full Cycle (Open → 3s → Close)</button>
+                            <button class="btn btn-primary btn-sm" onclick="runSim('door_open')">🚪 Simulate Door OPEN
+                                (Wake + Record)</button>
+                            <button class="btn btn-secondary btn-sm" onclick="runSim('door_closed')">🔒 Simulate Door
+                                CLOSED (8s Auto-Standby)</button>
+                            <button class="btn btn-secondary btn-sm" onclick="runSim('udp_record_trigger')">⚡ Test UDP
+                                :5055 Record Trigger</button>
+                            <button class="btn btn-secondary btn-sm" onclick="runFullDoorCycleSim()">🔄 Full Cycle (Open
+                                → 1.2s Img → Close)</button>
                         </div>
                     </div>
 
-                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px;">
-                        <h3 style="font-size: 0.92rem; margin-bottom: 10px; color: #f1f5f9;">🔋 Low-Power &amp; Imaging</h3>
+                    <div
+                        style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px;">
+                        <h3 style="font-size: 0.92rem; margin-bottom: 10px; color: #f1f5f9;">🔋 Low-Power &amp; Imaging
+                        </h3>
                         <div style="display: flex; flex-direction: column; gap: 8px;">
-                            <button class="btn btn-primary btn-sm" onclick="runSim('low_power_off')" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">⚡ Low-Power OFF (Wake CAM)</button>
-                            <button class="btn btn-secondary btn-sm" onclick="runSim('low_power_on')">🌙 Low-Power ON (Standby)</button>
-                            <button class="btn btn-secondary btn-sm" onclick="runSim('cam_snapshot')">📸 Test CAM Snapshot (/capture)</button>
-                            <button class="btn btn-secondary btn-sm" onclick="runSim('wroom_saved_image')">🖼️ Fetch 1.2s WROOM SPIFFS Image</button>
+                            <button class="btn btn-primary btn-sm" onclick="runSim('low_power_off')"
+                                style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">⚡ Low-Power OFF
+                                (Wake CAM)</button>
+                            <button class="btn btn-secondary btn-sm" onclick="runSim('low_power_on')">🌙 Low-Power ON
+                                (Standby)</button>
+                            <button class="btn btn-secondary btn-sm" onclick="runSim('cam_snapshot')">📸 Test CAM
+                                Snapshot (/capture)</button>
+                            <button class="btn btn-secondary btn-sm" onclick="runSim('wroom_saved_image')">🖼️ Fetch
+                                1.2s WROOM SPIFFS Image</button>
                         </div>
                     </div>
 
-                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px;">
-                        <h3 style="font-size: 0.92rem; margin-bottom: 10px; color: #f1f5f9;">📡 Diagnostics &amp; Logs</h3>
+                    <div
+                        style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px;">
+                        <h3 style="font-size: 0.92rem; margin-bottom: 10px; color: #f1f5f9;">📡 Advanced Diagnostics
+                        </h3>
                         <div style="display: flex; flex-direction: column; gap: 8px;">
-                            <button class="btn btn-secondary btn-sm" onclick="runSim('ping_nodes')">📡 Ping Both ESP32s (RTT)</button>
-                            <button class="btn btn-secondary btn-sm" onclick="runSim('wroom_events')">📋 Fetch WROOM Events</button>
-                            <button class="btn btn-secondary btn-sm" onclick="runSim('cam_events')">📷 Fetch CAM Events</button>
-                            <button class="btn btn-secondary btn-sm" onclick="runSim('cam_spiffs_logs')">📜 Load CAM SPIFFS Logs</button>
-                            <button class="btn btn-secondary btn-sm" onclick="playDoorOpenAlertSound()">🔊 Test Alert Sound</button>
-                            <button class="btn btn-danger btn-sm" onclick="if(confirm('This will disconnect your laptop from current Wi-Fi and connect to Sentinel-CAM AP (192.168.4.1). Continue?')) runSim('connect_fallback_ap')">📶 Switch Laptop to Sentinel-CAM AP</button>
+                            <button class="btn btn-primary btn-sm" onclick="runFullDiagnosticSuite()">🚀 Run Full
+                                Diagnostic Suite</button>
+                            <button class="btn btn-secondary btn-sm" onclick="runLatencyBenchmark()">⚡ Latency Benchmark
+                                (5× Ping)</button>
+                            <button class="btn btn-secondary btn-sm" onclick="runSim('wroom_events')">📋 Fetch WROOM
+                                Events</button>
+                            <button class="btn btn-secondary btn-sm" onclick="runSim('cam_spiffs_logs')">📜 Load CAM
+                                SPIFFS Logs</button>
+                            <button class="btn btn-secondary btn-sm"
+                                onclick="playDoorOpenAlertSound(); appendTestLog('INFO','AUDIO','Triggered dashboard door-open alert chime');">🔊
+                                Test Alert Sound</button>
+                        </div>
+                    </div>
+
+                    <div
+                        style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between;">
+                        <div
+                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <h3 style="font-size: 0.92rem; margin: 0; color: #f1f5f9;">📺 Mini Live Stream</h3>
+                            <span id="testingMiniStreamBadge" style="font-size:0.74rem; color:#fbbf24;">Standby</span>
+                        </div>
+                        <div
+                            style="background:#000; border-radius:8px; overflow:hidden; aspect-ratio:4/3; display:flex; align-items:center; justify-content:center; border:1px solid #1e293b;">
+                            <img id="testingMiniStreamImg" src="/live" alt="Mini Stream"
+                                style="width:100%; height:100%; object-fit:cover;" />
+                        </div>
+                        <div style="display:flex; gap:6px; margin-top:8px;">
+                            <button class="btn btn-secondary btn-sm" style="flex:1;"
+                                onclick="document.getElementById('testingMiniStreamImg').src='/live?t='+Date.now()">🔄
+                                Refresh</button>
+                            <button class="btn btn-primary btn-sm" style="flex:1;" onclick="runSim('low_power_off')">⚡
+                                Wake</button>
                         </div>
                     </div>
                 </div>
 
                 <div id="testingImagePreviewWrap" style="display: none; margin-bottom: 14px;">
                     <div style="font-size: 0.82rem; color: #94a3b8; margin-bottom: 6px;" id="testingImageMeta"></div>
-                    <img id="testingImagePreview" style="max-width: 360px; border-radius: 8px; border: 1px solid #334155;" />
+                    <img id="testingImagePreview"
+                        style="max-width: 360px; border-radius: 8px; border: 1px solid #334155;" />
                 </div>
 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                     <span style="font-size: 0.84rem; color: #94a3b8;">Simulation Console</span>
-                    <button class="btn btn-secondary btn-sm" onclick="document.getElementById('testingConsole').textContent='Cleared.'">🗑️ Clear</button>
+                    <button class="btn btn-secondary btn-sm"
+                        onclick="document.getElementById('testingConsole').textContent='Cleared.'">🗑️ Clear</button>
                 </div>
-                <pre id="testingConsole" style="background: #0b1120; border: 1px solid #1e293b; border-radius: 8px; padding: 12px; color: #cbd5e1; font-size: 0.8rem; max-height: 360px; overflow: auto; white-space: pre-wrap;">Click any simulation above to run...</pre>
+                <pre id="testingConsole"
+                    style="background: #0b1120; border: 1px solid #1e293b; border-radius: 8px; padding: 12px; color: #cbd5e1; font-size: 0.8rem; max-height: 360px; overflow: auto; white-space: pre-wrap;">Click any simulation above to run...</pre>
             </div>
         </div> <!-- /#page-testing -->
+
+        <!-- PAGE 10: AI MODELS & RAM-TIER SELECTOR -->
+        <div id="page-models" class="page-view">
+            <div class="card" style="padding: 20px; margin-bottom: 20px;">
+                <div class="card-header" style="margin-bottom: 10px;">
+                    <h2 style="margin: 0;">🧠 AI Model Selector (NPU / iGPU / CPU)</h2>
+                    <span class="stat-badge primary" id="modelsRamBanner">Detecting System RAM...</span>
+                </div>
+                <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 14px;" id="modelsAccelInfo">
+                    Select active Object Detection and Face Recognition models. Cards automatically adapt Warning
+                    (yellow) and Danger (red) zones to your total physical RAM.
+                </p>
+
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;">
+                    <button class="btn btn-primary btn-sm" id="modelSubTabObj"
+                        onclick="switchModelSubTab('object_detection')">📦 Object Detection</button>
+                    <button class="btn btn-secondary btn-sm" id="modelSubTabFace"
+                        onclick="switchModelSubTab('face_recognition')">👤 Face Recognition</button>
+                    <button class="btn btn-secondary btn-sm" onclick="loadModelsCatalog()" style="margin-left: auto;">🔄
+                        Refresh</button>
+                </div>
+
+                <div id="modelsGrid"
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
+                    Loading model catalog...
+                </div>
+            </div>
+        </div> <!-- /#page-models -->
     </div>
 
     <!-- WHO IS THIS PERSON? IDENTITY MODAL -->
@@ -2419,7 +2733,8 @@
                 <button class="btn btn-secondary btn-sm" onclick="closeIdentityModal()">✖ Close</button>
             </div>
             <p style="color: var(--text-secondary); font-size: 0.86rem; margin-bottom: 14px;">
-                Choose how this person is related to you. Hover over <strong>Family</strong> to pick a specific family member.
+                Choose how this person is related to you. Hover over <strong>Family</strong> to pick a specific family
+                member.
             </p>
             <div style="display:flex; flex-direction:column; gap:10px;">
                 <!-- Family: unclickable button with hover dropdown -->
@@ -2430,16 +2745,24 @@
                     </div>
                     <div class="identity-family-dropdown">
                         <div class="family-role-grid">
-                            <button type="button" class="family-role-btn" onclick="selectIdentity('Family', 'Mom')">Mom</button>
-                            <button type="button" class="family-role-btn" onclick="selectIdentity('Family', 'Dad')">Dad</button>
-                            <button type="button" class="family-role-btn" onclick="selectIdentity('Family', 'Me')">Me</button>
-                            <button type="button" class="family-role-btn" onclick="selectIdentity('Family', 'Sis')">Sis</button>
-                            <button type="button" class="family-role-btn" onclick="selectIdentity('Family', 'Bro')">Bro</button>
-                            <button type="button" class="family-role-btn" onclick="selectIdentity('Family', 'Cousin')">Cousin</button>
+                            <button type="button" class="family-role-btn"
+                                onclick="selectIdentity('Family', 'Mom')">Mom</button>
+                            <button type="button" class="family-role-btn"
+                                onclick="selectIdentity('Family', 'Dad')">Dad</button>
+                            <button type="button" class="family-role-btn"
+                                onclick="selectIdentity('Family', 'Me')">Me</button>
+                            <button type="button" class="family-role-btn"
+                                onclick="selectIdentity('Family', 'Sis')">Sis</button>
+                            <button type="button" class="family-role-btn"
+                                onclick="selectIdentity('Family', 'Bro')">Bro</button>
+                            <button type="button" class="family-role-btn"
+                                onclick="selectIdentity('Family', 'Cousin')">Cousin</button>
                         </div>
                         <div style="display:flex; gap:6px; align-items:center;">
-                            <input id="familyCustomRoleInput" type="text" placeholder="Custom family member..." style="flex:1; padding:6px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; font-size:0.84rem;">
-                            <button type="button" class="btn btn-primary btn-sm" onclick="saveCustomFamilyRole()">Save</button>
+                            <input id="familyCustomRoleInput" type="text" placeholder="Custom family member..."
+                                style="flex:1; padding:6px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; font-size:0.84rem;">
+                            <button type="button" class="btn btn-primary btn-sm"
+                                onclick="saveCustomFamilyRole()">Save</button>
                         </div>
                     </div>
                 </div>
@@ -2454,16 +2777,21 @@
                     <span style="font-size:0.78rem; color:#94a3b8;">Select</span>
                 </button>
 
-                <div style="padding:10px 12px; border-radius:9px; border:1px solid rgba(148,163,184,0.22); background:rgba(15,23,42,0.55);">
+                <div
+                    style="padding:10px 12px; border-radius:9px; border:1px solid rgba(148,163,184,0.22); background:rgba(15,23,42,0.55);">
                     <div style="font-size:0.84rem; font-weight:600; color:#e2e8f0; margin-bottom:6px;">✏️ Custom</div>
                     <div style="display:flex; gap:6px;">
-                        <input id="customIdentityInput" type="text" placeholder="Type custom identity (e.g. Delivery, Maid, Guest)..." style="flex:1; padding:7px 9px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; font-size:0.86rem;">
-                        <button type="button" class="btn btn-primary btn-sm" onclick="saveCustomIdentity()">Save</button>
+                        <input id="customIdentityInput" type="text"
+                            placeholder="Type custom identity (e.g. Delivery, Maid, Guest)..."
+                            style="flex:1; padding:7px 9px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; font-size:0.86rem;">
+                        <button type="button" class="btn btn-primary btn-sm"
+                            onclick="saveCustomIdentity()">Save</button>
                     </div>
                 </div>
             </div>
             <div style="margin-top:14px; display:flex; justify-content:space-between; align-items:center;">
-                <button type="button" class="btn btn-secondary btn-sm" onclick="selectIdentity('', '')">Clear Identity</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="selectIdentity('', '')">Clear
+                    Identity</button>
                 <button type="button" class="btn btn-secondary btn-sm" onclick="closeIdentityModal()">Cancel</button>
             </div>
         </div>
@@ -2480,8 +2808,12 @@
                 Assign a friendly name (e.g., "Adhyatm", "Mom", "Courier"). Leave blank to clear.
             </p>
             <div style="margin-bottom: 16px;">
-                <label for="nameModalInput" style="display:block; font-size:0.82rem; font-weight:600; color:var(--text-secondary); margin-bottom:6px;">DISPLAY NAME</label>
-                <input type="text" id="nameModalInput" class="setting-input" style="width: 100%; box-sizing: border-box; font-size: 1rem; padding: 10px 12px; border-radius: 8px; background: rgba(15, 23, 42, 0.6); color: var(--text-primary); border: 1px solid var(--border-color); outline: none;" placeholder="e.g. Adhyatm" autocomplete="off">
+                <label for="nameModalInput"
+                    style="display:block; font-size:0.82rem; font-weight:600; color:var(--text-secondary); margin-bottom:6px;">DISPLAY
+                    NAME</label>
+                <input type="text" id="nameModalInput" class="setting-input"
+                    style="width: 100%; box-sizing: border-box; font-size: 1rem; padding: 10px 12px; border-radius: 8px; background: rgba(15, 23, 42, 0.6); color: var(--text-primary); border: 1px solid var(--border-color); outline: none;"
+                    placeholder="e.g. Adhyatm" autocomplete="off">
                 <div id="nameModalError" style="display:none; color:#f87171; font-size:0.82rem; margin-top:6px;"></div>
             </div>
             <div style="display: flex; gap: 10px; justify-content: flex-end;">
@@ -2501,38 +2833,58 @@
                 <button class="btn btn-secondary btn-sm" onclick="closeAddPersonModal()">✖ Close</button>
             </div>
             <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 16px;">
-                Train the YuNet + SFace recognition model with photos of this person. Upload clear photos from multiple angles (front, 45° left/right, tilted, different lighting).
+                Train the YuNet + SFace recognition model with photos of this person. Upload clear photos from multiple
+                angles (front, 45° left/right, tilted, different lighting).
             </p>
 
             <div style="margin-bottom: 16px;">
-                <label for="newPersonLabelInput" style="display:block; font-size:0.82rem; font-weight:600; color:var(--text-secondary); margin-bottom:6px;">DISPLAY NAME / LABEL</label>
-                <input type="text" id="newPersonLabelInput" class="setting-input" style="width: 100%; box-sizing: border-box; font-size: 1rem; padding: 10px 12px; border-radius: 8px; background: rgba(15, 23, 42, 0.6); color: var(--text-primary); border: 1px solid var(--border-color); outline: none;" placeholder="e.g. Adhyatm, Dad, Guest" autocomplete="off">
+                <label for="newPersonLabelInput"
+                    style="display:block; font-size:0.82rem; font-weight:600; color:var(--text-secondary); margin-bottom:6px;">DISPLAY
+                    NAME / LABEL</label>
+                <input type="text" id="newPersonLabelInput" class="setting-input"
+                    style="width: 100%; box-sizing: border-box; font-size: 1rem; padding: 10px 12px; border-radius: 8px; background: rgba(15, 23, 42, 0.6); color: var(--text-primary); border: 1px solid var(--border-color); outline: none;"
+                    placeholder="e.g. Adhyatm, Dad, Guest" autocomplete="off">
             </div>
 
             <div style="margin-bottom: 16px;">
-                <label style="display:block; font-size:0.82rem; font-weight:600; color:var(--text-secondary); margin-bottom:6px;">FACE PHOTOS (MULTIPLE ANGLES)</label>
-                <div id="newPersonDropzone" style="border: 2px dashed var(--border-highlight); border-radius: 12px; padding: 22px; text-align: center; cursor: pointer; background: rgba(15, 23, 42, 0.4); transition: border-color 0.2s;" onclick="document.getElementById('newPersonFileInput').click()">
+                <label
+                    style="display:block; font-size:0.82rem; font-weight:600; color:var(--text-secondary); margin-bottom:6px;">FACE
+                    PHOTOS (MULTIPLE ANGLES)</label>
+                <div id="newPersonDropzone"
+                    style="border: 2px dashed var(--border-highlight); border-radius: 12px; padding: 22px; text-align: center; cursor: pointer; background: rgba(15, 23, 42, 0.4); transition: border-color 0.2s;"
+                    onclick="document.getElementById('newPersonFileInput').click()">
                     <div style="font-size: 1.8rem; margin-bottom: 4px;">📸</div>
-                    <div style="font-weight: 600; color: var(--text-primary); font-size: 0.95rem;">Click or Drag Photos Here</div>
-                    <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">Select multiple files: front, 45° side profiles, smile, etc.</div>
+                    <div style="font-weight: 600; color: var(--text-primary); font-size: 0.95rem;">Click or Drag Photos
+                        Here</div>
+                    <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">Select multiple
+                        files: front, 45° side profiles, smile, etc.</div>
                 </div>
-                <input type="file" id="newPersonFileInput" accept="image/*" multiple style="display: none;" onchange="handleNewPersonFiles(this.files)">
+                <input type="file" id="newPersonFileInput" accept="image/*" multiple style="display: none;"
+                    onchange="handleNewPersonFiles(this.files)">
             </div>
 
             <!-- Preview selected files -->
             <div id="newPersonPreviewSection" style="display: none; margin-bottom: 16px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span id="newPersonFileCount" style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary);"></span>
-                    <button class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 0.75rem;" onclick="clearNewPersonFiles()">Clear All</button>
+                    <span id="newPersonFileCount"
+                        style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary);"></span>
+                    <button class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 0.75rem;"
+                        onclick="clearNewPersonFiles()">Clear All</button>
                 </div>
-                <div id="newPersonThumbs" style="display: flex; gap: 8px; flex-wrap: wrap; max-height: 140px; overflow-y: auto; padding: 6px; background: rgba(15, 23, 42, 0.5); border-radius: 8px;"></div>
+                <div id="newPersonThumbs"
+                    style="display: flex; gap: 8px; flex-wrap: wrap; max-height: 140px; overflow-y: auto; padding: 6px; background: rgba(15, 23, 42, 0.5); border-radius: 8px;">
+                </div>
             </div>
 
-            <div id="newPersonStatus" style="display: none; margin-bottom: 16px; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem;"></div>
+            <div id="newPersonStatus"
+                style="display: none; margin-bottom: 16px; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem;">
+            </div>
 
             <div style="display: flex; gap: 10px; justify-content: flex-end;">
                 <button class="btn btn-secondary" onclick="closeAddPersonModal()">Cancel</button>
-                <button class="btn btn-primary" id="btnSubmitNewPerson" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);" onclick="submitNewPersonEnrollment()">
+                <button class="btn btn-primary" id="btnSubmitNewPerson"
+                    style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);"
+                    onclick="submitNewPersonEnrollment()">
                     ➕ Enroll Person
                 </button>
             </div>
@@ -2543,26 +2895,31 @@
     <div class="modal-backdrop" id="deleteModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 style="font-size: 1.3rem; color: #fca5a5;">🗑️ Safe Person Deletion — <span id="deleteModalPersonId"></span></h3>
+                <h3 style="font-size: 1.3rem; color: #fca5a5;">🗑️ Safe Person Deletion — <span
+                        id="deleteModalPersonId"></span></h3>
                 <button class="btn btn-secondary btn-sm" onclick="closeDeleteModal()">✖ Close</button>
             </div>
             <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 14px;">
-                Choose how much data to remove. Shared full-frame images containing other people are automatically protected and never deleted.
+                Choose how much data to remove. Shared full-frame images containing other people are automatically
+                protected and never deleted.
             </p>
 
             <div class="delete-option-card" id="delOptA" onclick="selectDeleteOption('A')">
                 <h4>Option A — Remove Identity Only</h4>
-                <p>Clears enrolled facial embeddings so future recognition cannot match this identity. Preserves saved images and detection timeline.</p>
+                <p>Clears enrolled facial embeddings so future recognition cannot match this identity. Preserves saved
+                    images and detection timeline.</p>
             </div>
 
             <div class="delete-option-card" id="delOptB" onclick="selectDeleteOption('B')">
                 <h4>Option B — Remove Identity & Associated Images</h4>
-                <p>Removes facial embeddings, all face crops for this profile, and full-frame images owned exclusively by this identity.</p>
+                <p>Removes facial embeddings, all face crops for this profile, and full-frame images owned exclusively
+                    by this identity.</p>
             </div>
 
             <div class="delete-option-card selected" id="delOptC" onclick="selectDeleteOption('C')">
                 <h4>Option C — Remove All Associated Data (Complete Wipe)</h4>
-                <p>Removes identity embeddings, exclusively owned face & full-frame images, and all historical detection records.</p>
+                <p>Removes identity embeddings, exclusively owned face & full-frame images, and all historical detection
+                    records.</p>
             </div>
 
             <div class="delete-impact-box" id="deletePreviewBox">
@@ -2581,38 +2938,50 @@
     <!-- INSPECT FACE SAMPLES MODAL -->
     <div class="modal-backdrop" id="samplesModal" onclick="if(event.target === this) closeSamplesModal()">
         <div class="modal-content" style="max-width: 880px;">
-            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div class="modal-header"
+                style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <h3 style="font-size: 1.25rem; margin: 0;">🖼️ Face Samples — <span id="samplesModalPersonId"></span></h3>
-                    <span id="samplesModalCountBadge" class="stat-badge primary" style="font-size: 0.76rem;">0 photos</span>
+                    <h3 style="font-size: 1.25rem; margin: 0;">🖼️ Face Samples — <span
+                            id="samplesModalPersonId"></span></h3>
+                    <span id="samplesModalCountBadge" class="stat-badge primary" style="font-size: 0.76rem;">0
+                        photos</span>
                 </div>
 
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <!-- Files App Style Selection Toolbar & 3-dots Menu Button -->
                     <div id="selectionToolbar" style="display: flex; align-items: center; gap: 8px;">
-                        <span id="selectionCounter" style="display: none; font-size: 0.82rem; font-weight: 600; color: #38bdf8; background: rgba(56, 189, 248, 0.12); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(56, 189, 248, 0.3);">
+                        <span id="selectionCounter"
+                            style="display: none; font-size: 0.82rem; font-weight: 600; color: #38bdf8; background: rgba(56, 189, 248, 0.12); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(56, 189, 248, 0.3);">
                             0 selected
                         </span>
 
                         <div class="samples-dropdown-wrapper" style="position: relative; display: inline-block;">
-                            <button class="btn btn-secondary btn-sm" id="btnSamplesMenu" onclick="toggleSamplesMenu(event)" title="Selection Actions" style="font-size: 1.15rem; padding: 4px 10px; line-height: 1; min-width: 34px;">
+                            <button class="btn btn-secondary btn-sm" id="btnSamplesMenu"
+                                onclick="toggleSamplesMenu(event)" title="Selection Actions"
+                                style="font-size: 1.15rem; padding: 4px 10px; line-height: 1; min-width: 34px;">
                                 ⋮
                             </button>
-                            <div class="samples-dropdown-menu" id="samplesDropdownMenu" style="display: none; position: absolute; right: 0; top: calc(100% + 6px); background: var(--bg-card); border: 1px solid var(--border-highlight); border-radius: 10px; box-shadow: 0 14px 35px rgba(0,0,0,0.7); min-width: 190px; z-index: 100; overflow: hidden; padding: 5px 0;">
-                                <button class="samples-menu-item" onclick="executeBatchAction('gallery')" style="width: 100%; text-align: left; padding: 8px 14px; background: none; border: none; color: var(--text-primary); font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                            <div class="samples-dropdown-menu" id="samplesDropdownMenu"
+                                style="display: none; position: absolute; right: 0; top: calc(100% + 6px); background: var(--bg-card); border: 1px solid var(--border-highlight); border-radius: 10px; box-shadow: 0 14px 35px rgba(0,0,0,0.7); min-width: 190px; z-index: 100; overflow: hidden; padding: 5px 0;">
+                                <button class="samples-menu-item" onclick="executeBatchAction('gallery')"
+                                    style="width: 100%; text-align: left; padding: 8px 14px; background: none; border: none; color: var(--text-primary); font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
                                     <span style="color: #34d399;">⭐</span> Add to Gallery
                                 </button>
-                                <button class="samples-menu-item" onclick="executeBatchAction('archive')" style="width: 100%; text-align: left; padding: 8px 14px; background: none; border: none; color: var(--text-primary); font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                                <button class="samples-menu-item" onclick="executeBatchAction('archive')"
+                                    style="width: 100%; text-align: left; padding: 8px 14px; background: none; border: none; color: var(--text-primary); font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
                                     <span style="color: #94a3b8;">📁</span> Make Archived
                                 </button>
-                                <button class="samples-menu-item" onclick="executeBatchAction('delete')" style="width: 100%; text-align: left; padding: 8px 14px; background: none; border: none; color: #f87171; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                                <button class="samples-menu-item" onclick="executeBatchAction('delete')"
+                                    style="width: 100%; text-align: left; padding: 8px 14px; background: none; border: none; color: #f87171; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
                                     <span>🗑️</span> Delete
                                 </button>
                                 <div style="height: 1px; background: var(--border-subtle); margin: 4px 0;"></div>
-                                <button class="samples-menu-item" onclick="selectAllSamples()" style="width: 100%; text-align: left; padding: 8px 14px; background: none; border: none; color: var(--text-secondary); font-size: 0.82rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                                <button class="samples-menu-item" onclick="selectAllSamples()"
+                                    style="width: 100%; text-align: left; padding: 8px 14px; background: none; border: none; color: var(--text-secondary); font-size: 0.82rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
                                     <span>☑️</span> Select All Loaded
                                 </button>
-                                <button class="samples-menu-item" onclick="clearSampleSelection()" style="width: 100%; text-align: left; padding: 8px 14px; background: none; border: none; color: var(--text-secondary); font-size: 0.82rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                                <button class="samples-menu-item" onclick="clearSampleSelection()"
+                                    style="width: 100%; text-align: left; padding: 8px 14px; background: none; border: none; color: var(--text-secondary); font-size: 0.82rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
                                     <span>⏹️</span> Deselect All
                                 </button>
                             </div>
@@ -2624,14 +2993,19 @@
             </div>
 
             <p style="color: var(--text-secondary); font-size: 0.88rem; margin: 8px 0 14px;">
-                Samples marked <strong style="color: #34d399;">★ In Gallery</strong> actively contribute to face recognition. Click any photo to select it (Files app style), then use the <strong>⋮ menu</strong> to <em>Add to Gallery</em>, <em>Make Archived</em>, or <em>Delete</em>.
+                Samples marked <strong style="color: #34d399;">★ In Gallery</strong> actively contribute to face
+                recognition. Click any photo to select it (Files app style), then use the <strong>⋮ menu</strong> to
+                <em>Add to Gallery</em>, <em>Make Archived</em>, or <em>Delete</em>.
             </p>
 
             <!-- ADD IMAGES TO EXISTING PERSON -->
-            <div style="background: var(--bg-elevated); border: 1px dashed var(--border-highlight); border-radius: 12px; padding: 14px 18px; margin: 16px 0;">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div
+                style="background: var(--bg-elevated); border: 1px dashed var(--border-highlight); border-radius: 12px; padding: 14px 18px; margin: 16px 0;">
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                     <div>
-                        <div style="font-weight: 600; font-size: 0.95rem; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                        <div
+                            style="font-weight: 600; font-size: 0.95rem; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
                             <span>➕ Add Face Photos to Gallery</span>
                         </div>
                         <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">
@@ -2639,31 +3013,39 @@
                         </div>
                     </div>
                     <div>
-                        <input type="file" id="personSampleFileInput" accept="image/*" multiple style="display: none;" onchange="handlePersonSampleFiles(this.files)">
-                        <button class="btn btn-primary btn-sm" onclick="document.getElementById('personSampleFileInput').click()">
+                        <input type="file" id="personSampleFileInput" accept="image/*" multiple style="display: none;"
+                            onchange="handlePersonSampleFiles(this.files)">
+                        <button class="btn btn-primary btn-sm"
+                            onclick="document.getElementById('personSampleFileInput').click()">
                             📁 Select Photos...
                         </button>
                     </div>
                 </div>
 
                 <!-- Preview & Upload status -->
-                <div id="sampleUploadPreview" style="display: none; margin-top: 12px; border-top: 1px solid var(--border-subtle); padding-top: 12px;">
-                    <div id="samplePreviewThumbs" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;"></div>
+                <div id="sampleUploadPreview"
+                    style="display: none; margin-top: 12px; border-top: 1px solid var(--border-subtle); padding-top: 12px;">
+                    <div id="samplePreviewThumbs"
+                        style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;"></div>
                     <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
                         <span id="sampleUploadCount" style="font-size: 0.82rem; color: var(--text-secondary);"></span>
                         <div style="display: flex; gap: 8px;">
                             <button class="btn btn-secondary btn-sm" onclick="cancelSampleUpload()">Cancel</button>
-                            <button class="btn btn-primary btn-sm" id="btnUploadSamples" onclick="uploadSamplesToCurrentPerson()">
+                            <button class="btn btn-primary btn-sm" id="btnUploadSamples"
+                                onclick="uploadSamplesToCurrentPerson()">
                                 ⚡ Enroll Selected Photos
                             </button>
                         </div>
                     </div>
-                    <div id="sampleUploadProgress" style="display: none; margin-top: 10px; font-size: 0.82rem; padding: 8px 12px; border-radius: 6px;"></div>
+                    <div id="sampleUploadProgress"
+                        style="display: none; margin-top: 10px; font-size: 0.82rem; padding: 8px 12px; border-radius: 6px;">
+                    </div>
                 </div>
             </div>
 
             <div class="samples-modal-grid" id="samplesModalGrid"></div>
-            <div id="samplesModalGridLoader" style="display: none; text-align: center; padding: 16px; color: var(--text-secondary); font-size: 0.85rem;">
+            <div id="samplesModalGridLoader"
+                style="display: none; text-align: center; padding: 16px; color: var(--text-secondary); font-size: 0.85rem;">
                 ⏳ Loading more photos...
             </div>
         </div>
@@ -2716,9 +3098,9 @@
         function populateCameraSettingsUI(data) {
             if (!data) return;
             ['framesize', 'quality', 'brightness', 'contrast', 'saturation',
-             'special_effect', 'vflip', 'hmirror', 'awb', 'aec', 'flash'].forEach(k => {
-                if (data[k] !== undefined) lastAppliedCameraSettings[k] = data[k];
-            });
+                'special_effect', 'vflip', 'hmirror', 'awb', 'aec', 'flash'].forEach(k => {
+                    if (data[k] !== undefined) lastAppliedCameraSettings[k] = data[k];
+                });
 
             // Flash
             currentFlashValue = data.flash !== undefined ? data.flash : 0;
@@ -3023,7 +3405,7 @@
                         <div class="dup-header">
                             <div>
                                 <span class="stat-badge primary" style="margin-right:8px;">${cand.tier}</span>
-                                <strong>${a.id}${a.label ? ' ('+a.label+')' : ''}</strong> ↔ <strong>${b.id}${b.label ? ' ('+b.label+')' : ''}</strong>
+                                <strong>${a.id}${a.label ? ' (' + a.label + ')' : ''}</strong> ↔ <strong>${b.id}${b.label ? ' (' + b.label + ')' : ''}</strong>
                             </div>
                             <div style="font-size:0.88rem; color:#38bdf8; font-weight:600;">
                                 Peak Cosine Sim: ${cand.max_cosine_similarity} | Centroid Sim: ${cand.centroid_similarity}
@@ -3038,7 +3420,7 @@
                         <div class="dup-compare-grid">
                             <div class="dup-side ${canonicalDefault === a.id ? 'canonical-selected' : ''}" id="dup-${idx}-sideA">
                                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                                    <h4>${a.id} ${a.label ? '('+a.label+')' : ''}</h4>
+                                    <h4>${a.id} ${a.label ? '(' + a.label + ')' : ''}</h4>
                                     <button class="btn btn-sm ${canonicalDefault === a.id ? 'btn-primary' : 'btn-secondary'}"
                                             onclick="selectCanonical(${idx}, '${a.id}', '${b.id}')">
                                         ${canonicalDefault === a.id ? '★ Canonical (Keep)' : 'Set as Canonical'}
@@ -3056,7 +3438,7 @@
 
                             <div class="dup-side ${canonicalDefault === b.id ? 'canonical-selected' : ''}" id="dup-${idx}-sideB">
                                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                                    <h4>${b.id} ${b.label ? '('+b.label+')' : ''}</h4>
+                                    <h4>${b.id} ${b.label ? '(' + b.label + ')' : ''}</h4>
                                     <button class="btn btn-sm ${canonicalDefault === b.id ? 'btn-primary' : 'btn-secondary'}"
                                             onclick="selectCanonical(${idx}, '${b.id}', '${a.id}')">
                                         ${canonicalDefault === b.id ? '★ Canonical (Keep)' : 'Set as Canonical'}
@@ -3192,7 +3574,7 @@
 
             const info = document.createElement('div');
             info.innerHTML = `
-                <h4 style="color:var(--text-primary);">${person.label ? person.label + ' ('+person.id+')' : person.id}</h4>
+                <h4 style="color:var(--text-primary);">${person.label ? person.label + ' (' + person.id + ')' : person.id}</h4>
                 <p style="font-size:0.8rem; color:var(--text-secondary);">
                     ${person.image_count} imgs • ${person.sface_count} emb • Avg Q: ${person.avg_quality}
                 </p>
@@ -3252,16 +3634,16 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ source_id: selectedSource, target_id: selectedTarget })
             })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                } else {
-                    alert('Error: ' + (data.error || 'Unknown error'));
-                    btn.disabled = false;
-                    btn.textContent = '✅ Confirm & Merge Selected Profiles';
-                }
-            });
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Error: ' + (data.error || 'Unknown error'));
+                        btn.disabled = false;
+                        btn.textContent = '✅ Confirm & Merge Selected Profiles';
+                    }
+                });
         }
 
         // ====================================================================
@@ -4262,7 +4644,7 @@
                         <span>Audit Entries: <strong style="color:#38bdf8;">${aData.total_audit_entries}</strong></span>
                     `;
                 }
-            } catch (e) {}
+            } catch (e) { }
             if (currentDbTab === 'audit') return loadAuditLog();
             return loadEventDb();
         }
@@ -4508,9 +4890,11 @@
                 }
 
                 const isOnline = data.camera_online;
+                const boardOnline = data.board_online === true;
                 const badge = document.getElementById('cameraStatusBadge');
                 const text = document.getElementById('cameraStatusText');
                 const overlay = document.getElementById('offlineOverlay');
+                const overlayTitle = document.getElementById('offlineOverlayTitle');
                 const img = document.getElementById('liveStreamImg');
 
                 if (isOnline) {
@@ -4520,7 +4904,7 @@
                         badge.style.background = 'rgba(245, 158, 11, 0.2)';
                         badge.style.color = '#fbbf24';
                         badge.style.borderColor = 'rgba(245, 158, 11, 0.4)';
-                        text.textContent = `⚠️ Board Connected (${data.ip}) • Optical Sensor Disconnected`;
+                        text.textContent = `⚠️ Board Connected (${data.ip}) • Cam-Sens Off`;
                     } else {
                         badge.className = 'status-badge-live online';
                         badge.style.background = '';
@@ -4534,8 +4918,23 @@
                         img.src = '/live?t=' + Date.now();
                     }
                     wasOnline = true;
+                } else if (boardOnline) {
+                    window._offlineCounter = 0;
+                    badge.className = 'status-badge-live warning';
+                    badge.style.background = 'rgba(245, 158, 11, 0.2)';
+                    badge.style.color = '#fbbf24';
+                    badge.style.borderColor = 'rgba(245, 158, 11, 0.4)';
+                    const tempText = (data.temp_c !== undefined && data.temp_c !== null) ? ` • ${Math.round(data.temp_c)}°C` : '';
+                    text.textContent = `🔋 Online (${data.ip || '192.168.29.10'}) • Cam-Sens Off${tempText}`;
+                    if (overlayTitle) overlayTitle.textContent = 'ESP-CAM Online • Cam-Sens Off (Low-Power)';
+                    overlay.style.display = 'flex';
+                    wasOnline = false;
                 } else {
                     window._offlineCounter = (window._offlineCounter || 0) + 1;
+                    badge.style.background = '';
+                    badge.style.color = '';
+                    badge.style.borderColor = '';
+                    if (overlayTitle) overlayTitle.textContent = 'ESP-CAM Video Stream Offline';
                     if (window._offlineCounter < 6) {
                         // Transient Wi-Fi retransmit: show subtle connecting status without jarring black overlay
                         badge.className = 'status-badge-live offline';
@@ -4549,6 +4948,12 @@
                 }
 
                 updateCamSensorButton(isOnline || data.cam_sensor_active === true, data.recording_active === true);
+                const miniBadge = document.getElementById('testingMiniStreamBadge');
+                if (miniBadge) {
+                    if (isOnline) { miniBadge.textContent = data.recording_active ? '● LIVE (REC)' : '● LIVE'; miniBadge.style.color = '#34d399'; }
+                    else if (boardOnline) { miniBadge.textContent = 'Cam-Sens Off'; miniBadge.style.color = '#fbbf24'; }
+                    else { miniBadge.textContent = 'Offline'; miniBadge.style.color = '#f87171'; }
+                }
                 if (typeof data.door_open_seq === 'number') {
                     if (window._lastDoorOpenSeq !== undefined && data.door_open_seq > window._lastDoorOpenSeq) {
                         playDoorOpenAlertSound();
@@ -4599,7 +5004,7 @@
                                     ${imgHtml}
                                     <div class="event-meta">
                                         <div class="event-title">[${ev.time}] ${title}</div>
-                                        <div class="event-sub">${ev.reason} • Sim: ${(ev.similarity*100).toFixed(1)}% • Quality: ${ev.quality}/100</div>
+                                        <div class="event-sub">${ev.reason} • Sim: ${(ev.similarity * 100).toFixed(1)}% • Quality: ${ev.quality}/100</div>
                                     </div>
                                 </div>
                             `;
@@ -4684,7 +5089,7 @@
         let currentSentinelPage = 'overview';
 
         function switchPage(pageId) {
-            const validPages = ['overview', 'camera', 'events', 'people', 'alerts', 'devices', 'analytics', 'settings', 'testing'];
+            const validPages = ['overview', 'camera', 'events', 'people', 'alerts', 'devices', 'analytics', 'settings', 'models', 'testing'];
             if (!validPages.includes(pageId)) pageId = 'overview';
             currentSentinelPage = pageId;
 
@@ -4712,6 +5117,7 @@
             if (pageId === 'alerts') refreshPhase10Notifications();
             if (pageId === 'devices') refreshControlCenterHealth(true);
             if (pageId === 'analytics') renderAnalyticsPage();
+            if (pageId === 'models') loadModelsCatalog();
             if (pageId === 'settings') {
                 if (typeof loadNotifyConfig === 'function') loadNotifyConfig();
                 loadCameraDefaults();
@@ -4802,8 +5208,20 @@
 
                 const wOk = !!(data.wroom && data.wroom.online);
                 const cOk = !!(data.camera && data.camera.online);
+                const cBoardOk = !!(data.camera && data.camera.board_online);
                 setDot('ovDotWroom', 'ovTxtWroom', wOk, `Online (${data.wroom.ip})`, `Offline (${data.wroom.ip})`);
-                setDot('ovDotCamera', 'ovTxtCamera', cOk, `${data.camera.fps || 0} FPS`, 'Offline');
+                if (cOk) {
+                    setDot('ovDotCamera', 'ovTxtCamera', true, `${data.camera.fps || 0} FPS`, 'Offline');
+                } else if (cBoardOk) {
+                    const dot = document.getElementById('ovDotCamera');
+                    const txt = document.getElementById('ovTxtCamera');
+                    if (dot) { dot.classList.remove('on', 'off'); dot.style.background = '#fbbf24'; }
+                    if (txt) { txt.textContent = `Standby (${data.camera.ip || '192.168.29.10'})`; txt.style.color = '#fbbf24'; }
+                } else {
+                    const dot = document.getElementById('ovDotCamera');
+                    if (dot) dot.style.background = '';
+                    setDot('ovDotCamera', 'ovTxtCamera', false, '', 'Offline');
+                }
                 setDot('ovDotAi', 'ovTxtAi', true, data.ai_server.recognition_enabled ? 'Active' : 'Paused', 'Offline');
                 setDot('ovDotDb', 'ovTxtDb', true, 'SQLite OK', 'Offline');
 
@@ -5088,7 +5506,7 @@
                         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:8px; margin-bottom:8px;">
                             <div style="padding:8px; border-radius:8px; background:rgba(15,23,42,0.6);"><strong>Uptime:</strong> ${d.uptime_s}s</div>
                             <div style="padding:8px; border-radius:8px; background:rgba(15,23,42,0.6);"><strong>RAM / Disk:</strong> ${d.process_rss_mb ?? '--'} MB | ${d.disk_free_gb} GB free</div>
-                            <div style="padding:8px; border-radius:8px; background:rgba(15,23,42,0.6);"><strong>CPU / GPU Duty:</strong> ${v.cpu_pct ?? d.cpu_pct ?? '--'}% | ${v.gpu_duty_pct ?? '--'}%</div>
+                            <div style="padding:8px; border-radius:8px; background:rgba(15,23,42,0.6);"><strong>CPU / GPU / NPU:</strong> ${d.cpu_pct ?? '--'}% | ${d.gpu_pct ?? 0}% | ${d.npu_pct ?? 0}%</div>
                             <div style="padding:8px; border-radius:8px; background:rgba(15,23,42,0.6);"><strong>PIN / API Key:</strong> ${s.pin_configured ? 'Set' : 'Open (LAN protected)'} | <code>${s.api_key_preview}</code></div>
                         </div>
                         <div style="font-size:0.78rem; color:#94a3b8;">Threads: ${th} | Blocked Requests: ${s.blocked_requests || 0} | Rate Limiter: ${s.rate_limiter}</div>
@@ -5098,6 +5516,11 @@
                 console.error('loadSecurityHealthz error', e);
             }
         }
+        setInterval(() => {
+            if (typeof currentSentinelPage !== 'undefined' && currentSentinelPage === 'settings') {
+                loadSecurityHealthz();
+            }
+        }, 1000);
         async function saveAdminPin() {
             const pin = document.getElementById('secPinInput').value;
             const lockLocal = document.getElementById('secLockLocalhost').checked;
@@ -5109,8 +5532,18 @@
                 body: JSON.stringify(body),
             });
             const d = await res.json();
-            showToast(d.ok ? 'Security PIN/lock updated!' : (d.error || 'Failed'), d.ok ? 'success' : 'error');
+            showToast(d.ok ? 'User password / PIN updated!' : (d.error || 'Failed'), d.ok ? 'success' : 'error');
             if (d.ok) document.getElementById('secPinInput').value = '';
+            loadSecurityHealthz();
+        }
+        async function clearUserPassword() {
+            const res = await fetch('/api/v1/security/pin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pin: '', lock_localhost: false }),
+            });
+            const d = await res.json();
+            showToast(d.ok ? 'User password / PIN cleared!' : (d.error || 'Failed'), d.ok ? 'success' : 'error');
             loadSecurityHealthz();
         }
         async function rotateApiKey() {
@@ -5173,8 +5606,37 @@
             setCameraSensor(!window._camSensorActive);
         }
 
-        async function runSim(action) {
+        function appendTestLog(level, tag, msg) {
             const con = document.getElementById('testingConsole');
+            if (!con) return;
+            const ts = new Date().toLocaleTimeString();
+            const line = `[${ts}] [${level}] [${tag}] ${msg}\n`;
+            if (con.textContent.startsWith('Click any simulation')) con.textContent = '';
+            con.textContent = line + con.textContent.slice(0, 6000);
+        }
+
+        function _formatSimLog(action, d) {
+            const lat = d.latency_ms !== undefined ? `${d.latency_ms} ms` : '--';
+            if (!d.ok) return `${action} failed (${lat}): ${d.error || 'Unknown error'}`;
+            if (action === 'ping_nodes' && d.nodes) {
+                const c = d.nodes.cam || {}, w = d.nodes.wroom || {};
+                return `CAM=${c.online ? 'ONLINE (' + c.rtt_ms + ' ms)' : 'OFFLINE'} | WROOM=${w.online ? 'ONLINE (' + w.rtt_ms + ' ms)' : 'OFFLINE'} (total ${lat})`;
+            }
+            if (action === 'door_open') return `DOOR_OPEN delivered to CAM in ${lat} — async wake & 20s recording armed`;
+            if (action === 'door_closed') return `DOOR_CLOSED delivered to CAM in ${lat} — 5s recording tail & 8s auto-standby`;
+            if (action === 'low_power_off') return `Low-Power OFF (CAM live, ready=${d.cam_response && d.cam_response.ready}) in ${lat}`;
+            if (action === 'low_power_on') return `Low-Power ON (CAM standby) in ${lat}`;
+            if (action === 'udp_record_trigger') return `UDP :5055 trigger processed in ${lat} (recording_active=${d.recording_active})`;
+            if (action === 'cam_snapshot' || action === 'wroom_saved_image') return `Fetched ${d.bytes} bytes JPEG in ${lat}`;
+            if ((action === 'cam_events' || action === 'wroom_events') && d.data) {
+                const evs = (d.data.events || []).slice(0, 5).map(e => `${e.type}(${e.src})@${e.time_ms}ms`).join(', ');
+                return `${d.data.count || 0} events in ${lat}: ${evs || 'none'}`;
+            }
+            if (action === 'cam_spiffs_logs') return `Loaded SPIFFS logs (${lat}):\n${d.logs || '(empty)'}`;
+            return `Completed in ${lat}`;
+        }
+
+        async function runSim(action) {
             const badge = document.getElementById('testingLastLatency');
             const imgWrap = document.getElementById('testingImagePreviewWrap');
             const imgEl = document.getElementById('testingImagePreview');
@@ -5193,19 +5655,251 @@
                     if (imgMeta) imgMeta.textContent = `${action} — ${d.bytes} bytes (${d.latency_ms} ms)`;
                     imgWrap.style.display = 'block';
                 }
-                const ts = new Date().toLocaleTimeString();
-                const displayText = d.logs ? d.logs : JSON.stringify(d, (k, v) => k === 'image_data_url' ? '[base64 image]' : v, 2);
-                if (con) {
-                    con.textContent = `[${ts}] ${action} (${d.latency_ms} ms)\n${displayText}\n\n` + con.textContent.slice(0, 4000);
+                if (action === 'low_power_off' || action === 'door_open') {
+                    const mini = document.getElementById('testingMiniStreamImg');
+                    if (mini) setTimeout(() => { mini.src = '/live?t=' + Date.now(); }, 250);
                 }
+                appendTestLog(d.ok ? 'PASS' : 'FAIL', action.toUpperCase(), _formatSimLog(action, d));
+                return d;
             } catch (e) {
                 if (badge) badge.textContent = '❌ Error';
-                if (con) con.textContent = `Error running ${action}: ${e}\n\n` + con.textContent;
+                appendTestLog('ERR', action.toUpperCase(), String(e));
+                return { ok: false, error: String(e) };
             }
         }
         async function runFullDoorCycleSim() {
+            appendTestLog('INFO', 'CYCLE', 'Starting full door cycle: OPEN -> 1.2s WROOM image -> CLOSE...');
             await runSim('door_open');
-            setTimeout(() => runSim('door_closed'), 3000);
+            setTimeout(async () => {
+                await runSim('wroom_saved_image');
+                await runSim('door_closed');
+                appendTestLog('PASS', 'CYCLE', 'Full door cycle finished.');
+            }, 2500);
+        }
+        async function runLatencyBenchmark() {
+            appendTestLog('INFO', 'BENCH', 'Running 5x RTT ping benchmark...');
+            const camRtts = [], wroomRtts = [];
+            for (let i = 0; i < 5; i++) {
+                const d = await runSim('ping_nodes');
+                if (d.nodes && d.nodes.cam && d.nodes.cam.online) camRtts.push(d.nodes.cam.rtt_ms);
+                if (d.nodes && d.nodes.wroom && d.nodes.wroom.online) wroomRtts.push(d.nodes.wroom.rtt_ms);
+            }
+            const avg = arr => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1) + ' ms' : 'N/A';
+            appendTestLog('PASS', 'BENCH', `5x Avg RTT — CAM: ${avg(camRtts)} (${camRtts.length}/5) | WROOM: ${avg(wroomRtts)} (${wroomRtts.length}/5)`);
+        }
+        async function runFullDiagnosticSuite() {
+            appendTestLog('INFO', 'SUITE', 'Starting Full Diagnostic Suite...');
+            for (const act of ['ping_nodes', 'wroom_events', 'cam_events', 'low_power_off', 'cam_snapshot', 'low_power_on']) {
+                await runSim(act);
+            }
+            appendTestLog('PASS', 'SUITE', 'Full Diagnostic Suite completed.');
+        }
+
+        window._modelSubTab = 'object_detection';
+        window._modelCatalogData = null;
+
+        function switchModelSubTab(cat) {
+            window._modelSubTab = cat;
+            const objBtn = document.getElementById('modelSubTabObj');
+            const faceBtn = document.getElementById('modelSubTabFace');
+            if (objBtn && faceBtn) {
+                objBtn.className = cat === 'object_detection' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm';
+                faceBtn.className = cat === 'face_recognition' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm';
+            }
+            renderModelsGrid();
+        }
+
+        function renderModelsGrid() {
+            const grid = document.getElementById('modelsGrid');
+            const data = window._modelCatalogData;
+            if (!grid || !data || !data.catalog) return;
+            const items = data.catalog[window._modelSubTab] || [];
+            grid.innerHTML = items.map(m => {
+                let border = 'rgba(255,255,255,0.1)';
+                let bg = 'rgba(255,255,255,0.03)';
+                let zoneBanner = '';
+                if (m.zone === 'warning') {
+                    border = 'rgba(245, 158, 11, 0.75)';
+                    bg = 'rgba(245, 158, 11, 0.08)';
+                    zoneBanner = `<div style="border-left: 3px solid #f59e0b; padding: 6px 8px; margin-bottom: 10px; background: rgba(245,158,11,0.14); color: #fbbf24; font-size: 0.78rem; border-radius: 4px;">⚠️ ${m.zone_note}</div>`;
+                } else if (m.zone === 'danger') {
+                    border = 'rgba(239, 68, 68, 0.8)';
+                    bg = 'rgba(239, 68, 68, 0.09)';
+                    zoneBanner = `<div style="border-left: 3px solid #ef4444; padding: 6px 8px; margin-bottom: 10px; background: rgba(239,68,68,0.16); color: #f87171; font-size: 0.78rem; border-radius: 4px;">🔴 ${m.zone_note}</div>`;
+                } else if (m.zone === 'optimal') {
+                    border = 'rgba(16, 185, 129, 0.45)';
+                    zoneBanner = `<div style="border-left: 3px solid #10b981; padding: 6px 8px; margin-bottom: 10px; background: rgba(16,185,129,0.12); color: #34d399; font-size: 0.78rem; border-radius: 4px;">🟢 ${m.zone_note}</div>`;
+                }
+                if (m.active) {
+                    border = '#10b981';
+                }
+                const sizeTxt = m.size_mb !== null ? `${m.size_mb} MB` : 'Not on disk';
+                const safeName = (m.name || '').replace(/'/g, "\\'");
+                const btnLabel = m.exists ? '⚡ Select &amp; Load' : '📥 Select (Not on Disk)';
+                const btnHtml = m.active
+                    ? `<button class="btn btn-primary btn-sm" disabled style="width:100%; background:#059669;">✅ Active Model</button>`
+                    : `<button class="btn btn-secondary btn-sm" style="width:100%;" onclick="selectModelCard('${window._modelSubTab}','${m.id}','${safeName}','${m.zone}')">${btnLabel}</button>`;
+                return `
+                    <div style="border: 1px solid ${border}; background: ${bg}; border-radius: 10px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px;">
+                                <strong style="font-size:0.98rem; color:#f8fafc;">${m.name}</strong>
+                                <span style="font-size:0.75rem; color:#94a3b8;">${sizeTxt} • ${m.ram_est}</span>
+                            </div>
+                            ${zoneBanner}
+                            <p style="font-size:0.82rem; color:#cbd5e1; margin-bottom:6px;">${m.description}</p>
+                            <p style="font-size:0.78rem; color:#94a3b8; margin-bottom:12px;"><strong>Usage:</strong> ${m.usage}</p>
+                        </div>
+                        ${btnHtml}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function loadModelsCatalog() {
+            try {
+                const res = await fetch('/api/v1/models/catalog');
+                const d = await res.json();
+                if (!d.ok) return;
+                window._modelCatalogData = d;
+                const ramEl = document.getElementById('modelsRamBanner');
+                if (ramEl) ramEl.textContent = `Total RAM: ${d.total_ram_gb} GB (${d.ram_tier_label})`;
+                const accEl = document.getElementById('modelsAccelInfo');
+                if (accEl && d.accelerator) {
+                    accEl.textContent = `Active Target: ${d.accelerator.active_target} | Providers: ${(d.accelerator.configured_providers || []).join(' → ')} | RAM Warning/Danger zones adapt automatically to ${d.total_ram_gb} GB total RAM.`;
+                }
+                renderModelsGrid();
+            } catch (e) {
+                console.error('loadModelsCatalog error', e);
+            }
+        }
+
+        function _waitMs(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+        function showPositionedPopup({ title, message, borderColor, fieldsHtml = '', confirmLabel = 'Continue', validateFn = null }) {
+            return new Promise(resolve => {
+                const anchors = [
+                    { top: '24px', left: '24px', right: 'auto', bottom: 'auto', transform: 'none' },
+                    { top: '24px', right: '24px', left: 'auto', bottom: 'auto', transform: 'none' },
+                    { bottom: '24px', left: '24px', top: 'auto', right: 'auto', transform: 'none' },
+                    { bottom: '24px', right: '24px', top: 'auto', left: 'auto', transform: 'none' },
+                    { top: '50%', left: '50%', right: 'auto', bottom: 'auto', transform: 'translate(-50%, -50%)' },
+                ];
+                const pos = anchors[Math.floor(Math.random() * anchors.length)];
+
+                const backdrop = document.createElement('div');
+                backdrop.style.cssText = 'position:fixed;inset:0;background:rgba(2,6,23,0.65);z-index:9999;';
+
+                const box = document.createElement('div');
+                box.style.cssText = `position:fixed;z-index:10000;width:min(380px,calc(100vw - 48px));background:#0f172a;border:2px solid ${borderColor};border-radius:12px;padding:18px;box-shadow:0 20px 50px rgba(0,0,0,0.65);color:#e2e8f0;top:${pos.top};left:${pos.left};right:${pos.right};bottom:${pos.bottom};transform:${pos.transform};`;
+                box.innerHTML = `
+                    <div style="font-weight:700;font-size:1rem;margin-bottom:8px;">${title}</div>
+                    <p style="font-size:0.84rem;color:#cbd5e1;margin-bottom:12px;line-height:1.45;">${message}</p>
+                    ${fieldsHtml}
+                    <div id="mgPopupErr" style="color:#f87171;font-size:0.78rem;min-height:18px;margin-bottom:8px;"></div>
+                    <div style="display:flex;gap:8px;justify-content:flex-end;">
+                        <button type="button" class="btn btn-secondary btn-sm" id="mgCancelBtn">Cancel</button>
+                        <button type="button" class="btn btn-primary btn-sm" id="mgConfirmBtn">${confirmLabel}</button>
+                    </div>
+                `;
+                document.body.appendChild(backdrop);
+                document.body.appendChild(box);
+
+                const cleanup = val => { backdrop.remove(); box.remove(); resolve(val); };
+                box.querySelector('#mgCancelBtn').onclick = () => cleanup(null);
+                box.querySelector('#mgConfirmBtn').onclick = () => {
+                    if (validateFn) {
+                        const err = validateFn(box);
+                        if (err) {
+                            box.querySelector('#mgPopupErr').textContent = err;
+                            return;
+                        }
+                    }
+                    cleanup(true);
+                };
+            });
+        }
+
+        async function runModelGuardFlow(name, zone) {
+            const isDanger = (zone === 'danger');
+            const color = isDanger ? '#ef4444' : '#f59e0b';
+
+            // Pop-up 1 (Warning & Danger): Confirmation
+            const p1 = await showPositionedPopup({
+                title: isDanger ? `🔴 Danger Confirmation (1/4)` : `⚠️ Warning Confirmation (1/2)`,
+                message: `<strong>${name}</strong> is in the <strong>${zone.toUpperCase()}</strong> zone for your system RAM tier. Are you sure you want to proceed?`,
+                borderColor: color,
+                confirmLabel: 'Continue',
+            });
+            if (!p1) return false;
+
+            if (isDanger) {
+                await _waitMs(2000);
+                // Pop-up 2 (Danger): Reason
+                const p2 = await showPositionedPopup({
+                    title: '🔴 Reason Required (2/4)',
+                    message: `State your reason for loading <strong>${name}</strong> on this system:`,
+                    borderColor: color,
+                    fieldsHtml: `<textarea id="mgReasonInput" rows="2" placeholder="Enter reason..." style="width:100%;padding:8px;border-radius:6px;border:1px solid #334155;background:#020617;color:#e2e8f0;font-size:0.84rem;margin-bottom:6px;"></textarea>`,
+                    confirmLabel: 'Continue',
+                    validateFn: b => (!b.querySelector('#mgReasonInput').value.trim() ? 'Please enter a reason to continue.' : null),
+                });
+                if (!p2) return false;
+
+                await _waitMs(2000);
+                // CUSTOMIZE_REAL_CONFIRM_TEXT: Edit the message below for your special compliment!
+                const realConfirmMsg = `Real Confirmation: You are about to unlock heavy-duty mode for <strong>${name}</strong>.My Guy,you are not gonna like this,Please Respect your hardware — click Continue if you really mean Bro`;
+                // Pop-up 3 (Danger): Real Confirmation
+                const p3 = await showPositionedPopup({
+                    title: '🔴 Real Confirmation (3/4)',
+                    message: realConfirmMsg,
+                    borderColor: color,
+                    confirmLabel: 'Continue',
+                });
+                if (!p3) return false;
+            }
+
+            await _waitMs(2000);
+            // Final Pop-up (Warning 2/2 & Danger 4/4): Admin Credentials Only
+            const stepLabel = isDanger ? '4/4' : '2/2';
+            const pAuth = await showPositionedPopup({
+                title: `${isDanger ? '🔴' : '⚠️'} Admin Authorization (${stepLabel})`,
+                message: `Enter administrator credentials to load <strong>${name}</strong>:`,
+                borderColor: color,
+                fieldsHtml: `
+                    <input id="mgUname" type="text" placeholder="Username" autocomplete="off" style="width:100%;padding:7px 9px;border-radius:6px;border:1px solid #334155;background:#020617;color:#e2e8f0;font-size:0.84rem;margin-bottom:8px;">
+                    <input id="mgPasswd" type="password" placeholder="Password" autocomplete="off" style="width:100%;padding:7px 9px;border-radius:6px;border:1px solid #334155;background:#020617;color:#e2e8f0;font-size:0.84rem;margin-bottom:6px;">
+                `,
+                confirmLabel: 'Authorize & Load',
+                validateFn: b => {
+                    const u = b.querySelector('#mgUname').value.trim();
+                    const p = b.querySelector('#mgPasswd').value;
+                    return (u === 'admin' && p === 'admin_passwd') ? null : 'Invalid credentials. Only admin / admin_passwd allowed.';
+                },
+            });
+            return !!pAuth;
+        }
+
+        async function selectModelCard(category, id, name = id, zone = 'safe') {
+            if (zone === 'warning' || zone === 'danger') {
+                const allowed = await runModelGuardFlow(name, zone);
+                if (!allowed) {
+                    showToast(`Cancelled loading ${name}`, 'info');
+                    return;
+                }
+            }
+            try {
+                const res = await fetch('/api/v1/models/select', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ category, id })
+                });
+                const d = await res.json();
+                showToast(d.ok ? `Loaded ${d.name}` : (d.error || 'Failed to load model'), d.ok ? 'success' : 'error');
+                loadModelsCatalog();
+            } catch (e) {
+                showToast('Error switching model: ' + e, 'error');
+            }
         }
 
         function _getAlertAudioCtx() {
@@ -5214,7 +5908,7 @@
                 if (Ctx) window._sentinelAudioCtx = new Ctx();
             }
             if (window._sentinelAudioCtx && window._sentinelAudioCtx.state === 'suspended') {
-                window._sentinelAudioCtx.resume().catch(() => {});
+                window._sentinelAudioCtx.resume().catch(() => { });
             }
             return window._sentinelAudioCtx;
         }
@@ -5238,8 +5932,9 @@
                     osc.start(ctx.currentTime + idx * 0.16);
                     osc.stop(ctx.currentTime + idx * 0.16 + 0.3);
                 });
-            } catch (e) {}
+            } catch (e) { }
         }
     </script>
 </body>
+
 </html>

@@ -278,7 +278,7 @@ def calibrate_esp32_temperature(data):
 
 def refresh_camera_hardware_status():
     """Fetch live OV2640 hardware registers & internal chip temperature asynchronously"""
-    cam_ip = get_current_camera_ip()
+    cam_ip = active_camera_ip or (CANDIDATE_IPS[0] if CANDIDATE_IPS else '192.168.29.10')
     try:
         req = urllib.request.Request(f"http://{cam_ip}:80/status", headers={'User-Agent': 'ESP32-Dashboard'})
         with urllib.request.urlopen(req, timeout=1.5) as r:
@@ -288,8 +288,11 @@ def refresh_camera_hardware_status():
                 with state_lock:
                     cached_camera_settings.update(data)
                     cached_camera_settings['online'] = True
+                return
     except Exception:
         pass
+    with state_lock:
+        cached_camera_settings['online'] = False
 
 # ============================================================================
 # DEEP FACE DETECTION & RECOGNITION ENGINE (YuNet + InsightFace MobileFaceNet)
@@ -327,7 +330,8 @@ def init_cv_models():
     sess_opts.intra_op_num_threads = 2
     sess_opts.inter_op_num_threads = 1
     sess_opts.add_session_config_entry("session.intra_op.allow_spinning", "0")
-    providers = ['DmlExecutionProvider', 'CPUExecutionProvider'] if 'DmlExecutionProvider' in ort.get_available_providers() else ['CPUExecutionProvider']
+    from npu import get_execution_providers
+    providers, _accel_target = get_execution_providers(ort.get_available_providers(), use_gpu=True, use_npu=True)
     mobilefacenet_session = ort.InferenceSession(SFACE_MODEL_PATH, sess_options=sess_opts, providers=providers)
     print(f"[*] Initialized YuNet + InsightFace MobileFaceNet (512-D ArcFace) on {mobilefacenet_session.get_providers()}")
 
@@ -1276,7 +1280,78 @@ door_recording_until = 0.0
 door_video_writer = None
 door_recording_path = None
 door_recording_frames = 0
+door_recording_start_ts = 0.0
+door_video_w = 0
+door_video_h = 0
+door_recording_timer = None
 door_open_seq = 0
+RECORDING_TARGET_FPS = 10.0
+
+def _finalize_all_recordings():
+    with door_recording_lock:
+        if door_video_writer is not None:
+            _close_recording_writer_locked()
+
+import atexit
+atexit.register(_finalize_all_recordings)
+
+def _schedule_recording_finalize(delay_s):
+    global door_recording_timer
+    if door_recording_timer is not None:
+        try:
+            door_recording_timer.cancel()
+        except Exception:
+            pass
+    door_recording_timer = threading.Timer(max(0.2, float(delay_s)), _finalize_expired_recording)
+    door_recording_timer.daemon = True
+    door_recording_timer.start()
+
+def _finalize_expired_recording():
+    with door_recording_lock:
+        if door_recording_active and time.time() >= door_recording_until:
+            _close_recording_writer_locked()
+        elif not door_recording_active and door_video_writer is not None:
+            _close_recording_writer_locked()
+
+def _prune_old_recordings_if_low_disk(min_free_gb=2.0):
+    """Prune oldest recordings FIFO when free disk space drops below min_free_gb."""
+    try:
+        if shutil.disk_usage('.').free / (1024 ** 3) >= min_free_gb:
+            return 0
+        files = []
+        for r, _ds, fs in os.walk(RECORDINGS_FOLDER):
+            for f in fs:
+                if f.endswith(('.mp4', '.avi')):
+                    fp = os.path.join(r, f)
+                    try:
+                        files.append((os.path.getmtime(fp), fp))
+                    except OSError:
+                        pass
+        files.sort()
+        pruned = 0
+        for _mt, fp in files:
+            if shutil.disk_usage('.').free / (1024 ** 3) >= min_free_gb:
+                break
+            try:
+                os.remove(fp)
+                pruned += 1
+            except OSError:
+                pass
+        if pruned:
+            event_db.log_audit('system', 'retention_prune', RECORDINGS_FOLDER, f'pruned={pruned}')
+        return pruned
+    except Exception:
+        return 0
+
+def _disk_retention_janitor_thread():
+    while stream_active:
+        _prune_old_recordings_if_low_disk(min_free_gb=2.0)
+        for _ in range(90):
+            if not stream_active:
+                break
+            time.sleep(10.0)
+
+threading.Thread(target=_disk_retention_janitor_thread, daemon=True).start()
 
 def start_door_recording(duration_s=20.0, bump_seq=True):
     """Arm live MJPEG recording immediately on DOOR_OPEN (<150ms target)."""
@@ -1286,6 +1361,7 @@ def start_door_recording(duration_s=20.0, bump_seq=True):
         door_recording_until = time.time() + float(duration_s)
         if bump_seq:
             door_open_seq += 1
+        _schedule_recording_finalize(float(duration_s) + 0.3)
     stream_wake_event.set()
     print(f"[REC] Door recording armed for up to {duration_s:.0f}s")
 
@@ -1295,41 +1371,67 @@ def stop_door_recording_tail(tail_s=5.0):
     with door_recording_lock:
         if door_recording_active:
             door_recording_until = min(door_recording_until, time.time() + float(tail_s))
+            _schedule_recording_finalize(max(0.2, door_recording_until - time.time()) + 0.3)
 
 def _close_recording_writer_locked():
-    global door_video_writer, door_recording_active, door_recording_path, door_recording_frames
+    global door_video_writer, door_recording_active, door_recording_path, door_recording_frames, door_recording_start_ts, door_video_w, door_video_h
     if door_video_writer is not None:
         try:
             door_video_writer.release()
         except Exception:
             pass
-        print(f"[REC] Saved recording ({door_recording_frames} frames): {door_recording_path}")
+        if door_recording_frames == 0 and door_recording_path and os.path.exists(door_recording_path):
+            try:
+                os.remove(door_recording_path)
+            except Exception:
+                pass
+        else:
+            print(f"[REC] Saved recording ({door_recording_frames} frames): {door_recording_path}")
         door_video_writer = None
     door_recording_active = False
     door_recording_path = None
     door_recording_frames = 0
+    door_recording_start_ts = 0.0
+    door_video_w = 0
+    door_video_h = 0
 
 def _write_recording_frame(img):
-    global door_video_writer, door_recording_path, door_recording_frames
+    global door_video_writer, door_recording_path, door_recording_frames, door_recording_start_ts, door_video_w, door_video_h
+    now = time.time()
     with door_recording_lock:
         if not door_recording_active:
             if door_video_writer is not None:
                 _close_recording_writer_locked()
             return
-        if time.time() > door_recording_until:
+        if now > door_recording_until:
             _close_recording_writer_locked()
             return
         if door_video_writer is None:
-            ts = datetime.now().strftime('%Y%m%d_%H%M%S_%f')[:-3]
-            door_recording_path = os.path.join(RECORDINGS_FOLDER, f"door_{ts}.avi")
+            now_dt = datetime.now()
+            day_dir = os.path.join(RECORDINGS_FOLDER, now_dt.strftime('%Y'), now_dt.strftime('%m'), now_dt.strftime('%d'))
+            os.makedirs(day_dir, exist_ok=True)
+            base_name = now_dt.strftime('%H-%M-%S')
+            candidate = os.path.join(day_dir, f"{base_name}.mp4")
+            if os.path.exists(candidate):
+                candidate = os.path.join(day_dir, f"{base_name}_{now_dt.strftime('%f')[:3]}.mp4")
+            door_recording_path = candidate
             h, w = img.shape[:2]
-            fourcc = cv2.VideoWriter_fourcc(*'MJPG')
-            door_video_writer = cv2.VideoWriter(door_recording_path, fourcc, 15.0, (w, h))
+            door_video_w, door_video_h = w, h
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            door_video_writer = cv2.VideoWriter(door_recording_path, fourcc, RECORDING_TARGET_FPS, (w, h))
             door_recording_frames = 0
-            print(f"[REC] Started live recording -> {door_recording_path} ({w}x{h})")
+            door_recording_start_ts = now
+            print(f"[REC] Started live recording -> {door_recording_path} ({w}x{h} @ {RECORDING_TARGET_FPS:.0f}fps)")
         if door_video_writer is not None and door_video_writer.isOpened():
-            door_video_writer.write(img)
-            door_recording_frames += 1
+            frame_to_write = img
+            if img.shape[1] != door_video_w or img.shape[0] != door_video_h:
+                frame_to_write = cv2.resize(img, (door_video_w, door_video_h))
+            elapsed = max(0.0, now - door_recording_start_ts)
+            target_count = max(1, int(round(elapsed * RECORDING_TARGET_FPS)))
+            repeat = max(1, min(15, target_count - door_recording_frames))
+            for _ in range(repeat):
+                door_video_writer.write(frame_to_write)
+                door_recording_frames += 1
 
 def mjpeg_consumer_thread():
     """Background thread to consume MJPEG stream from ESP32-CAM and buffer validated frames"""
@@ -1378,9 +1480,7 @@ def mjpeg_consumer_thread():
                     ))
             camera_online = False
             stream_fps = 0.0
-            with door_recording_lock:
-                if door_video_writer is not None and not door_recording_active:
-                    _close_recording_writer_locked()
+            _finalize_expired_recording()
             now_poll = time.time()
             if now_poll - last_standby_status_poll >= 4.0:
                 last_standby_status_poll = now_poll
@@ -1809,15 +1909,18 @@ def stream_status():
         cam_info = cached_camera_settings.get('camera', {})
         sensor_ready = bool(cam_info.get('ready', False)) if isinstance(cam_info, dict) else False
         sensor_active = bool(cam_info.get('sensor_active', is_alive)) if isinstance(cam_info, dict) else is_alive
+        board_online = bool(cached_camera_settings.get('online', False)) or is_alive
+        board_ip = active_camera_ip or (CANDIDATE_IPS[0] if (board_online and CANDIDATE_IPS) else None)
 
     return jsonify({
         'active': stream_active,
         'camera_online': is_alive,
+        'board_online': board_online,
         'sensor_ready': sensor_ready,
         'cam_sensor_active': sensor_active,
         'recording_active': door_recording_active,
         'door_open_seq': door_open_seq,
-        'ip': active_camera_ip if is_alive else None,
+        'ip': board_ip,
         'fps': round(stream_fps, 1) if is_alive else 0.0,
         'temp_c': cached_camera_settings.get('temp_c'),
         'last_frame_seconds_ago': round(now - last_frame_received_time, 1) if last_frame_received_time > 0 else None,
@@ -3335,7 +3438,7 @@ def _probe_wroom_health(force=False):
     info = {}
     try:
         req = urllib.request.Request(f"http://{WROOM_NODE_IP}:80/status", headers={'User-Agent': 'Sentinel-Dashboard'})
-        with urllib.request.urlopen(req, timeout=0.45) as resp:
+        with urllib.request.urlopen(req, timeout=2.0) as resp:
             online = resp.status == 200
             raw = resp.read().decode('utf-8', errors='replace')
             try:
@@ -3359,11 +3462,15 @@ def devices_health_api():
     """Unified health telemetry for ESP32-WROOM, ESP32-CAM, AI Server, and EventDB"""
     force = request.args.get('refresh') == '1'
     wroom_online, wroom_info = _probe_wroom_health(force=force)
+    if force:
+        refresh_camera_hardware_status()
     now = time.time()
     cam_alive = camera_online and (now - last_frame_received_time < 12.0)
     with state_lock:
         cam_info = cached_camera_settings.get('camera', {})
         sensor_ready = bool(cam_info.get('ready', False)) if isinstance(cam_info, dict) else False
+        sensor_active = bool(cam_info.get('sensor_active', cam_alive)) if isinstance(cam_info, dict) else cam_alive
+        cam_board_online = bool(cached_camera_settings.get('online', False)) or cam_alive
         temp_c = cached_camera_settings.get('temp_c')
         recog_on = recognition_enabled
     notif_status = notification_manager.get_status()
@@ -3377,8 +3484,10 @@ def devices_health_api():
         },
         'camera': {
             'online': cam_alive,
+            'board_online': cam_board_online,
             'sensor_ready': sensor_ready,
-            'ip': active_camera_ip if cam_alive else get_current_camera_ip(),
+            'sensor_active': sensor_active,
+            'ip': active_camera_ip if cam_alive else (CANDIDATE_IPS[0] if CANDIDATE_IPS else '192.168.29.10'),
             'fps': round(stream_fps, 1) if cam_alive else 0.0,
             'temp_c': temp_c,
         },
@@ -3624,17 +3733,108 @@ def security_rotate_key_api():
     event_db.log_audit('user', 'api_key_rotated', 'security_config', 'Rotated X-Sentinel-API-Key')
     return jsonify({'ok': True, 'api_key': new_key, **security_guard.get_public_status()})
 
+hw_telemetry = {'cpu_pct': 0.0, 'gpu_pct': 0.0, 'npu_pct': 0.0}
+_hw_telemetry_proc = None
+
+def _stop_hw_telemetry():
+    global _hw_telemetry_proc
+    if _hw_telemetry_proc is not None:
+        try:
+            _hw_telemetry_proc.terminate()
+        except Exception:
+            pass
+        _hw_telemetry_proc = None
+
+atexit.register(_stop_hw_telemetry)
+
+def _hw_telemetry_sampler_thread():
+    """Sample real OS-wide CPU, Windows GPU, and Intel/AMD NPU utilization every 1s."""
+    global _hw_telemetry_proc
+    import subprocess, re
+    if psutil is not None:
+        try:
+            psutil.cpu_percent(interval=None)
+        except Exception:
+            pass
+
+    def _cpu_loop():
+        while stream_active:
+            if psutil is not None:
+                try:
+                    hw_telemetry['cpu_pct'] = round(psutil.cpu_percent(interval=1.0), 1)
+                except Exception:
+                    time.sleep(1.0)
+            else:
+                time.sleep(1.0)
+
+    threading.Thread(target=_cpu_loop, daemon=True).start()
+
+    creationflags = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
+    while stream_active:
+        try:
+            _hw_telemetry_proc = subprocess.Popen(
+                ['typeperf', r'\GPU Engine(*)\Utilization Percentage', '-si', '1'],
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+                creationflags=creationflags
+            )
+            header = None
+            gpu_luids = set()
+            col_meta = []
+            for raw_line in _hw_telemetry_proc.stdout:
+                if not stream_active:
+                    break
+                line = raw_line.strip()
+                if not line or line.startswith('(') or line.startswith('Exiting'):
+                    continue
+                parts = [p.strip('"') for p in line.split(',')]
+                if header is None:
+                    header = parts
+                    for idx, col in enumerate(header[1:], start=1):
+                        m = re.search(r'luid_(0x[0-9a-fA-F]+_0x[0-9a-fA-F]+).*?engtype_([^)\\]+)', col)
+                        if m:
+                            luid, eng = m.group(1), m.group(2).strip().lower()
+                            if eng == '3d':
+                                gpu_luids.add(luid)
+                            col_meta.append((idx, luid, eng))
+                    continue
+                if len(parts) < 2:
+                    continue
+                gpu_eng_sums = {}
+                npu_sum = 0.0
+                for idx, luid, eng in col_meta:
+                    if idx >= len(parts):
+                        continue
+                    try:
+                        val = float(parts[idx])
+                    except ValueError:
+                        continue
+                    if val <= 0.0:
+                        continue
+                    if luid in gpu_luids:
+                        gpu_eng_sums[eng] = gpu_eng_sums.get(eng, 0.0) + val
+                    elif 'compute' in eng:
+                        npu_sum += val
+                hw_telemetry['gpu_pct'] = round(min(100.0, max(gpu_eng_sums.values()) if gpu_eng_sums else 0.0), 1)
+                hw_telemetry['npu_pct'] = round(min(100.0, npu_sum), 1)
+        except Exception:
+            time.sleep(3.0)
+        finally:
+            _stop_hw_telemetry()
+
+threading.Thread(target=_hw_telemetry_sampler_thread, daemon=True).start()
+
 @app.route('/api/v1/system/healthz', methods=['GET'])
 def system_healthz_api():
     """Phase 12: Industrial readiness, thread liveness, memory & disk telemetry"""
     disk = shutil.disk_usage('.')
     rss_mb = None
-    cpu_pct = None
+    cpu_pct = hw_telemetry.get('cpu_pct')
     if psutil is not None:
         try:
             proc = psutil.Process(os.getpid())
             rss_mb = round(proc.memory_info().rss / (1024 * 1024), 1)
-            cpu_pct = round(psutil.cpu_percent(interval=None), 1)
+            if not cpu_pct:
+                cpu_pct = round(psutil.cpu_percent(interval=None), 1)
         except Exception:
             pass
     threads = {
@@ -3650,9 +3850,183 @@ def system_healthz_api():
         'disk_free_gb': round(disk.free / (1024 ** 3), 2),
         'process_rss_mb': rss_mb,
         'cpu_pct': cpu_pct,
+        'gpu_pct': hw_telemetry.get('gpu_pct', 0.0),
+        'npu_pct': hw_telemetry.get('npu_pct', 0.0),
         'vlm': vlm.get_status(),
         'security': security_guard.get_public_status(),
     })
+
+MODEL_CATALOG = {
+    'object_detection': [
+        {
+            'id': 'yolov8n',
+            'name': 'YOLOv8 Nano',
+            'path': os.path.join(MODELS_FOLDER, 'yolov8n.onnx'),
+            'weight_tier': 'light',
+            'ram_est': '~350 MB',
+            'description': 'Ultra-lightweight nano object detector for fast person/parcel detection.',
+            'usage': 'Best for 8 GB RAM PCs, low battery drain, or high-FPS streams (4–8 ms/frame).',
+        },
+        {
+            'id': 'yolo11s',
+            'name': 'YOLO11 Small',
+            'path': os.path.join(MODELS_FOLDER, 'yolo11s.onnx'),
+            'weight_tier': 'medium',
+            'ram_est': '~750 MB',
+            'description': 'Balanced precision & speed detector used as the default Sentinel engine.',
+            'usage': 'Great all-rounder for 16 GB+ PCs and NPU/iGPU offload (12–20 ms/frame).',
+        },
+        {
+            'id': 'yolo11m',
+            'name': 'YOLO11 Medium',
+            'path': os.path.join(MODELS_FOLDER, 'yolo11m.onnx'),
+            'weight_tier': 'heavy',
+            'ram_est': '~1.5 GB',
+            'description': 'High-accuracy medium detector for distant objects & low-light doors.',
+            'usage': 'Recommended for 16 GB (warning) or 24 GB+ systems (22–38 ms/frame).',
+        },
+        {
+            'id': 'yolo11l',
+            'name': 'YOLO11 Large',
+            'path': os.path.join(MODELS_FOLDER, 'yolo11l.onnx'),
+            'weight_tier': 'heaviest',
+            'ram_est': '~2.4 GB',
+            'description': 'Maximum-precision flagship detector with heavy compute & memory footprint.',
+            'usage': 'Best on 32 GB+ workstations or dedicated GPU/NPU INT8 (40–70 ms/frame).',
+        },
+    ],
+    'face_recognition': [
+        {
+            'id': 'mobilefacenet',
+            'name': 'InsightFace MobileFaceNet',
+            'path': os.path.join(MODELS_FOLDER, 'insightface', 'recognition', 'model.onnx'),
+            'weight_tier': 'light',
+            'ram_est': '~250 MB',
+            'description': 'Compact 13 MB face embedding model tuned for low-RAM & NPU efficiency.',
+            'usage': 'Ideal for 8 GB RAM laptops and maximum battery life.',
+        },
+        {
+            'id': 'sface',
+            'name': 'SFace 128-D',
+            'path': os.path.join(MODELS_FOLDER, 'face_recognition_sface_2021dec.onnx'),
+            'weight_tier': 'light',
+            'ram_est': '~450 MB',
+            'description': 'Fast 128-dimensional OpenCV/ONNX face recognizer.',
+            'usage': 'Reliable lightweight recognizer for 8–16 GB systems.',
+        },
+        {
+            'id': 'buffalo_m_r50',
+            'name': 'InsightFace ResNet50 (buffalo_m)',
+            'path': os.path.join(MODELS_FOLDER, 'insightface_m', 'recognition', 'model.onnx'),
+            'weight_tier': 'medium',
+            'ram_est': '~1.2 GB',
+            'description': 'High-accuracy 512-D ArcFace ResNet50 model for strict identity matching.',
+            'usage': 'Default high-accuracy recognizer; smooth on 16 GB+ systems, heavy on <=8 GB.',
+        },
+    ],
+}
+
+def _evaluate_ram_zone(weight_tier, total_ram_gb):
+    """Classify model into safe/optimal/warning/danger based on TOTAL physical RAM (accounting for iGPU UMA reserve)."""
+    if total_ram_gb < 12.5:
+        # <= 8 GB / 12 GB systems (<16 GB)
+        if weight_tier in ('heavy', 'heaviest'):
+            return 'danger', f"DANGER (<16 GB RAM): {total_ram_gb} GB usable RAM — high risk of severe lag or OOM."
+        if weight_tier == 'medium':
+            return 'warning', f"WARNING (<16 GB RAM): {total_ram_gb} GB usable RAM — may lag under load."
+        return 'safe', "Safe for <=8–12 GB RAM systems."
+    if total_ram_gb < 21.5:
+        # 16 GB tier (13.5-16 GB OS-visible after iGPU UMA reserve)
+        if weight_tier == 'heaviest':
+            return 'danger', f"DANGER (16 GB Tier): Exceeds comfortable 16 GB RAM headroom."
+        if weight_tier == 'heavy':
+            return 'warning', f"WARNING (16 GB Tier): Heavy RAM/thermal load on 16 GB."
+        return 'safe', "Cleared for 16 GB RAM."
+    if total_ram_gb < 29.5:
+        # 24 GB tier
+        if weight_tier == 'heaviest':
+            return 'warning', f"WARNING (24 GB Tier): High memory & thermal load on 24 GB."
+        return 'safe', "Cleared for 24 GB RAM."
+    # 32 GB+ Workstation tier
+    return 'optimal', "32 GB+ Tier: All models cleared for maximum performance."
+
+@app.route('/api/v1/models/catalog', methods=['GET'])
+def api_models_catalog():
+    import onnxruntime as ort
+    from npu import get_accelerator_summary
+    total_ram_gb = 16.0
+    if psutil is not None:
+        try:
+            total_ram_gb = round(psutil.virtual_memory().total / (1024 ** 3), 1)
+        except Exception:
+            pass
+    if total_ram_gb < 12.5:
+        ram_tier = '< 16 GB (Low-RAM Protection Active)'
+    elif total_ram_gb < 21.5:
+        ram_tier = '16 GB Tier'
+    elif total_ram_gb < 29.5:
+        ram_tier = '24 GB Tier'
+    else:
+        ram_tier = '32 GB+ Workstation Tier'
+
+    active_obj = os.path.abspath(getattr(vlm, 'model_path', '') or '')
+    active_face = os.path.abspath(SFACE_MODEL_PATH)
+
+    out_catalog = {}
+    for cat, items in MODEL_CATALOG.items():
+        enriched = []
+        for item in items:
+            p = item['path']
+            exists = os.path.exists(p)
+            size_mb = round(os.path.getsize(p) / (1024 * 1024), 2) if exists else None
+            zone, zone_note = _evaluate_ram_zone(item['weight_tier'], total_ram_gb)
+            is_active = (os.path.abspath(p) == active_obj) if cat == 'object_detection' else (os.path.abspath(p) == active_face)
+            enriched.append({
+                'id': item['id'],
+                'name': item['name'],
+                'path': p,
+                'exists': exists,
+                'size_mb': size_mb,
+                'weight_tier': item['weight_tier'],
+                'ram_est': item['ram_est'],
+                'description': item['description'],
+                'usage': item['usage'],
+                'zone': zone,
+                'zone_note': zone_note,
+                'active': is_active,
+            })
+        out_catalog[cat] = enriched
+
+    return jsonify({
+        'ok': True,
+        'total_ram_gb': total_ram_gb,
+        'ram_tier_label': ram_tier,
+        'accelerator': get_accelerator_summary(ort.get_available_providers()),
+        'catalog': out_catalog,
+    })
+
+@app.route('/api/v1/models/select', methods=['POST'])
+def api_models_select():
+    global SFACE_MODEL_PATH
+    data = request.get_json(silent=True) or {}
+    cat = str(data.get('category') or '')
+    mid = str(data.get('id') or '')
+    items = MODEL_CATALOG.get(cat, [])
+    target = next((x for x in items if x['id'] == mid), None)
+    if not target:
+        return jsonify({'ok': False, 'error': 'Unknown model id'}), 404
+    if not os.path.exists(target['path']):
+        return jsonify({'ok': False, 'error': f"Model file not found on disk: {target['path']}"}), 400
+    try:
+        if cat == 'object_detection':
+            vlm.model_path = target['path']
+            vlm.reload()
+        elif cat == 'face_recognition':
+            SFACE_MODEL_PATH = target['path']
+            init_cv_models()
+        return jsonify({'ok': True, 'category': cat, 'id': mid, 'name': target['name']})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
 
 def _format_wroom_event_reason(ev):
     ev_type = str(ev.get('type') or 'CUSTOM')

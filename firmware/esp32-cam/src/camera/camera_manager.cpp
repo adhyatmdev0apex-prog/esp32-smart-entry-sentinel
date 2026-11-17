@@ -19,6 +19,24 @@ static size_t s_last_len = 0;
 static char s_cam_log[160] = "none";
 static SemaphoreHandle_t s_camera_mutex = NULL;
 static uint32_t s_last_retry_ms = 0;
+static TaskHandle_t s_wake_task_handle = NULL;
+
+static void cameraWakeTask(void* param) {
+  (void)param;
+  for (;;) {
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    setCameraSensorActive(true);
+  }
+}
+
+void requestCameraWakeAsync() {
+  if (s_wake_task_handle == NULL) {
+    xTaskCreatePinnedToCore(cameraWakeTask, "cam_wake", 4096, NULL, 4, &s_wake_task_handle, 1);
+  }
+  if (s_wake_task_handle != NULL) {
+    xTaskNotifyGive(s_wake_task_handle);
+  }
+}
 
 static int cam_log_vprintf(const char* fmt, va_list args) {
   char tmp[160];

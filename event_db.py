@@ -28,10 +28,26 @@ class EventDatabase:
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA journal_mode=WAL;")
         conn.execute("PRAGMA synchronous=NORMAL;")
+        conn.execute("PRAGMA busy_timeout=5000;")
+        conn.execute("PRAGMA foreign_keys=ON;")
         return conn
 
     def _init_schema(self):
         with self._lock:
+            if os.path.exists(self.db_path):
+                try:
+                    qc = self._connect()
+                    res = qc.execute("PRAGMA quick_check;").fetchone()
+                    qc.close()
+                    if not res or str(res[0]).lower() != "ok":
+                        raise sqlite3.DatabaseError(f"quick_check failed: {res}")
+                except sqlite3.DatabaseError:
+                    corrupt_path = f"{self.db_path}.corrupt.{int(time.time())}"
+                    try:
+                        os.replace(self.db_path, corrupt_path)
+                        print(f"[!] EventDB corruption detected -> quarantined to {corrupt_path}")
+                    except OSError:
+                        pass
             conn = self._connect()
             try:
                 conn.executescript(
