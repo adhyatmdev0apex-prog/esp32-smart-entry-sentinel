@@ -12,6 +12,7 @@
 #include "app_config.h"
 
 #include <esp_http_server.h>
+#include <esp_task_wdt.h>
 #include <ArduinoOTA.h>
 #include <FS.h>
 #include <SPIFFS.h>
@@ -195,6 +196,36 @@ static esp_err_t control_handler(httpd_req_t* req) {
 
   if (!strcmp(variable, "fan_freq")) {
     setCoolingPwmFrequency((uint32_t)val);
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    return httpd_resp_send(req, "OK", 2);
+  }
+
+  if (!strcmp(variable, "fan_manual_pct")) {
+    setCoolingManualDuty((int16_t)val);
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    return httpd_resp_send(req, "OK", 2);
+  }
+
+  if (!strcmp(variable, "fan_standby_pct")) {
+    setCoolingStandbyDuty((uint8_t)val);
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    return httpd_resp_send(req, "OK", 2);
+  }
+
+  if (!strcmp(variable, "fan_min_pct")) {
+    setCoolingMinDuty((uint8_t)val);
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    return httpd_resp_send(req, "OK", 2);
+  }
+
+  if (!strcmp(variable, "fan_temp_step")) {
+    setCoolingTempStep((float)val);
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    return httpd_resp_send(req, "OK", 2);
+  }
+
+  if (!strcmp(variable, "fan_step_pct")) {
+    setCoolingStepDuty((uint8_t)val);
     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
     return httpd_resp_send(req, "OK", 2);
   }
@@ -529,6 +560,7 @@ void initWebApi() {
   // ArduinoOTA Setup
   ArduinoOTA.setHostname(CFG_MDNS_HOSTNAME);
   ArduinoOTA.onStart([]() {
+    esp_task_wdt_delete(NULL);
     setFlashBrightness(0);
 #if HAS_CAMERA_FEATURE
     setStreamingPaused(true);
@@ -546,6 +578,7 @@ void initWebApi() {
     postEvent(EVENT_OTA_END, "OTA");
   });
   ArduinoOTA.onError([](ota_error_t err) {
+    esp_task_wdt_add(NULL);
     setFlashBrightness(0);
 #if HAS_CAMERA_FEATURE
     setStreamingPaused(false);

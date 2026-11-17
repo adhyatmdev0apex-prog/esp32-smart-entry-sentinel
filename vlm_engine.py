@@ -44,20 +44,30 @@ COCO_CLASSES = [
 ]
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+YOLO11M_MODEL = os.path.join(BASE_DIR, "models", "yolo11m.onnx")
 YOLO11S_MODEL = os.path.join(BASE_DIR, "models", "yolo11s.onnx")
-DEFAULT_YOLO_MODEL = YOLO11S_MODEL if os.path.exists(YOLO11S_MODEL) else os.path.join(BASE_DIR, "models", "yolov8n.onnx")
+if os.path.exists(YOLO11S_MODEL):
+    DEFAULT_YOLO_MODEL = YOLO11S_MODEL
+else:
+    DEFAULT_YOLO_MODEL = os.path.join(BASE_DIR, "models", "yolov8n.onnx")
 
 
 class ObjectDetectionEngine:
-    def __init__(self, model_path=DEFAULT_YOLO_MODEL, use_gpu=True, cooldown_s=0.22):
-        is_y11s = os.path.basename(model_path).startswith("yolo11s")
-        self.model_name = "yolo11s-416 (COCO 80 classes)" if is_y11s else "yolov8n-320 (COCO 80 classes)"
+    def __init__(self, model_path=DEFAULT_YOLO_MODEL, use_gpu=True, cooldown_s=0.0):
+        bname = os.path.basename(model_path).lower()
+        if bname.startswith("yolo11m"):
+            self.model_name = "yolo11m-416 (COCO 80 classes)"
+        elif bname.startswith("yolo11s"):
+            self.model_name = "yolo11s-416 (COCO 80 classes)"
+        else:
+            self.model_name = "yolov8n-320 (COCO 80 classes)"
+        is_y11_heavy = "yolo11" in model_path.lower()
         self.model_path = model_path
         self.use_gpu = use_gpu
-        self.cooldown_s = cooldown_s
-        self.min_cooldown_s = 0.14
+        self.cooldown_s = 0.0
+        self.min_cooldown_s = 0.0
         self.max_cooldown_s = 0.65
-        self.input_size = 416 if is_y11s else 320
+        self.input_size = 416 if is_y11_heavy else 320
         self.last_inference_time = 0.0
         self.last_infer_ms = 0.0
         self.gpu_duty_pct = 0.0
@@ -175,11 +185,12 @@ class ObjectDetectionEngine:
             return []
 
         now = time.time()
-        if not force and (now - self.last_inference_time) < self.cooldown_s:
+        npu_active = any((p[0] if isinstance(p, tuple) else p) == "VitisAIExecutionProvider" for p in self.providers)
+        if not npu_active and not force and (now - self.last_inference_time) < self.cooldown_s:
             with self.lock:
                 return list(self.latest_boxes)
 
-        if not force and HAS_PSUTIL:
+        if not npu_active and not force and HAS_PSUTIL:
             cpu_now = psutil.cpu_percent(interval=None)
             self.last_cpu_pct = cpu_now
             if cpu_now > 36.0:
@@ -206,6 +217,9 @@ class ObjectDetectionEngine:
             try:
                 outputs = self.session.run(None, {self.input_name: blob})[0]
             except Exception as infer_err:
+                if os.environ.get("SENTINEL_NPU_ONLY", "0").strip().lower() in ("1", "true", "yes"):
+                    print(f"[NPU_ONLY] ERROR during NPU inference: {infer_err}")
+                    raise
                 if self.providers != ["CPUExecutionProvider"]:
                     print(f"[!] ObjectDetector EP error ({infer_err}), falling back to CPUExecutionProvider")
                     self.providers = ["CPUExecutionProvider"]
@@ -220,11 +234,14 @@ class ObjectDetectionEngine:
                 dt_ms = max(infer_ms, (self.last_inference_time - prev_t) * 1000.0)
                 duty = min(100.0, (infer_ms / dt_ms) * 100.0)
                 self.gpu_duty_pct = 0.7 * self.gpu_duty_pct + 0.3 * duty if self.gpu_duty_pct > 0 else duty
-                # Adaptive governor: target 7-9% GPU (hard cap 15%), CPU <= 36%
-                if self.gpu_duty_pct > 14.5 or self.last_cpu_pct > 32.0:
-                    self.cooldown_s = min(self.max_cooldown_s, self.cooldown_s + 0.04)
-                elif self.gpu_duty_pct < 7.0 and self.last_cpu_pct < 28.0:
-                    self.cooldown_s = max(self.min_cooldown_s, self.cooldown_s - 0.02)
+                # Adaptive governor only when not running zero-cooldown NPU mode
+                if not npu_active:
+                    if self.gpu_duty_pct > 14.5 or self.last_cpu_pct > 32.0:
+                        self.cooldown_s = min(self.max_cooldown_s, self.cooldown_s + 0.04)
+                    elif self.gpu_duty_pct < 7.0 and self.last_cpu_pct < 28.0:
+                        self.cooldown_s = max(self.min_cooldown_s, self.cooldown_s - 0.02)
+                else:
+                    self.cooldown_s = 0.0
 
             preds = np.squeeze(outputs, axis=0).T  # (2100, 84)
             boxes_xywh = preds[:, :4]
@@ -306,7 +323,8 @@ class ObjectDetectionEngine:
                     except Exception:
                         pass
                 self.task_queue.task_done()
-                time.sleep(0.5)
+                if not any((p[0] if isinstance(p, tuple) else p) == "VitisAIExecutionProvider" for p in self.providers):
+                    time.sleep(0.5)
             except queue.Empty:
                 continue
 

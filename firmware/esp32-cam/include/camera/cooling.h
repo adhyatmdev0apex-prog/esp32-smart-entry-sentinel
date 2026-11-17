@@ -20,6 +20,11 @@ void setCoolingPausedForOTA(bool paused);
 void setCoolingReferenceTemp(float ref_temp_c);
 void setCoolingXgaThreshold(float high_temp_c);
 void setCoolingPwmFrequency(uint32_t freq_hz);
+void setCoolingManualDuty(int16_t duty_pct);
+void setCoolingStandbyDuty(uint8_t duty_pct);
+void setCoolingMinDuty(uint8_t duty_pct);
+void setCoolingTempStep(float step_deg_c);
+void setCoolingStepDuty(uint8_t step_pct);
 
 uint8_t getCoolingDutyPercent();
 uint32_t getCoolingPwmRaw();

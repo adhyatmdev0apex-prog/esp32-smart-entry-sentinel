@@ -14,6 +14,11 @@ static cooling_policy_t s_active_policy = COOLING_POLICY_UNIVERSAL;
 static float s_ref_temp_c = CFG_COOLING_REF_TEMP_C;
 static float s_xga_high_temp_threshold_c = CFG_COOLING_XGA_THRESH_C;
 static uint32_t s_pwm_freq_hz = CFG_COOLING_PWM_FREQ_HZ;
+static int16_t s_manual_duty_pct = -1; // -1 = Auto adaptive, 0..100 = Fixed manual speed
+static uint8_t s_standby_duty_pct = 60; // Low-Power Standby baseline
+static uint8_t s_min_duty_pct = CFG_COOLING_MIN_DUTY_PCT; // Active Cam baseline
+static float s_temp_step_c = CFG_COOLING_TEMP_STEP_DEG_C;
+static uint8_t s_step_duty_pct = CFG_COOLING_STEP_DUTY_PCT;
 
 static uint8_t s_target_duty_pct = CFG_COOLING_MIN_DUTY_PCT;
 static uint8_t s_current_duty_pct = 0;
@@ -88,8 +93,9 @@ static void applyPwmDuty(uint8_t duty_pct) {
     return;
   }
 
-  // Absolute minimum speed clamp (50% floor)
-  if (duty_pct < CFG_COOLING_MIN_DUTY_PCT) duty_pct = CFG_COOLING_MIN_DUTY_PCT;
+  // Absolute minimum speed clamp (0 in manual mode, s_min_duty_pct during active cam, s_standby_duty_pct in Low-Power Standby)
+  uint8_t min_floor = (s_manual_duty_pct >= 0) ? 0 : (isCameraSensorActive() ? s_min_duty_pct : s_standby_duty_pct);
+  if (duty_pct < min_floor) duty_pct = min_floor;
   if (duty_pct > 100) duty_pct = 100;
 
   uint32_t raw = (uint32_t)((duty_pct * 255 + 50) / 100);
@@ -105,16 +111,16 @@ static uint8_t calculateDutyForPolicy(cooling_policy_t policy, float temp_c, boo
 
   if (!temp_valid) {
     if (policy == COOLING_POLICY_XGA) return 100;
-    else if (policy == COOLING_POLICY_LOW_POWER) return CFG_COOLING_MIN_DUTY_PCT;
+    else if (policy == COOLING_POLICY_LOW_POWER) return s_min_duty_pct;
     else return 75;
   }
 
   float rise = temp_c - s_ref_temp_c;
   int steps = 0;
-  if (rise > 0.0f) {
-    steps = (int)(rise / CFG_COOLING_TEMP_STEP_DEG_C);
+  if (rise > 0.0f && s_temp_step_c > 0.1f) {
+    steps = (int)(rise / s_temp_step_c);
   }
-  int step_increase = steps * CFG_COOLING_STEP_DUTY_PCT;
+  int step_increase = steps * (int)s_step_duty_pct;
 
   if (policy == COOLING_POLICY_XGA) {
     if (temp_c >= s_xga_high_temp_threshold_c) return 100;
@@ -125,14 +131,14 @@ static uint8_t calculateDutyForPolicy(cooling_policy_t policy, float temp_c, boo
   }
 
   if (policy == COOLING_POLICY_LOW_POWER) {
-    int duty = CFG_COOLING_MIN_DUTY_PCT + step_increase;
-    if (duty < CFG_COOLING_MIN_DUTY_PCT) duty = CFG_COOLING_MIN_DUTY_PCT;
+    int duty = (int)s_min_duty_pct + step_increase;
+    if (duty < (int)s_min_duty_pct) duty = (int)s_min_duty_pct;
     if (duty > 100) duty = 100;
     return (uint8_t)duty;
   }
 
-  int duty = CFG_COOLING_MIN_DUTY_PCT + step_increase;
-  if (duty < CFG_COOLING_MIN_DUTY_PCT) duty = CFG_COOLING_MIN_DUTY_PCT;
+  int duty = (int)s_min_duty_pct + step_increase;
+  if (duty < (int)s_min_duty_pct) duty = (int)s_min_duty_pct;
   if (duty > 100) duty = 100;
   return (uint8_t)duty;
 }
@@ -162,13 +168,22 @@ static void evaluateCooling(bool force_reeval) {
   s_last_measured_temp_c = raw_temp;
   s_last_temp_valid = temp_valid;
 
-  uint8_t target_duty = calculateDutyForPolicy(s_active_policy, raw_temp, temp_valid);
   float cal_temp = raw_temp - 26.0f;
-  if (!isCameraSensorActive() && temp_valid && cal_temp < 52.0f) {
-    target_duty = 0; // Silent fan during Low-Power Standby
-  } else if (temp_valid && cal_temp > 78.0f) {
-    target_duty = 100;
-    logWarn("COOLING", "Thermal guard: high die temp %.1f°C -> fan 100%%", cal_temp);
+  uint8_t target_duty = 0;
+  if (s_manual_duty_pct >= 0) {
+    target_duty = (uint8_t)s_manual_duty_pct;
+    if (temp_valid && cal_temp > 82.0f) {
+      target_duty = 100;
+      logWarn("COOLING", "Thermal guard (manual override): high die temp %.1f°C -> fan 100%%", cal_temp);
+    }
+  } else {
+    target_duty = calculateDutyForPolicy(s_active_policy, raw_temp, temp_valid);
+    if (!isCameraSensorActive() && (!temp_valid || cal_temp < 52.0f)) {
+      target_duty = s_standby_duty_pct; // Hold configurable baseline during Low-Power Standby
+    } else if (temp_valid && cal_temp > 78.0f) {
+      target_duty = 100;
+      logWarn("COOLING", "Thermal guard: high die temp %.1f°C -> fan 100%%", cal_temp);
+    }
   }
   s_target_duty_pct = target_duty;
 
@@ -265,6 +280,38 @@ void setCoolingPwmFrequency(uint32_t freq_hz) {
   }
 }
 
+void setCoolingManualDuty(int16_t duty_pct) {
+  if (duty_pct < -1) duty_pct = -1;
+  if (duty_pct > 100) duty_pct = 100;
+  s_manual_duty_pct = duty_pct;
+  evaluateCooling(true);
+}
+
+void setCoolingStandbyDuty(uint8_t duty_pct) {
+  if (duty_pct > 100) duty_pct = 100;
+  s_standby_duty_pct = duty_pct;
+  evaluateCooling(true);
+}
+
+void setCoolingMinDuty(uint8_t duty_pct) {
+  if (duty_pct > 100) duty_pct = 100;
+  s_min_duty_pct = duty_pct;
+  evaluateCooling(true);
+}
+
+void setCoolingTempStep(float step_deg_c) {
+  if (step_deg_c >= 1.0f && step_deg_c <= 20.0f) {
+    s_temp_step_c = step_deg_c;
+    evaluateCooling(true);
+  }
+}
+
+void setCoolingStepDuty(uint8_t step_pct) {
+  if (step_pct > 25) step_pct = 25;
+  s_step_duty_pct = step_pct;
+  evaluateCooling(true);
+}
+
 uint8_t getCoolingDutyPercent() { return s_current_duty_pct; }
 uint32_t getCoolingPwmRaw() { return s_applied_pwm_raw; }
 uint32_t getCoolingPwmFrequency() { return s_pwm_freq_hz; }
@@ -275,15 +322,20 @@ cooling_policy_t getCoolingActivePolicy() { return s_active_policy; }
 
 void getCoolingDiagnostics(char* buf, size_t len) {
   snprintf(buf, len,
-           "\"fan_gpio\":%d,\"fan_pct\":%u,\"fan_pwm\":%u,\"fan_min_pct\":%u,\"fan_freq\":%u,\"fan_policy\":\"%s\","
-           "\"fan_ref_c\":%.1f,\"fan_xga_thresh_c\":%.1f,\"fan_kick\":%s",
+           "\"fan_gpio\":%d,\"fan_pct\":%u,\"fan_pwm\":%u,\"fan_manual_pct\":%d,\"fan_standby_pct\":%u,"
+           "\"fan_min_pct\":%u,\"fan_freq\":%u,\"fan_policy\":\"%s\","
+           "\"fan_ref_c\":%.1f,\"fan_temp_step\":%.1f,\"fan_step_pct\":%u,\"fan_xga_thresh_c\":%.1f,\"fan_kick\":%s",
            PIN_COOLING_FAN,
            (unsigned int)s_current_duty_pct,
            (unsigned int)s_applied_pwm_raw,
-           (unsigned int)CFG_COOLING_MIN_DUTY_PCT,
+           (int)s_manual_duty_pct,
+           (unsigned int)s_standby_duty_pct,
+           (unsigned int)s_min_duty_pct,
            (unsigned int)s_pwm_freq_hz,
            getCoolingPolicyName(),
            s_ref_temp_c,
+           s_temp_step_c,
+           (unsigned int)s_step_duty_pct,
            s_xga_high_temp_threshold_c,
            s_kickstart_active ? "true" : "false");
 }

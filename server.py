@@ -2959,18 +2959,16 @@ CAMERA_SETTING_RANGES = {
     'hmirror': {0, 1},
     'awb': {0, 1},
     'aec': {0, 1},
+    'fan_manual_pct': range(-1, 101),
+    'fan_standby_pct': range(0, 101),
+    'fan_min_pct': range(0, 101),
+    'fan_ref_temp': range(20, 91),
+    'fan_temp_step': range(1, 21),
+    'fan_step_pct': range(0, 26),
 }
 
 def _load_camera_defaults():
-    if os.path.exists(CAMERA_DEFAULTS_FILE):
-        try:
-            with open(CAMERA_DEFAULTS_FILE, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                if isinstance(data, dict):
-                    return data
-        except Exception:
-            pass
-    return {
+    base_defaults = {
         'framesize': 9,
         'quality': 12,
         'flash': 0,
@@ -2981,7 +2979,22 @@ def _load_camera_defaults():
         'hmirror': 0,
         'awb': 1,
         'aec': 1,
+        'fan_manual_pct': -1,
+        'fan_standby_pct': 60,
+        'fan_min_pct': 70,
+        'fan_ref_temp': 60,
+        'fan_temp_step': 5,
+        'fan_step_pct': 5,
     }
+    if os.path.exists(CAMERA_DEFAULTS_FILE):
+        try:
+            with open(CAMERA_DEFAULTS_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                if isinstance(data, dict):
+                    return {**base_defaults, **data}
+        except Exception:
+            pass
+    return base_defaults
 
 def _save_camera_defaults(defaults_dict):
     os.makedirs(os.path.dirname(CAMERA_DEFAULTS_FILE), exist_ok=True)
@@ -3067,6 +3080,12 @@ def set_camera_setting():
         'hmirror': {0, 1},
         'awb': {0, 1},
         'aec': {0, 1},
+        'fan_manual_pct': range(-1, 101),
+        'fan_standby_pct': range(0, 101),
+        'fan_min_pct': range(0, 101),
+        'fan_ref_temp': range(20, 91),
+        'fan_temp_step': range(1, 21),
+        'fan_step_pct': range(0, 26),
     }
     if not isinstance(var_name, str) or var_name not in setting_ranges:
         return jsonify({'error': f'Unsupported camera setting: {var_name}'}), 400
@@ -3247,6 +3266,64 @@ def api_testing_simulate():
             b64 = base64.b64encode(img_bytes).decode('ascii')
             return jsonify({'ok': st == 200, 'action': action, 'latency_ms': round((time.time() - t0) * 1000, 1),
                             'bytes': len(img_bytes), 'image_data_url': f"data:image/jpeg;base64,{b64}"})
+
+        if action == 'npu_stress_5s':
+            if not vlm.is_loaded or vlm.session is None:
+                return jsonify({'ok': False, 'action': action, 'error': 'Model session not loaded'}), 400
+            bench_img = np.zeros((480, 640, 3), dtype=np.uint8)
+            blob, *_ = vlm._letterbox(bench_img)
+            inp_name = vlm.input_name
+            sess = vlm.session
+            counts = [0, 0]
+            st_end = time.time() + 5.0
+            def _stress_worker(idx):
+                c = 0
+                while time.time() < st_end:
+                    sess.run(None, {inp_name: blob})
+                    c += 1
+                counts[idx] = c
+            t1 = threading.Thread(target=_stress_worker, args=(0,))
+            t2 = threading.Thread(target=_stress_worker, args=(1,))
+            t1.start(); t2.start()
+            t1.join(); t2.join()
+            count = counts[0] + counts[1]
+            elapsed_s = round(time.time() - t0, 2)
+            fps_ach = round(count / max(0.1, elapsed_s), 1)
+            return jsonify({
+                'ok': True, 'action': action, 'count': count, 'fps': fps_ach,
+                'vlm_providers': sess.get_providers(),
+                'latency_ms': round(elapsed_s * 1000, 1),
+            })
+
+        if action == 'set_exec_profile':
+            global mobilefacenet_session
+            import onnxruntime as ort
+            from npu.accelerator_manager import get_providers_for_profile
+            profile = str(data.get('profile') or 'all')
+            obj_p, face_p, label = get_providers_for_profile(ort.get_available_providers(), profile)
+            if not obj_p or not face_p:
+                return jsonify({'ok': False, 'action': action, 'latency_ms': round((time.time() - t0) * 1000, 1),
+                                'error': f'{label}: required provider not available in this Python runtime'}), 400
+            vlm.providers = obj_p
+            vlm.active_provider = label
+            vlm.reload()
+            sess_opts = ort.SessionOptions()
+            sess_opts.log_severity_level = 3
+            mobilefacenet_session = ort.InferenceSession(SFACE_MODEL_PATH, sess_options=sess_opts, providers=face_p)
+            bench_img = np.zeros((480, 640, 3), dtype=np.uint8)
+            bt0 = time.time()
+            vlm.detect_objects(bench_img, force=True)
+            infer_ms = round((time.time() - bt0) * 1000, 1)
+            return jsonify({
+                'ok': True,
+                'action': action,
+                'profile': profile,
+                'label': label,
+                'vlm_providers': vlm.session.get_providers() if vlm.session else [],
+                'face_providers': mobilefacenet_session.get_providers(),
+                'infer_ms': infer_ms,
+                'latency_ms': round((time.time() - t0) * 1000, 1),
+            })
 
         if action == 'connect_fallback_ap':
             import subprocess, tempfile
@@ -4005,12 +4082,43 @@ def api_models_catalog():
         'catalog': out_catalog,
     })
 
+def _get_secrets_h_admin_creds():
+    """Read SECRET_ADMIN_USER and SECRET_ADMIN_PASSWORD from firmware secrets.h."""
+    import re
+    secrets_path = os.path.join('firmware', 'esp32-cam', 'include', 'secrets.h')
+    admin_u, admin_p = 'admin', 'admin_passwd'
+    if os.path.exists(secrets_path):
+        try:
+            txt = open(secrets_path, 'r', encoding='utf-8', errors='ignore').read()
+            mu = re.search(r'#define\s+SECRET_ADMIN_USER\s+"([^"]*)"', txt)
+            mp = re.search(r'#define\s+SECRET_ADMIN_PASSWORD\s+"([^"]*)"', txt)
+            if mu:
+                admin_u = mu.group(1)
+            if mp:
+                admin_p = mp.group(1)
+        except Exception:
+            pass
+    return admin_u, admin_p
+
+@app.route('/api/v1/models/authorize', methods=['POST'])
+def api_models_authorize():
+    data = request.get_json(silent=True) or {}
+    u = str(data.get('username') or '').strip()
+    p = str(data.get('password') or '')
+    exp_u, exp_p = _get_secrets_h_admin_creds()
+    if u.lower() == exp_u.lower() and p == exp_p:
+        return jsonify({'ok': True})
+    return jsonify({'ok': False, 'error': 'Invalid credentials (must match secrets.h admin credentials).'}), 403
+
 @app.route('/api/v1/models/select', methods=['POST'])
 def api_models_select():
-    global SFACE_MODEL_PATH
+    global SFACE_MODEL_PATH, mobilefacenet_session
+    import onnxruntime as ort
+    from npu import get_execution_providers
     data = request.get_json(silent=True) or {}
     cat = str(data.get('category') or '')
     mid = str(data.get('id') or '')
+    exec_mode = data.get('mode')  # 'npu', 'gpu', 'hybrid_90_10', or None
     items = MODEL_CATALOG.get(cat, [])
     target = next((x for x in items if x['id'] == mid), None)
     if not target:
@@ -4019,14 +4127,131 @@ def api_models_select():
         return jsonify({'ok': False, 'error': f"Model file not found on disk: {target['path']}"}), 400
     try:
         if cat == 'object_detection':
+            # Continuous detector (~90% workload): NPU+CPU when npu/hybrid_90_10, GPU when mode='gpu'
+            provs, active_target = get_execution_providers(ort.get_available_providers(), use_gpu=(exec_mode == 'gpu'), use_npu=(exec_mode != 'gpu'), mode=exec_mode)
             vlm.model_path = target['path']
+            vlm.providers = provs
+            vlm.active_provider = active_target
             vlm.reload()
         elif cat == 'face_recognition':
+            # Face embedding (~10% workload): GPU in hybrid_90_10 or gpu mode, NPU in npu mode
+            face_mode = 'gpu' if exec_mode == 'hybrid_90_10' else exec_mode
+            provs, active_target = get_execution_providers(ort.get_available_providers(), use_gpu=True, use_npu=(face_mode != 'gpu'), mode=face_mode)
             SFACE_MODEL_PATH = target['path']
-            init_cv_models()
-        return jsonify({'ok': True, 'category': cat, 'id': mid, 'name': target['name']})
+            sess_opts = ort.SessionOptions()
+            sess_opts.log_severity_level = 3
+            mobilefacenet_session = ort.InferenceSession(SFACE_MODEL_PATH, sess_options=sess_opts, providers=provs)
+        return jsonify({'ok': True, 'category': cat, 'id': mid, 'name': target['name'], 'mode': exec_mode or 'auto', 'target': active_target})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
+
+_model_job_lock = threading.Lock()
+_model_job_state = {
+    'running': False,
+    'stage': 'idle',
+    'pct': 0,
+    'model_name': '',
+    'target_label': '',
+    'steps': [],
+    'status_text': '',
+    'error': None,
+}
+
+def _set_model_job(stage=None, pct=None, status_text=None, running=None, error=None):
+    with _model_job_lock:
+        if running is not None:
+            _model_job_state['running'] = running
+        if stage is not None:
+            _model_job_state['stage'] = stage
+        if pct is not None:
+            _model_job_state['pct'] = pct
+        if status_text is not None:
+            _model_job_state['status_text'] = status_text
+            if not _model_job_state['steps'] or _model_job_state['steps'][-1] != status_text:
+                _model_job_state['steps'].append(status_text)
+                _model_job_state['steps'] = _model_job_state['steps'][-6:]
+        if error is not None:
+            _model_job_state['error'] = error
+
+@app.route('/api/v1/models/job', methods=['GET'])
+def api_models_job_status():
+    with _model_job_lock:
+        return jsonify({'ok': True, **_model_job_state})
+
+@app.route('/api/v1/models/prepare_and_select', methods=['POST'])
+def api_models_prepare_and_select():
+    data = request.get_json(silent=True) or {}
+    cat = str(data.get('category') or '')
+    mid = str(data.get('id') or '')
+    exec_mode = str(data.get('mode') or 'npu_cpu')
+    items = MODEL_CATALOG.get(cat, [])
+    target = next((x for x in items if x['id'] == mid), None)
+    if not target:
+        return jsonify({'ok': False, 'error': 'Unknown model id'}), 404
+
+    with _model_job_lock:
+        if _model_job_state['running']:
+            return jsonify({'ok': False, 'error': 'Another model prepare/compile job is already running.'}), 409
+        _model_job_state.update({
+            'running': True, 'stage': 'queued', 'pct': 5,
+            'model_name': target['name'], 'target_label': exec_mode,
+            'steps': [f"Preparing {target['name']} ({exec_mode})..."],
+            'status_text': f"Preparing {target['name']} ({exec_mode})...",
+            'error': None,
+        })
+
+    def _run_prepare():
+        global SFACE_MODEL_PATH, mobilefacenet_session
+        import subprocess, shutil
+        import onnxruntime as ort
+        from npu.accelerator_manager import get_providers_for_profile
+
+        try:
+            model_path = target['path']
+            if not os.path.exists(model_path):
+                if cat != 'object_detection' or not mid.startswith('yolo'):
+                    raise RuntimeError(f"Auto-download not supported for {target['name']}. Place file at {model_path}.")
+                _set_model_job('downloading', 20, f"Downloading {mid}.pt weights...")
+                py_exe = r"C:\Python314\python.exe" if os.path.exists(r"C:\Python314\python.exe") else sys.executable
+                pt_name = f"{mid}.pt"
+                export_code = (
+                    f"from ultralytics import YOLO; import os, shutil; "
+                    f"m = YOLO('{pt_name}'); out = m.export(format='onnx', imgsz=416, simplify=True); "
+                    f"shutil.move(out, r'{model_path}'); "
+                    f"os.path.exists('{pt_name}') and os.remove('{pt_name}')"
+                )
+                _set_model_job('exporting', 40, f"Exporting {target['name']} to 416×416 ONNX...")
+                res = subprocess.run([py_exe, "-c", export_code], capture_output=True, text=True, timeout=300)
+                if res.returncode != 0 or not os.path.exists(model_path):
+                    raise RuntimeError(f"ONNX export failed: {(res.stderr or res.stdout)[-240:]}")
+
+            obj_p, face_p, label = get_providers_for_profile(ort.get_available_providers(), exec_mode)
+            if not obj_p or not face_p:
+                raise RuntimeError(f"{label} is not available in this Python runtime.")
+
+            uses_npu = any((p[0] if isinstance(p, tuple) else p) == 'VitisAIExecutionProvider' for p in (obj_p if cat == 'object_detection' else face_p))
+            if uses_npu:
+                _set_model_job('compiling', 68, f"Compiling & caching {target['name']} for AMD XDNA 2 NPU (one-time)...")
+            else:
+                _set_model_job('loading', 75, f"Loading {target['name']} onto {label}...")
+
+            if cat == 'object_detection':
+                vlm.model_path = model_path
+                vlm.providers = obj_p
+                vlm.active_provider = label
+                vlm.reload()
+            else:
+                SFACE_MODEL_PATH = model_path
+                sess_opts = ort.SessionOptions()
+                sess_opts.log_severity_level = 3
+                mobilefacenet_session = ort.InferenceSession(SFACE_MODEL_PATH, sess_options=sess_opts, providers=face_p)
+
+            _set_model_job('done', 100, f"✅ {target['name']} is active on {label}!", running=False)
+        except Exception as e:
+            _set_model_job('error', 100, f"❌ Failed: {e}", running=False, error=str(e))
+
+    threading.Thread(target=_run_prepare, daemon=True).start()
+    return jsonify({'ok': True, 'started': True, 'model': target['name'], 'mode': exec_mode})
 
 def _format_wroom_event_reason(ev):
     ev_type = str(ev.get('type') or 'CUSTOM')

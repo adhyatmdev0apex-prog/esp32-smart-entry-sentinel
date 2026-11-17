@@ -2568,6 +2568,62 @@
             </div>
 
             <div class="card" style="padding: 20px; margin-bottom: 20px;">
+                <div class="card-header" style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                    <h2 style="margin:0;">🌀 Cooling Fan Speed &amp; Thermal Curve</h2>
+                    <span id="fanLiveBadge" style="font-size:0.8rem; padding:4px 10px; border-radius:999px; background:#0f172a; border:1px solid #334155; color:#94a3b8;">
+                        Live: --%
+                    </span>
+                </div>
+                <p style="color:#94a3b8; font-size:0.86rem; margin-bottom:14px;">
+                    Configure manual fan speed override or adaptive speeds for Low-Power Standby, Camera-ON mode, and temperature-based speed increases. Saved to <code>data/camera_defaults.json</code> and auto-applied on boot/reconnect.
+                </p>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:12px; font-size:0.84rem;">
+                    <div>
+                        <label style="display:block; color:#94a3b8; margin-bottom:4px;">Fan Mode</label>
+                        <select id="defFanMode" onchange="toggleFanManualInput()"
+                            style="width:100%; padding:7px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+                            <option value="auto">Auto (Adaptive Thermal Curve)</option>
+                            <option value="manual">Manual Fixed Speed Override</option>
+                        </select>
+                    </div>
+                    <div id="defFanManualWrap" style="display:none;">
+                        <label style="display:block; color:#94a3b8; margin-bottom:4px;">Manual Speed (0–100%)</label>
+                        <input id="defFanManualPct" type="number" min="0" max="100" value="50"
+                            style="width:100%; padding:7px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+                    </div>
+                    <div>
+                        <label style="display:block; color:#94a3b8; margin-bottom:4px;">Low-Power Standby Speed (%)</label>
+                        <input id="defFanStandbyPct" type="number" min="0" max="100" value="60"
+                            style="width:100%; padding:7px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+                    </div>
+                    <div>
+                        <label style="display:block; color:#94a3b8; margin-bottom:4px;">Cam-ON Default / Min Speed (%)</label>
+                        <input id="defFanMinPct" type="number" min="0" max="100" value="70"
+                            style="width:100%; padding:7px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+                    </div>
+                    <div>
+                        <label style="display:block; color:#94a3b8; margin-bottom:4px;">Temp Increase Threshold (°C)</label>
+                        <input id="defFanRefTemp" type="number" min="20" max="90" value="60"
+                            style="width:100%; padding:7px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+                    </div>
+                    <div>
+                        <label style="display:block; color:#94a3b8; margin-bottom:4px;">Every +°C Rise (Step °C)</label>
+                        <input id="defFanTempStep" type="number" min="1" max="20" value="5"
+                            style="width:100%; padding:7px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+                    </div>
+                    <div>
+                        <label style="display:block; color:#94a3b8; margin-bottom:4px;">Increase Speed By (+% per step)</label>
+                        <input id="defFanStepPct" type="number" min="0" max="25" value="5"
+                            style="width:100%; padding:7px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+                    </div>
+                </div>
+                <div style="margin-top:14px; display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap;">
+                    <button class="btn btn-secondary btn-sm" onclick="resetFanDefaultsUI()">↺ Reset Defaults</button>
+                    <button class="btn btn-primary btn-sm" onclick="saveFanDefaults()">💾 Save &amp; Apply Fan Settings</button>
+                </div>
+            </div>
+
+            <div class="card" style="padding: 20px; margin-bottom: 20px;">
                 <div class="card-header" style="margin-bottom:10px;">
                     <h2 style="margin:0;">🔔 Notification Providers &amp; Secrets (Backend-Only)</h2>
                 </div>
@@ -2680,6 +2736,23 @@
                     </div>
                 </div>
 
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px; margin-bottom: 16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+                        <h3 style="font-size: 0.92rem; margin: 0; color: #f1f5f9;">⚙️ Hardware Execution Target Switcher &amp; Benchmark</h3>
+                        <span id="testingExecTargetBadge" style="font-size:0.78rem; color:#38bdf8;">Active: Auto</span>
+                    </div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button class="btn btn-secondary btn-sm" onclick="runExecProfileSim('only_cpu')">🖥️ Only CPU</button>
+                        <button class="btn btn-secondary btn-sm" onclick="runExecProfileSim('only_gpu')">🎮 Only GPU</button>
+                        <button class="btn btn-secondary btn-sm" onclick="runExecProfileSim('only_npu')">⚡ Only NPU</button>
+                        <button class="btn btn-secondary btn-sm" onclick="runExecProfileSim('npu_cpu')">🔋 NPU + CPU</button>
+                        <button class="btn btn-secondary btn-sm" onclick="runExecProfileSim('npu_gpu')">⚖️ NPU + GPU</button>
+                        <button class="btn btn-secondary btn-sm" onclick="runExecProfileSim('hybrid_90_10')">🎯 90:10 (NPU+GPU)</button>
+                        <button class="btn btn-primary btn-sm" onclick="runExecProfileSim('all')">🌐 All (NPU+GPU+CPU)</button>
+                        <button class="btn btn-secondary btn-sm" onclick="runSim('npu_stress_5s')">🔥 NPU Stress Benchmark (5s)</button>
+                    </div>
+                </div>
+
                 <div id="testingImagePreviewWrap" style="display: none; margin-bottom: 14px;">
                     <div style="font-size: 0.82rem; color: #94a3b8; margin-bottom: 6px;" id="testingImageMeta"></div>
                     <img id="testingImagePreview"
@@ -2713,6 +2786,12 @@
                         onclick="switchModelSubTab('object_detection')">📦 Object Detection</button>
                     <button class="btn btn-secondary btn-sm" id="modelSubTabFace"
                         onclick="switchModelSubTab('face_recognition')">👤 Face Recognition</button>
+                    <button class="btn btn-secondary btn-sm" id="modelSubTabNpu"
+                        onclick="switchModelSubTab('npu_models')">⚡ NPU Models</button>
+                    <button class="btn btn-secondary btn-sm" id="modelSubTabGpu"
+                        onclick="switchModelSubTab('gpu_models')">🎮 GPU Models</button>
+                    <button class="btn btn-secondary btn-sm" id="modelSubTabHybrid"
+                        onclick="switchModelSubTab('hybrid_90_10')">🔋 NPU + GPU (90:10)</button>
                     <button class="btn btn-secondary btn-sm" onclick="loadModelsCatalog()" style="margin-left: auto;">🔄
                         Refresh</button>
                 </div>
@@ -2720,6 +2799,17 @@
                 <div id="modelsGrid"
                     style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
                     Loading model catalog...
+                </div>
+
+                <div id="modelPipelineBox" style="display: none; margin-top: 18px; padding: 14px 16px; border-radius: 10px; background: #090e1a; border: 1px solid rgba(255,255,255,0.12);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span id="modelPipelineText" style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.84rem; color: #f8fafc;">Initializing...</span>
+                        <span id="modelPipelinePct" style="font-family: ui-monospace, monospace; font-size: 0.8rem; color: #94a3b8;">0%</span>
+                    </div>
+                    <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 999px; overflow: hidden; margin-bottom: 8px;">
+                        <div id="modelPipelineBar" style="width: 0%; height: 100%; background: #ffffff; border-radius: 999px; transition: width 0.35s ease;"></div>
+                    </div>
+                    <div id="modelPipelineTrail" style="font-family: ui-monospace, monospace; font-size: 0.75rem; color: #94a3b8; line-height: 1.5;"></div>
                 </div>
             </div>
         </div> <!-- /#page-models -->
@@ -5402,8 +5492,80 @@
                 document.getElementById('defCamHmirror').checked = !!d.hmirror;
                 document.getElementById('defCamAwb').checked = d.awb !== 0;
                 document.getElementById('defCamAec').checked = d.aec !== 0;
+
+                const manualPct = d.fan_manual_pct !== undefined ? Number(d.fan_manual_pct) : -1;
+                document.getElementById('defFanMode').value = manualPct >= 0 ? 'manual' : 'auto';
+                document.getElementById('defFanManualPct').value = manualPct >= 0 ? manualPct : 50;
+                if (d.fan_standby_pct !== undefined) document.getElementById('defFanStandbyPct').value = d.fan_standby_pct;
+                if (d.fan_min_pct !== undefined) document.getElementById('defFanMinPct').value = d.fan_min_pct;
+                if (d.fan_ref_temp !== undefined) document.getElementById('defFanRefTemp').value = d.fan_ref_temp;
+                if (d.fan_temp_step !== undefined) document.getElementById('defFanTempStep').value = d.fan_temp_step;
+                if (d.fan_step_pct !== undefined) document.getElementById('defFanStepPct').value = d.fan_step_pct;
+                toggleFanManualInput();
+                refreshFanLiveBadge();
             } catch (e) {
                 console.error('loadCameraDefaults error', e);
+            }
+        }
+
+        function toggleFanManualInput() {
+            const mode = document.getElementById('defFanMode')?.value || 'auto';
+            const wrap = document.getElementById('defFanManualWrap');
+            if (wrap) wrap.style.display = (mode === 'manual') ? 'block' : 'none';
+        }
+
+        function resetFanDefaultsUI() {
+            document.getElementById('defFanMode').value = 'auto';
+            document.getElementById('defFanManualPct').value = 50;
+            document.getElementById('defFanStandbyPct').value = 60;
+            document.getElementById('defFanMinPct').value = 70;
+            document.getElementById('defFanRefTemp').value = 60;
+            document.getElementById('defFanTempStep').value = 5;
+            document.getElementById('defFanStepPct').value = 5;
+            toggleFanManualInput();
+        }
+
+        async function refreshFanLiveBadge() {
+            const badge = document.getElementById('fanLiveBadge');
+            if (!badge) return;
+            try {
+                const res = await fetch('/api/camera/settings');
+                const data = await res.json();
+                if (data.fan_pct !== undefined) {
+                    const tempStr = (data.temp_c !== undefined) ? ` · ${Number(data.temp_c).toFixed(1)}°C` : '';
+                    const modeStr = (data.fan_manual_pct !== undefined && Number(data.fan_manual_pct) >= 0) ? 'Manual' : 'Auto';
+                    badge.textContent = `Live: ${data.fan_pct}% (${modeStr}${tempStr})`;
+                    badge.style.color = '#38bdf8';
+                }
+            } catch (_) {}
+        }
+
+        async function saveFanDefaults() {
+            const mode = document.getElementById('defFanMode').value;
+            const manualVal = mode === 'manual' ? parseInt(document.getElementById('defFanManualPct').value, 10) : -1;
+            const payload = {
+                fan_manual_pct: manualVal,
+                fan_standby_pct: parseInt(document.getElementById('defFanStandbyPct').value, 10),
+                fan_min_pct: parseInt(document.getElementById('defFanMinPct').value, 10),
+                fan_ref_temp: parseInt(document.getElementById('defFanRefTemp').value, 10),
+                fan_temp_step: parseInt(document.getElementById('defFanTempStep').value, 10),
+                fan_step_pct: parseInt(document.getElementById('defFanStepPct').value, 10),
+            };
+            try {
+                const res = await fetch('/api/camera/defaults', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    showToast('Fan speed & thermal settings saved and applied!', 'success');
+                    refreshFanLiveBadge();
+                } else {
+                    showToast('Failed to save fan settings: ' + (data.error || 'unknown'), 'error');
+                }
+            } catch (e) {
+                showToast('Error saving fan settings: ' + e.message, 'error');
             }
         }
 
@@ -5632,6 +5794,7 @@
                 const evs = (d.data.events || []).slice(0, 5).map(e => `${e.type}(${e.src})@${e.time_ms}ms`).join(', ');
                 return `${d.data.count || 0} events in ${lat}: ${evs || 'none'}`;
             }
+            if (action === 'npu_stress_5s') return `Ran ${d.count} continuous inferences in ${lat} (${d.fps} FPS) on [${(d.vlm_providers||[]).join(',')}]`;
             if (action === 'cam_spiffs_logs') return `Loaded SPIFFS logs (${lat}):\n${d.logs || '(empty)'}`;
             return `Completed in ${lat}`;
         }
@@ -5695,17 +5858,47 @@
             appendTestLog('PASS', 'SUITE', 'Full Diagnostic Suite completed.');
         }
 
+        async function runExecProfileSim(profile) {
+            const badge = document.getElementById('testingExecTargetBadge');
+            const latBadge = document.getElementById('testingLastLatency');
+            if (badge) badge.textContent = 'Switching to ' + profile + '...';
+            try {
+                const res = await fetch('/api/testing/simulate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'set_exec_profile', profile })
+                });
+                const d = await res.json();
+                if (latBadge) latBadge.textContent = (d.ok ? '✅ ' : '❌ ') + (d.latency_ms !== undefined ? d.latency_ms + ' ms' : 'Done');
+                if (d.ok) {
+                    if (badge) badge.textContent = `Active: ${d.label} (${d.infer_ms} ms)`;
+                    appendTestLog('PASS', 'EXEC_TARGET', `${d.label} | Obj=[${(d.vlm_providers||[]).join(',')}] | Face=[${(d.face_providers||[]).join(',')}] | 1-frame=${d.infer_ms} ms (switch ${d.latency_ms} ms)`);
+                } else {
+                    if (badge) badge.textContent = 'Error';
+                    appendTestLog('FAIL', 'EXEC_TARGET', d.error || 'Failed to switch execution profile');
+                }
+            } catch (e) {
+                if (badge) badge.textContent = 'Error';
+                appendTestLog('ERR', 'EXEC_TARGET', String(e));
+            }
+        }
+
         window._modelSubTab = 'object_detection';
         window._modelCatalogData = null;
 
         function switchModelSubTab(cat) {
             window._modelSubTab = cat;
-            const objBtn = document.getElementById('modelSubTabObj');
-            const faceBtn = document.getElementById('modelSubTabFace');
-            if (objBtn && faceBtn) {
-                objBtn.className = cat === 'object_detection' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm';
-                faceBtn.className = cat === 'face_recognition' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm';
-            }
+            const map = {
+                object_detection: 'modelSubTabObj',
+                face_recognition: 'modelSubTabFace',
+                npu_models: 'modelSubTabNpu',
+                gpu_models: 'modelSubTabGpu',
+                hybrid_90_10: 'modelSubTabHybrid',
+            };
+            Object.entries(map).forEach(([k, id]) => {
+                const el = document.getElementById(id);
+                if (el) el.className = (cat === k) ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm';
+            });
             renderModelsGrid();
         }
 
@@ -5713,7 +5906,17 @@
             const grid = document.getElementById('modelsGrid');
             const data = window._modelCatalogData;
             if (!grid || !data || !data.catalog) return;
-            const items = data.catalog[window._modelSubTab] || [];
+            const tab = window._modelSubTab;
+            let items = [];
+            let forcedMode = null;
+            if (tab === 'npu_models' || tab === 'gpu_models' || tab === 'hybrid_90_10') {
+                forcedMode = tab === 'npu_models' ? 'npu' : (tab === 'gpu_models' ? 'gpu' : 'hybrid_90_10');
+                const obj = (data.catalog.object_detection || []).map(x => ({ ...x, _cat: 'object_detection' }));
+                const face = (data.catalog.face_recognition || []).map(x => ({ ...x, _cat: 'face_recognition' }));
+                items = [...obj, ...face];
+            } else {
+                items = (data.catalog[tab] || []).map(x => ({ ...x, _cat: tab }));
+            }
             grid.innerHTML = items.map(m => {
                 let border = 'rgba(255,255,255,0.1)';
                 let bg = 'rgba(255,255,255,0.03)';
@@ -5730,15 +5933,17 @@
                     border = 'rgba(16, 185, 129, 0.45)';
                     zoneBanner = `<div style="border-left: 3px solid #10b981; padding: 6px 8px; margin-bottom: 10px; background: rgba(16,185,129,0.12); color: #34d399; font-size: 0.78rem; border-radius: 4px;">🟢 ${m.zone_note}</div>`;
                 }
-                if (m.active) {
+                if (m.active && !forcedMode) {
                     border = '#10b981';
                 }
+                const modeTag = forcedMode === 'npu' ? '⚡ XDNA 2 NPU' : (forcedMode === 'gpu' ? '🎮 Radeon GPU' : (forcedMode === 'hybrid_90_10' ? '🔋 90% NPU : 10% GPU' : ''));
+                const modeNote = modeTag ? `<div style="font-size:0.75rem; color:#38bdf8; margin-bottom:6px; font-weight:600;">Target: ${modeTag}</div>` : '';
                 const sizeTxt = m.size_mb !== null ? `${m.size_mb} MB` : 'Not on disk';
                 const safeName = (m.name || '').replace(/'/g, "\\'");
-                const btnLabel = m.exists ? '⚡ Select &amp; Load' : '📥 Select (Not on Disk)';
-                const btnHtml = m.active
+                const btnLabel = forcedMode ? `⚡ Load on ${modeTag}` : (m.exists ? '⚡ Select &amp; Load' : '📥 Select (Not on Disk)');
+                const btnHtml = (m.active && !forcedMode)
                     ? `<button class="btn btn-primary btn-sm" disabled style="width:100%; background:#059669;">✅ Active Model</button>`
-                    : `<button class="btn btn-secondary btn-sm" style="width:100%;" onclick="selectModelCard('${window._modelSubTab}','${m.id}','${safeName}','${m.zone}')">${btnLabel}</button>`;
+                    : `<button class="btn btn-secondary btn-sm" style="width:100%;" onclick="selectModelCard('${m._cat}','${m.id}','${safeName}','${m.zone}','${forcedMode || ''}')">${btnLabel}</button>`;
                 return `
                     <div style="border: 1px solid ${border}; background: ${bg}; border-radius: 10px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between;">
                         <div>
@@ -5746,6 +5951,7 @@
                                 <strong style="font-size:0.98rem; color:#f8fafc;">${m.name}</strong>
                                 <span style="font-size:0.75rem; color:#94a3b8;">${sizeTxt} • ${m.ram_est}</span>
                             </div>
+                            ${modeNote}
                             ${zoneBanner}
                             <p style="font-size:0.82rem; color:#cbd5e1; margin-bottom:6px;">${m.description}</p>
                             <p style="font-size:0.78rem; color:#94a3b8; margin-bottom:12px;"><strong>Usage:</strong> ${m.usage}</p>
@@ -5807,9 +6013,9 @@
 
                 const cleanup = val => { backdrop.remove(); box.remove(); resolve(val); };
                 box.querySelector('#mgCancelBtn').onclick = () => cleanup(null);
-                box.querySelector('#mgConfirmBtn').onclick = () => {
+                box.querySelector('#mgConfirmBtn').onclick = async () => {
                     if (validateFn) {
-                        const err = validateFn(box);
+                        const err = await validateFn(box);
                         if (err) {
                             box.querySelector('#mgPopupErr').textContent = err;
                             return;
@@ -5871,16 +6077,29 @@
                     <input id="mgPasswd" type="password" placeholder="Password" autocomplete="off" style="width:100%;padding:7px 9px;border-radius:6px;border:1px solid #334155;background:#020617;color:#e2e8f0;font-size:0.84rem;margin-bottom:6px;">
                 `,
                 confirmLabel: 'Authorize & Load',
-                validateFn: b => {
+                validateFn: async b => {
                     const u = b.querySelector('#mgUname').value.trim();
                     const p = b.querySelector('#mgPasswd').value;
-                    return (u === 'admin' && p === 'admin_passwd') ? null : 'Invalid credentials. Only admin / admin_passwd allowed.';
+                    if (!u || !p) return 'Enter both username and password.';
+                    try {
+                        const r = await fetch('/api/v1/models/authorize', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ username: u, password: p })
+                        });
+                        const d = await r.json();
+                        return d.ok ? null : (d.error || 'Invalid credentials.');
+                    } catch (e) {
+                        return 'Authorization check failed: ' + e;
+                    }
                 },
             });
             return !!pAuth;
         }
 
-        async function selectModelCard(category, id, name = id, zone = 'safe') {
+        window._modelJobPoll = null;
+
+        async function selectModelCard(category, id, name = id, zone = 'safe', mode = '') {
             if (zone === 'warning' || zone === 'danger') {
                 const allowed = await runModelGuardFlow(name, zone);
                 if (!allowed) {
@@ -5888,17 +6107,97 @@
                     return;
                 }
             }
+
+            let chosenMode = mode;
+            if (!chosenMode) {
+                const picked = await new Promise(resolve => {
+                    showPositionedPopup({
+                        title: `⚙️ Choose Execution Target`,
+                        message: `Select where <strong>${name}</strong> should run (CPU fallback is always available):`,
+                        borderColor: '#38bdf8',
+                        fieldsHtml: `
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;">
+                                <button type="button" class="btn btn-primary btn-sm" id="tpNpuCpu">⚡ NPU + CPU</button>
+                                <button type="button" class="btn btn-secondary btn-sm" id="tpHybrid">🎯 90:10 NPU+GPU</button>
+                                <button type="button" class="btn btn-secondary btn-sm" id="tpGpu">🎮 GPU Only</button>
+                                <button type="button" class="btn btn-secondary btn-sm" id="tpCpu">🖥️ CPU Only</button>
+                            </div>
+                        `,
+                        confirmLabel: 'Use NPU + CPU',
+                    }).then(r => resolve(r ? 'npu_cpu' : null));
+                    setTimeout(() => {
+                        const wire = (idBtn, val) => {
+                            const b = document.getElementById(idBtn);
+                            if (b) b.onclick = () => {
+                                const cBtn = document.getElementById('mgCancelBtn');
+                                if (cBtn && cBtn.parentElement && cBtn.parentElement.parentElement) {
+                                    const box = cBtn.parentElement.parentElement;
+                                    const bd = box.previousSibling;
+                                    if (bd) bd.remove();
+                                    box.remove();
+                                }
+                                resolve(val);
+                            };
+                        };
+                        wire('tpNpuCpu', 'npu_cpu');
+                        wire('tpHybrid', 'hybrid_90_10');
+                        wire('tpGpu', 'only_gpu');
+                        wire('tpCpu', 'only_cpu');
+                    }, 10);
+                });
+                if (!picked) return;
+                chosenMode = picked;
+            } else if (chosenMode === 'npu') {
+                chosenMode = 'npu_cpu';
+            } else if (chosenMode === 'gpu') {
+                chosenMode = 'only_gpu';
+            }
+
+            const box = document.getElementById('modelPipelineBox');
+            const txt = document.getElementById('modelPipelineText');
+            const pctEl = document.getElementById('modelPipelinePct');
+            const bar = document.getElementById('modelPipelineBar');
+            const trail = document.getElementById('modelPipelineTrail');
+            if (box) box.style.display = 'block';
+            if (txt) txt.textContent = `Starting ${name} (${chosenMode})...`;
+            if (pctEl) pctEl.textContent = '5%';
+            if (bar) bar.style.width = '5%';
+            if (trail) trail.textContent = '';
+
             try {
-                const res = await fetch('/api/v1/models/select', {
+                const res = await fetch('/api/v1/models/prepare_and_select', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ category, id })
+                    body: JSON.stringify({ category, id, mode: chosenMode })
                 });
                 const d = await res.json();
-                showToast(d.ok ? `Loaded ${d.name}` : (d.error || 'Failed to load model'), d.ok ? 'success' : 'error');
-                loadModelsCatalog();
+                if (!d.ok) {
+                    if (txt) txt.textContent = `❌ ${d.error || 'Failed to start job'}`;
+                    showToast(d.error || 'Failed to start model job', 'error');
+                    return;
+                }
+                if (window._modelJobPoll) clearInterval(window._modelJobPoll);
+                window._modelJobPoll = setInterval(async () => {
+                    try {
+                        const jr = await fetch('/api/v1/models/job');
+                        const jd = await jr.json();
+                        if (!jd.ok) return;
+                        if (txt) txt.textContent = jd.status_text || 'Working...';
+                        if (pctEl) pctEl.textContent = `${jd.pct || 0}%`;
+                        if (bar) bar.style.width = `${jd.pct || 0}%`;
+                        if (trail && Array.isArray(jd.steps)) {
+                            trail.innerHTML = jd.steps.map(s => `<div>▸ ${s}</div>`).join('');
+                        }
+                        if (!jd.running) {
+                            clearInterval(window._modelJobPoll);
+                            window._modelJobPoll = null;
+                            loadModelsCatalog();
+                            showToast(jd.error ? jd.error : `${name} ready!`, jd.error ? 'error' : 'success');
+                        }
+                    } catch (e) {}
+                }, 500);
             } catch (e) {
-                showToast('Error switching model: ' + e, 'error');
+                showToast('Error starting model pipeline: ' + e, 'error');
             }
         }
 

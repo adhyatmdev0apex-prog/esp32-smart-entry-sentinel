@@ -29,7 +29,7 @@ static const char* getResetReasonName() {
 void initSystem() {
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); // Disable brownout detector for WiFi/Camera peak transients
   s_boot_time_ms = millis();
-  esp_task_wdt_init(15, true);
+  esp_task_wdt_init(30, true);
   esp_task_wdt_add(NULL);
 }
 
