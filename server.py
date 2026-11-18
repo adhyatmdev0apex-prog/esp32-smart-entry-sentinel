@@ -1085,7 +1085,7 @@ def render_face_overlay(bgr_image, face_boxes):
     return canvas
 
 def process_frame(jpg_bytes):
-    """Process a single validated JPEG frame through DirectML Object Detection + YuNet/SFace"""
+    """Process a single validated JPEG frame through DirectML/NPU Object Detection + YuNet/SFace + Behavioral/Anti-Spoof/Pre-Trigger DVR"""
     global latest_annotated_jpeg
     try:
         nparr = np.frombuffer(jpg_bytes, np.uint8)
@@ -1093,10 +1093,18 @@ def process_frame(jpg_bytes):
         if image is None:
             return
 
+        _push_pre_trigger_frame(image)
         timestamp = datetime.now()
+        gray_luma = float(np.mean(image))
+        ai_swarm_telemetry['last_luma'] = round(gray_luma, 1)
+        ai_swarm_telemetry['pre_trigger_frames'] = len(pre_trigger_buffer)
+
         obj_overlay_boxes = []
+        person_obj_count = 0
         if getattr(vlm, 'enabled', True):
             for obj in vlm.detect_objects(image):
+                if str(obj.get('label', '')).lower() == 'person':
+                    person_obj_count += 1
                 obj_overlay_boxes.append({
                     'bbox': obj['bbox'],
                     'label': f"{obj['label']} ({int(obj['conf'] * 100)}%)",
@@ -1105,6 +1113,26 @@ def process_frame(jpg_bytes):
                 })
 
         detections = detect_and_extract_faces(image) if recognition_enabled else []
+
+        # Behavioral Heuristics: Loitering & Tailgating
+        now_ep = time.time()
+        if detections or person_obj_count > 0:
+            if ai_swarm_telemetry['presence_since_ts'] == 0.0:
+                ai_swarm_telemetry['presence_since_ts'] = now_ep
+            dwell_s = now_ep - ai_swarm_telemetry['presence_since_ts']
+            ai_swarm_telemetry['dwell_s'] = round(dwell_s, 1)
+            if dwell_s >= 15.0 and (now_ep - ai_swarm_telemetry['last_loiter_alert_ts']) >= 30.0:
+                ai_swarm_telemetry['last_loiter_alert_ts'] = now_ep
+                ai_swarm_telemetry['loitering_alerts'] += 1
+                event_db.log_audit('ai_swarm', 'LOITERING_ALERT', 'door', f'dwell={dwell_s:.1f}s')
+            if (len(detections) >= 2 or person_obj_count >= 2) and door_recording_active:
+                if (now_ep - ai_swarm_telemetry['last_tailgate_alert_ts']) >= 15.0:
+                    ai_swarm_telemetry['last_tailgate_alert_ts'] = now_ep
+                    ai_swarm_telemetry['tailgating_alerts'] += 1
+                    event_db.log_audit('ai_swarm', 'TAILGATING_ALERT', 'door', f'persons={max(len(detections), person_obj_count)}')
+        else:
+            ai_swarm_telemetry['presence_since_ts'] = 0.0
+            ai_swarm_telemetry['dwell_s'] = 0.0
 
         if not detections:
             if recognition_enabled:
@@ -1295,6 +1323,54 @@ def _finalize_all_recordings():
 import atexit
 atexit.register(_finalize_all_recordings)
 
+from collections import deque
+
+pre_trigger_buffer = deque(maxlen=80)
+pre_trigger_lock = threading.Lock()
+ai_swarm_telemetry = {
+    'last_luma': 0.0,
+    'pre_trigger_frames': 0,
+    'presence_since_ts': 0.0,
+    'dwell_s': 0.0,
+    'loitering_alerts': 0,
+    'tailgating_alerts': 0,
+    'spoof_alerts': 0,
+    'last_loiter_alert_ts': 0.0,
+    'last_tailgate_alert_ts': 0.0,
+    'last_spoof_alert_ts': 0.0,
+}
+
+def _push_pre_trigger_frame(img):
+    if img is None:
+        return
+    with pre_trigger_lock:
+        pre_trigger_buffer.append(img.copy())
+
+def _read_firmware_wifi_secrets():
+    import re
+    creds = {
+        'WIFI_SSID': '',
+        'WIFI_PASSWORD': '',
+        'WIFI_AP_SSID': 'Sentinel-CAM',
+        'WIFI_AP_PASSWORD': '',
+    }
+    for path in (
+        os.path.join('firmware', 'esp32-cam', 'include', 'wifi_secrets.h'),
+        os.path.join('firmware', 'esp32-cam', 'include', 'secrets.h'),
+    ):
+        if not os.path.exists(path):
+            continue
+        try:
+            with open(path, 'r', encoding='utf-8', errors='ignore') as f:
+                txt = f.read()
+            for key in list(creds.keys()):
+                m = re.search(rf'#define\s+{key}\s+"([^"]*)"', txt)
+                if m and m.group(1):
+                    creds[key] = m.group(1)
+        except Exception:
+            pass
+    return creds
+
 def _schedule_recording_finalize(delay_s):
     global door_recording_timer
     if door_recording_timer is not None:
@@ -1422,6 +1498,16 @@ def _write_recording_frame(img):
             door_recording_frames = 0
             door_recording_start_ts = now
             print(f"[REC] Started live recording -> {door_recording_path} ({w}x{h} @ {RECORDING_TARGET_FPS:.0f}fps)")
+            # Prepend 10s circular RAM pre-trigger buffer frames
+            with pre_trigger_lock:
+                pre_frames = list(pre_trigger_buffer)
+            if pre_frames and door_video_writer.isOpened():
+                for pf in pre_frames:
+                    if pf.shape[1] != w or pf.shape[0] != h:
+                        pf = cv2.resize(pf, (w, h))
+                    door_video_writer.write(pf)
+                    door_recording_frames += 1
+                print(f"[REC] Prepended {len(pre_frames)} pre-trigger frames from RAM DVR buffer")
         if door_video_writer is not None and door_video_writer.isOpened():
             frame_to_write = img
             if img.shape[1] != door_video_w or img.shape[0] != door_video_h:
@@ -2965,6 +3051,12 @@ CAMERA_SETTING_RANGES = {
     'fan_ref_temp': range(20, 91),
     'fan_temp_step': range(1, 21),
     'fan_step_pct': range(0, 26),
+    'fan_ctrl_mode': range(0, 3),
+    'fan_pid_target': range(35, 86),
+    'fan_kick_ms': range(0, 1001),
+    'fan_thermal_throttle': {0, 1},
+    'fan_freq': range(100, 40001),
+    'fan_pct': range(0, 101),
 }
 
 def _load_camera_defaults():
@@ -2985,6 +3077,11 @@ def _load_camera_defaults():
         'fan_ref_temp': 60,
         'fan_temp_step': 5,
         'fan_step_pct': 5,
+        'fan_ctrl_mode': 0,
+        'fan_pid_target': 58,
+        'fan_kick_ms': 250,
+        'fan_thermal_throttle': 1,
+        'fan_freq': 25000,
     }
     if os.path.exists(CAMERA_DEFAULTS_FILE):
         try:
@@ -3086,6 +3183,14 @@ def set_camera_setting():
         'fan_ref_temp': range(20, 91),
         'fan_temp_step': range(1, 21),
         'fan_step_pct': range(0, 26),
+        'fan_ctrl_mode': range(0, 3),
+        'fan_pid_target': range(35, 86),
+        'fan_kick_ms': range(0, 1001),
+        'fan_thermal_throttle': {0, 1},
+        'fan_freq': range(100, 40001),
+        'fan_pct': range(0, 101),
+        'txpower': range(2, 21),
+        'wifi_proto': {1, 3, 7},
     }
     if not isinstance(var_name, str) or var_name not in setting_ranges:
         return jsonify({'error': f'Unsupported camera setting: {var_name}'}), 400
@@ -3109,16 +3214,24 @@ def set_camera_setting():
             if resp.status != 200:
                 return jsonify({'status': 'error', 'var': var_name,
                                 'error': f'Camera read-back returned HTTP {resp.status}'}), 502
-            actual = json.loads(resp.read().decode('utf-8')).get(var_name)
-        if actual is None or int(actual) != val:
+            status_key_map = {
+                'txpower': 'tx_pwr',
+                'fan_pid_target': 'fan_pid_target_c',
+                'fan_ref_temp': 'fan_ref_c',
+            }
+            status_key = status_key_map.get(var_name, var_name)
+            actual = json.loads(resp.read().decode('utf-8')).get(status_key)
+            if isinstance(actual, bool):
+                actual = 1 if actual else 0
+        if actual is None or int(round(float(actual))) != val:
             return jsonify({'status': 'error', 'var': var_name, 'requested': val,
                             'actual': actual, 'error': 'Camera did not apply the requested setting'}), 502
 
         with state_lock:
-            cached_camera_settings[var_name] = int(actual)
+            cached_camera_settings[var_name] = int(round(float(actual)))
             cached_camera_settings['online'] = True
-        event_db.log_audit("user", "camera_setting", var_name, f"val={int(actual)}")
-        return jsonify({'status': 'ok', 'var': var_name, 'val': val, 'actual': int(actual)})
+        event_db.log_audit("user", "camera_setting", var_name, f"val={int(round(float(actual)))}")
+        return jsonify({'status': 'ok', 'var': var_name, 'val': val, 'actual': int(round(float(actual)))})
     except Exception as e:
         with state_lock:
             cached_camera_settings['online'] = False
@@ -3200,13 +3313,24 @@ def api_testing_simulate():
     t0 = time.time()
 
     def _http_call(url, method='GET', payload=None, timeout=3.0):
+        global active_camera_ip
         req_data = json.dumps(payload).encode('utf-8') if payload is not None else None
         headers = {'User-Agent': 'Sentinel-Testing'}
         if payload is not None:
             headers['Content-Type'] = 'application/json'
-        req = urllib.request.Request(url, data=req_data, headers=headers, method=method)
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            return r.status, r.read()
+        try:
+            req = urllib.request.Request(url, data=req_data, headers=headers, method=method)
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return r.status, r.read()
+        except Exception:
+            fallback_ip = '192.168.29.10' if f"//{cam_ip}:" in url and cam_ip == '192.168.4.1' else ('192.168.4.1' if f"//{cam_ip}:" in url else None)
+            if fallback_ip:
+                alt_url = url.replace(f"//{cam_ip}:", f"//{fallback_ip}:")
+                req2 = urllib.request.Request(alt_url, data=req_data, headers=headers, method=method)
+                with urllib.request.urlopen(req2, timeout=timeout) as r2:
+                    active_camera_ip = fallback_ip
+                    return r2.status, r2.read()
+            raise
 
     try:
         if action in ('door_open', 'door_closed'):
@@ -3325,9 +3449,94 @@ def api_testing_simulate():
                 'latency_ms': round((time.time() - t0) * 1000, 1),
             })
 
+        if action in ('wifi_sim_blackout', 'wifi_sim_dual_ap', 'wifi_sim_restore'):
+            sim_val = 1 if action == 'wifi_sim_blackout' else (2 if action == 'wifi_sim_dual_ap' else 0)
+            st, body = _http_call(f"http://{cam_ip}:80/control?var=wifi_sim_mode&val={sim_val}", timeout=4.0)
+            time.sleep(0.35)
+            _, st_raw = _http_call(f"http://{cam_ip}:80/status", timeout=4.0)
+            cam_st = json.loads(st_raw.decode('utf-8', 'ignore'))
+            return jsonify({
+                'ok': st == 200,
+                'action': action,
+                'wifi_sim_mode': cam_st.get('wifi_sim_mode'),
+                'ap_active': cam_st.get('ap_active'),
+                'ap_ip': cam_st.get('ap_ip'),
+                'ap_ssid': cam_st.get('ap_ssid'),
+                'espnow_fallback': cam_st.get('espnow_fallback'),
+                'sta_connected': cam_st.get('sta_connected'),
+                'latency_ms': round((time.time() - t0) * 1000, 1),
+            })
+
+        if action == 'wifi_tx_power_sweep':
+            steps = [2, 5, 8, 11, 15, 18, 20]
+            sweep = []
+            for dbm in steps:
+                _http_call(f"http://{cam_ip}:80/control?var=txpower&val={dbm}", timeout=3.0)
+                time.sleep(0.15)
+                pt0 = time.time()
+                _, st_raw = _http_call(f"http://{cam_ip}:80/status", timeout=3.0)
+                rtt = round((time.time() - pt0) * 1000, 1)
+                cam_st = json.loads(st_raw.decode('utf-8', 'ignore'))
+                sweep.append({
+                    'tx_pwr_dbm': cam_st.get('tx_pwr', dbm),
+                    'rssi_dbm': cam_st.get('rssi'),
+                    'quality_pct': cam_st.get('signal_quality_pct'),
+                    'rtt_ms': rtt,
+                })
+            _http_call(f"http://{cam_ip}:80/control?var=txpower&val=18", timeout=3.0)
+            return jsonify({'ok': True, 'action': action, 'sweep': sweep, 'latency_ms': round((time.time() - t0) * 1000, 1)})
+
+        if action == 'wifi_proto_switch':
+            proto = int(data.get('proto', 7))
+            if proto not in (1, 3, 7):
+                proto = 7
+            _http_call(f"http://{cam_ip}:80/control?var=wifi_proto&val={proto}", timeout=3.0)
+            time.sleep(0.25)
+            pt0 = time.time()
+            st, img_bytes = _http_call(f"http://{cam_ip}:80/capture", timeout=4.0)
+            dt = max(0.001, time.time() - pt0)
+            kbps = round((len(img_bytes) / 1024.0) / dt, 1)
+            return jsonify({
+                'ok': st == 200,
+                'action': action,
+                'wifi_proto': proto,
+                'snapshot_bytes': len(img_bytes),
+                'throughput_kbps': kbps,
+                'latency_ms': round((time.time() - t0) * 1000, 1),
+            })
+
+        if action == 'espnow_fallback_sim':
+            st, _ = _http_call(f"http://{cam_ip}:80/control?var=espnow_sim_burst&val=10", timeout=4.0)
+            return jsonify({
+                'ok': st == 200,
+                'action': action,
+                'channel': 1,
+                'burst_count': 10,
+                'latency_ms': round((time.time() - t0) * 1000, 1),
+            })
+
+        if action == 'wroom_blackout_sim':
+            start_door_recording(duration_s=10.0)
+            event_db.log_audit('chaos_sim', 'WROOM_OFFLINE_SIM', 'wroom', 'Triggered 10s emergency safety .mp4')
+            return jsonify({
+                'ok': True,
+                'action': action,
+                'safety_recording_s': 10,
+                'recording_active': door_recording_active,
+                'latency_ms': round((time.time() - t0) * 1000, 1),
+            })
+
+        if action == 'verify_ledger':
+            res = event_db.verify_ledger_integrity()
+            return jsonify({**res, 'action': action, 'latency_ms': round((time.time() - t0) * 1000, 1)})
+
         if action == 'connect_fallback_ap':
             import subprocess, tempfile
-            ssid = 'Sentinel-CAM'
+            creds = _read_firmware_wifi_secrets()
+            ssid = creds['WIFI_AP_SSID']
+            pwd = creds['WIFI_AP_PASSWORD']
+            if not pwd:
+                return jsonify({'ok': False, 'action': action, 'error': 'WIFI_AP_PASSWORD not set in wifi_secrets.h'}), 400
             xml = (
                 '<?xml version="1.0"?>'
                 '<WLANProfile xmlns="http://www.microsoft.com/networking/WLAN/profile/v1">'
@@ -3336,7 +3545,7 @@ def api_testing_simulate():
                 '<MSM><security><authEncryption><authentication>WPA2PSK</authentication>'
                 '<encryption>AES</encryption><useOneX>false</useOneX></authEncryption>'
                 '<sharedKey><keyType>passPhrase</keyType><protected>false</protected>'
-                '<keyMaterial>sentinel123</keyMaterial></sharedKey></security></MSM></WLANProfile>'
+                f'<keyMaterial>{pwd}</keyMaterial></sharedKey></security></MSM></WLANProfile>'
             )
             with tempfile.NamedTemporaryFile('w', suffix='.xml', delete=False, encoding='utf-8') as tf:
                 tf.write(xml)
@@ -3346,7 +3555,7 @@ def api_testing_simulate():
                 subprocess.run(['netsh', 'wlan', 'disconnect'], capture_output=True, text=True, timeout=5)
                 res = subprocess.run(['netsh', 'wlan', 'connect', f'name={ssid}', f'ssid={ssid}'], capture_output=True, text=True, timeout=8)
                 active_camera_ip = '192.168.4.1'
-                return jsonify({'ok': res.returncode == 0, 'action': action, 'ap_ip': '192.168.4.1',
+                return jsonify({'ok': res.returncode == 0, 'action': action, 'ap_ip': '192.168.4.1', 'ssid': ssid,
                                 'stdout': res.stdout.strip(), 'stderr': res.stderr.strip(),
                                 'latency_ms': round((time.time() - t0) * 1000, 1)})
             finally:
@@ -3355,9 +3564,54 @@ def api_testing_simulate():
                 except Exception:
                     pass
 
+        if action == 'restore_home_wifi':
+            import subprocess, tempfile
+            creds = _read_firmware_wifi_secrets()
+            ssid = creds['WIFI_SSID']
+            pwd = creds['WIFI_PASSWORD']
+            if not ssid:
+                return jsonify({'ok': False, 'action': action, 'error': 'WIFI_SSID not found in wifi_secrets.h'}), 400
+            res = subprocess.run(['netsh', 'wlan', 'connect', f'name={ssid}', f'ssid={ssid}'], capture_output=True, text=True, timeout=8)
+            if res.returncode != 0 and pwd:
+                xml = (
+                    '<?xml version="1.0"?>'
+                    '<WLANProfile xmlns="http://www.microsoft.com/networking/WLAN/profile/v1">'
+                    f'<name>{ssid}</name><SSIDConfig><SSID><name>{ssid}</name></SSID></SSIDConfig>'
+                    '<connectionType>ESS</connectionType><connectionMode>auto</connectionMode>'
+                    '<MSM><security><authEncryption><authentication>WPA2PSK</authentication>'
+                    '<encryption>AES</encryption><useOneX>false</useOneX></authEncryption>'
+                    '<sharedKey><keyType>passPhrase</keyType><protected>false</protected>'
+                    f'<keyMaterial>{pwd}</keyMaterial></sharedKey></security></MSM></WLANProfile>'
+                )
+                with tempfile.NamedTemporaryFile('w', suffix='.xml', delete=False, encoding='utf-8') as tf:
+                    tf.write(xml)
+                    xml_path = tf.name
+                try:
+                    subprocess.run(['netsh', 'wlan', 'add', 'profile', f'filename={xml_path}'], capture_output=True, text=True, timeout=5)
+                    res = subprocess.run(['netsh', 'wlan', 'connect', f'name={ssid}', f'ssid={ssid}'], capture_output=True, text=True, timeout=8)
+                finally:
+                    try:
+                        os.remove(xml_path)
+                    except Exception:
+                        pass
+            active_camera_ip = CANDIDATE_IPS[0] if CANDIDATE_IPS else '192.168.29.10'
+            err_msg = (res.stderr or res.stdout or '').strip()
+            return jsonify({'ok': res.returncode == 0, 'action': action, 'ssid': ssid, 'camera_ip': active_camera_ip,
+                            'stdout': res.stdout.strip(), 'stderr': res.stderr.strip(),
+                            'error': None if res.returncode == 0 else (err_msg or f'netsh exited with {res.returncode}'),
+                            'latency_ms': round((time.time() - t0) * 1000, 1)})
+
         return jsonify({'ok': False, 'error': f'Unknown simulation action: {action}'}), 400
     except Exception as e:
         return jsonify({'ok': False, 'action': action, 'latency_ms': round((time.time() - t0) * 1000, 1), 'error': str(e)}), 502
+
+@app.route('/api/v1/ledger/verify', methods=['GET'])
+def api_verify_ledger():
+    return jsonify(event_db.verify_ledger_integrity())
+
+@app.route('/api/v1/ai/swarm_status', methods=['GET'])
+def api_ai_swarm_status():
+    return jsonify({'ok': True, **ai_swarm_telemetry})
 
 @app.route('/upload', methods=['POST'])
 def upload_image():

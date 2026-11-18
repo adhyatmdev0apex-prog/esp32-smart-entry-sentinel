@@ -227,6 +227,18 @@ test/
 
 ---
 
+## 🚀 13. Sentinel Omega High-Density Additions (Implemented)
+
+- **Wi-Fi, SoftAP (`192.168.4.1`), ESP-NOW & RF Chaos Lab (`#page-testing` + `wifi_manager.cpp` + `server.py`):**
+  - On-demand `wifi_sim_mode` (`0` Normal STA, `1` Forced Router Blackout + AP + ESP-NOW Ch 1, `2` Forced Dual AP+STA), `espnow_sim_burst`, `wifi_tx_power_sweep` (`2..20 dBm`), `wifi_proto_switch` (`802.11b/bg/bgn` throughput benchmark), `wroom_blackout_sim`, and `netsh` AP/Home-Wi-Fi switcher reading credentials dynamically from `wifi_secrets.h` / `secrets.h`.
+  - 14-field live RF diagnostics in `/status` (`ip`, `ap_ip`, `sta_connected`, `ap_active`, `ap_ssid`, `ap_clients`, `espnow_fallback`, `wifi_sim_mode`, `rssi`, `signal_quality_pct`, `wifi_ch`, `tx_pwr`, `wifi_proto`, `reconnect_count`, `last_server_hb_age_ms`).
+- **Cooling Fan, Closed-Loop PID Thermal Governor & Power Mega-Card (`#page-settings` + `cooling.cpp`):**
+  - 3 unified modes in `evaluateCooling()`: Stepped Thermal Curve (`0`), Closed-Loop PID Target Temp (`1`, anti-windup), and Manual Fixed PWM Override (`2`), plus configurable PWM frequency (`100–40000 Hz`), kickstart pulse (`0–1000 ms`), thermal runaway guard (`>78°C`), and instant `0% / 50% / 60% / 75% / 100% / Auto` controls.
+- **Pre-Trigger Circular RAM DVR + Behavioral Heuristics + SHA-256 Evidence Ledger (`server.py` + `event_db.py`):**
+  - 80-frame circular RAM pre-trigger buffer automatically prepended when a `DOOR_OPEN` `.mp4` starts.
+  - Real-time loitering (`>15s` dwell) and tailgating (`>=2` people during active door open) detection inside `process_frame()`.
+  - Tamper-evident `hash_ledger` SHA-256 chain in `data/events.db` with `verify_ledger_integrity()` exposed at `/api/v1/ledger/verify` and the Testing Chaos Lab.
+
 ## 🚀 12. Final Polish Checklist Before Public / Daily Release
 
 - [ ] Verify end-to-end "Ugly Situation" chaos suite from the **`🧪 Testing`** tab (`ping_nodes`, `door_open`, `cam_snapshot`, `door_closed`, `wroom_saved_image`, `cam_spiffs_logs`).

@@ -8,6 +8,7 @@ using SQLite WAL mode for concurrent read/write safety.
 import os
 import json
 import time
+import hashlib
 import sqlite3
 import threading
 from datetime import datetime, timedelta
@@ -79,6 +80,18 @@ class EventDatabase:
                         details TEXT
                     );
                     CREATE INDEX IF NOT EXISTS idx_audit_epoch ON audit_log(epoch DESC);
+
+                    CREATE TABLE IF NOT EXISTS hash_ledger (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        ts TEXT NOT NULL,
+                        epoch REAL NOT NULL,
+                        event_type TEXT NOT NULL,
+                        person_id TEXT,
+                        payload_json TEXT NOT NULL,
+                        prev_hash TEXT NOT NULL,
+                        entry_hash TEXT NOT NULL
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_ledger_id ON hash_ledger(id DESC);
                     """
                 )
                 conn.commit()
@@ -146,7 +159,49 @@ class EventDatabase:
                      round(float(similarity), 3), round(float(quality), 1),
                      reason, thumb, obj_json),
                 )
+                self._append_ledger_locked(conn, ts_iso, now, event_type, person_id, {
+                    "label": person_label,
+                    "similarity": round(float(similarity), 3),
+                    "quality": round(float(quality), 1),
+                    "reason": reason,
+                    "thumb": thumb,
+                })
                 conn.commit()
+            finally:
+                conn.close()
+
+    def _append_ledger_locked(self, conn, ts_iso, epoch_val, event_type, person_id, payload_dict):
+        row = conn.execute("SELECT entry_hash FROM hash_ledger ORDER BY id DESC LIMIT 1").fetchone()
+        prev_hash = row[0] if row else ("0" * 64)
+        payload_json = json.dumps(payload_dict, sort_keys=True, ensure_ascii=False)
+        raw = f"{prev_hash}|{ts_iso}|{event_type}|{person_id or ''}|{payload_json}".encode("utf-8")
+        entry_hash = hashlib.sha256(raw).hexdigest()
+        conn.execute(
+            """INSERT INTO hash_ledger (ts, epoch, event_type, person_id, payload_json, prev_hash, entry_hash)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (ts_iso, epoch_val, str(event_type), str(person_id or ""), payload_json, prev_hash, entry_hash),
+        )
+        return entry_hash
+
+    def verify_ledger_integrity(self):
+        with self._lock:
+            conn = self._connect()
+            try:
+                rows = conn.execute(
+                    "SELECT id, ts, event_type, person_id, payload_json, prev_hash, entry_hash FROM hash_ledger ORDER BY id ASC"
+                ).fetchall()
+                expected_prev = "0" * 64
+                latest_hash = expected_prev
+                for r in rows:
+                    if r["prev_hash"] != expected_prev:
+                        return {"ok": False, "entries": len(rows), "broken_at_id": r["id"], "latest_hash": latest_hash}
+                    raw = f"{r['prev_hash']}|{r['ts']}|{r['event_type']}|{r['person_id'] or ''}|{r['payload_json']}".encode("utf-8")
+                    calc = hashlib.sha256(raw).hexdigest()
+                    if calc != r["entry_hash"]:
+                        return {"ok": False, "entries": len(rows), "broken_at_id": r["id"], "latest_hash": latest_hash}
+                    expected_prev = calc
+                    latest_hash = calc
+                return {"ok": True, "entries": len(rows), "broken_at_id": None, "latest_hash": latest_hash}
             finally:
                 conn.close()
 
@@ -160,6 +215,10 @@ class EventDatabase:
                     "INSERT INTO audit_log (ts, epoch, actor, action, target, details) VALUES (?, ?, ?, ?, ?, ?)",
                     (ts_iso, now, actor, action, str(target or ""), str(details or "")),
                 )
+                self._append_ledger_locked(conn, ts_iso, now, f"AUDIT:{action}", actor, {
+                    "target": str(target or ""),
+                    "details": str(details or ""),
+                })
                 conn.commit()
             finally:
                 conn.close()

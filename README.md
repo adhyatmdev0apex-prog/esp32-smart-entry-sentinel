@@ -9,6 +9,7 @@ A local smart-entry system combining an ESP32-CAM, an optional ESP32-WROOM senso
 - [What the project does](#what-the-project-does)
 - [Quick start](#quick-start)
 - [Configure login and protect secrets](#configure-login-and-protect-secrets)
+- [Wi-Fi setup and fallback access](#wi-fi-setup-and-fallback-access)
 - [Run with Docker](#run-with-docker)
 - [Connect and verify the ESP32-CAM](#connect-and-verify-the-esp32-cam)
 - [Build and upload firmware](#build-and-upload-firmware)
@@ -104,13 +105,27 @@ The login page reads credentials from `firmware/esp32-cam/include/secrets.h`. Th
 #define SECRET_VIEW_PASSWORD  "replace-with-another-unique-password"
 ```
 
-Copy `firmware/esp32-cam/include/secrets.example.h` to `firmware/esp32-cam/include/secrets.h` if you need a starting point, then set the SSID, password, static IP, gateway, and custom-MAC options to match your network. The header uses static-IP and custom-MAC options by default; disable either option if it conflicts with your router or another device.
+Copy `firmware/esp32-cam/include/secrets.example.h` to `firmware/esp32-cam/include/secrets.h` if you need a starting point. For Wi-Fi-only credentials, you can instead copy `firmware/esp32-cam/include/wifi_secrets.h.example` to the ignored `firmware/esp32-cam/include/wifi_secrets.h`; when that file exists, it supplies the station SSID/password and optional fallback AP SSID/password. Configure the static IP, gateway, and custom-MAC options in the secret configuration to match your network. Static addressing and custom MAC are enabled in the example, and the CAM/WROOM defaults differ; do not assign the same static IP or MAC to multiple boards.
 
 **Keep real credentials private.** This checkout's `secrets.h` is present in Git's tracked-file list, so do not assume `.gitignore` makes it private. Before publishing or sharing this repository, remove secrets from tracked files and Git history, rotate any credentials that were exposed, and verify your own ignore rules. Do not paste credentials into issues, screenshots, logs, or this README.
 
 The web dashboard and Control Center share these login credentials, but the Control Center requires the admin role for remote access. The dashboard's PIN/API-key controls are separate additional protections. By default, loopback access is trusted unless the localhost lock is enabled. Do not expose either web port directly to the public internet.
 
 For Docker, `WIFI_SSID`, `WIFI_PASSWORD`, `ADMIN_PASSWORD`, and `USER_PASSWORD` in `.env` can override matching values at container startup. These are optional; `.env` is not automatically loaded by direct `python server.py` commands. Set shell environment variables yourself when running Python directly.
+
+## Wi-Fi setup and fallback access
+
+The firmware starts as a station and tries the SSID/password in its secret configuration. CAM and WROOM use separate default static IP and custom-MAC values in the example. Reserve those addresses in your router or change them to unused addresses on your subnet; use DHCP instead if static addressing is not appropriate for your network.
+
+The Wi-Fi manager retries the configured network. After roughly 20 seconds without a station connection, the CAM starts a recovery access point at `192.168.4.1` on channel 1, while the WROOM switches its peer link to ESP-NOW instead of creating an access point. Once in fallback mode, station reconnection attempts are spaced about 30 seconds apart. The CAM also starts its access point if it has station Wi-Fi but has no recent HTTP status/root/power request for more than 15 seconds (including when there has been no request since boot). A later request to `/status`, the root page, or `/api/v1/camera/power` marks the server reachable and stops that access point.
+
+The CAM recovery network uses `SECRET_AP_SSID` and `SECRET_AP_PASSWORD`. Set a private AP password of at least eight characters in `wifi_secrets.h`; do not rely on the example placeholder. Connect to that network and open <http://192.168.4.1> to use the CAM's fallback page. The fallback access point is a recovery path, not an internet connection. If it does not appear, wait for the timeout, verify the SSID/password settings, and check the serial log. Only the CAM profile creates this AP; the WROOM's offline peer fallback is ESP-NOW.
+
+The CAM disables Wi-Fi power saving for responsive camera streaming. The WROOM enters minimum modem-sleep after connecting and temporarily wakes its radio for event delivery. Runtime Wi-Fi controls are available on the device HTTP API; they reset to firmware defaults after reboot:
+
+- `GET /control?var=wifi_proto&val=7` selects the default 802.11b/g/n protocol mask. Supported masks are `1` (b), `3` (b/g), and `7` (b/g/n).
+- `GET /control?var=txpower&val=18` requests transmit power in dBm; the radio maps this to a supported ESP32 power step.
+- `/status` reports the current IP, RSSI, channel, configured transmit power, and protocol mask.
 
 ## Run with Docker
 
@@ -179,7 +194,7 @@ For a stopped stream, check that the sensor remains active and ready, the comput
 
 - Install PlatformIO Core (`pio`) or the PlatformIO VS Code extension.
 - Connect the board using a reliable USB-to-serial adapter/programmer and stable power.
-- Configure credentials and network options in `firmware/esp32-cam/include/secrets.h`.
+- Configure credentials/network options in `firmware/esp32-cam/include/secrets.h` or `wifi_secrets.h`; see [Configure login and protect secrets](#configure-login-and-protect-secrets).
 - Review `firmware/esp32-cam/include/configs.h` before flashing. The default mode is `SYSTEM_MODE_WROOM_CAM`; the PlatformIO environments are `esp32cam` and `esp32wroom`.
 
 ### Build
@@ -272,6 +287,7 @@ Use this map to find implementation details without searching the whole reposito
 | `firmware/esp32-cam/src/main.cpp` | Device startup order and main service loop |
 | `firmware/esp32-cam/src/camera/` | Camera lifecycle, standby/wake, shared capture lock, stream server, adaptive cooling |
 | `firmware/esp32-cam/src/network/` | Wi-Fi, mDNS, ArduinoOTA, device HTTP API |
+| `firmware/esp32-cam/src/network/wifi_manager.cpp` | Station setup, static IP/MAC application, radio power-save/protocol tuning, reconnect schedule, CAM AP/WROOM ESP-NOW fallback, and Wi-Fi diagnostics |
 | `firmware/esp32-cam/src/sensors/` | Reed switch, PIR, buzzer |
 | `firmware/esp32-cam/src/core/` | Device event system, logging, reboot/system diagnostics |
 | `firmware/esp32-cam/src/communication/wroom_cam_link.cpp` | WROOM-to-CAM event relay over Wi-Fi, with ESP-NOW fallback; event-triggered camera actions |
@@ -334,6 +350,8 @@ The two firmware builds share source but compile for different board profiles. R
 
 The ESP32-CAM serves MJPEG separately at `http://<camera-ip>:81/stream`. Device API endpoints are intended for a trusted local network; they are not a substitute for an internet-facing authenticated API.
 
+Wi-Fi control names accepted by `/control` include `txpower` and `wifi_proto`. Use only the protocol values `1`, `3`, or `7`, and confirm the resulting value in `/status`.
+
 ### Control Center — port 5001
 
 The browser UI is at `/`. Its `/api/cc/` endpoints provide health/config, release check/install/rollback, workspace tree/file/revert, build status/audit/start, and upload status/start. Upload mode is `ota` or `serial`; the configured target is the ESP IP or serial port. Remote Control Center access requires admin login.
@@ -378,7 +396,10 @@ Back up `data/` and `entrance_monitoring/` while the server is stopped. For Dock
 | Dashboard opens, but camera says offline | Confirm the CAM IP in `/status`, verify computer/device are on the same non-isolated LAN, then open `/ping` and `/status` directly |
 | `/capture` returns an error or non-JPEG | Wake the sensor using `/api/v1/camera/power?state=on`; check `sensor_active`/`ready` in `/status`, serial logs, camera ribbon orientation, stable 5 V power, and the sensor connector |
 | `/stream` shows no bytes | First get a complete JPEG from `/capture`; then ensure the camera remains awake, no other client is holding the sequential stream connection, and TCP port 81 is reachable |
-| ESP32 cannot join Wi-Fi | Check SSID/password and static IP/gateway/subnet in `secrets.h`; ensure the custom MAC is unique and accepted by the router; monitor serial output |
+| ESP32 cannot join Wi-Fi | Check the station SSID/password and static IP/gateway/subnet in `secrets.h` or `wifi_secrets.h`; confirm the static address is on the right subnet and unused, and the custom MAC is unique; allow the initial connection/retry interval and monitor serial output |
+| CAM recovery AP is not visible | The CAM starts it after about 20 seconds without Wi-Fi, or after 15 seconds without HTTP status/root heartbeat; check `SECRET_AP_SSID`/`SECRET_AP_PASSWORD` and the serial log. The WROOM does not create this AP |
+| CAM AP connects but device page does not load | Browse to `http://192.168.4.1`; make sure the connected network is the CAM AP and the computer is not routing the request through another interface |
+| CAM AP stays visible after reconnecting | Request `http://<cam-ip>/status` on the normal LAN; a recent status/root request is used as the server heartbeat that stops the AP |
 | Settings appear saved but hardware does not change | Check the camera is online and the setting is supported; `/api/camera/settings` reports errors if device read-back does not match |
 | Face recognition does not start | Look at server startup for model download/import errors; allow internet on first launch, verify the `buffalo_m` file exists, and check `/api/v1/system/healthz` |
 | Object detection is unavailable | Ensure a supported YOLO ONNX file exists in `models/`; the server does not fetch it automatically |

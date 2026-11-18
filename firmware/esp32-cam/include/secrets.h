@@ -4,9 +4,21 @@
 #include "wifi_secrets.h"
 #define SECRET_WIFI_SSID WIFI_SSID
 #define SECRET_WIFI_PASSWORD WIFI_PASSWORD
+#ifdef WIFI_AP_SSID
+#define SECRET_AP_SSID WIFI_AP_SSID
+#else
+#define SECRET_AP_SSID "Sentinel-CAM"
+#endif
+#ifdef WIFI_AP_PASSWORD
+#define SECRET_AP_PASSWORD WIFI_AP_PASSWORD
+#else
+#define SECRET_AP_PASSWORD "YOUR_AP_PASSWORD"
+#endif
 #else
 #define SECRET_WIFI_SSID "YOUR_WIFI_SSID"
 #define SECRET_WIFI_PASSWORD "YOUR_WIFI_PASSWORD"
+#define SECRET_AP_SSID "Sentinel-CAM"
+#define SECRET_AP_PASSWORD "YOUR_AP_PASSWORD"
 #endif
 
 // Static IP & MAC assignments per board

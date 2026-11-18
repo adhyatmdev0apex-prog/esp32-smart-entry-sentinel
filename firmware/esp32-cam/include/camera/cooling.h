@@ -25,6 +25,10 @@ void setCoolingStandbyDuty(uint8_t duty_pct);
 void setCoolingMinDuty(uint8_t duty_pct);
 void setCoolingTempStep(float step_deg_c);
 void setCoolingStepDuty(uint8_t step_pct);
+void setCoolingControlMode(uint8_t mode);
+void setCoolingPidTargetTemp(float target_c);
+void setCoolingKickstartMs(uint16_t ms);
+void setCoolingThermalThrottle(bool enabled);
 
 uint8_t getCoolingDutyPercent();
 uint32_t getCoolingPwmRaw();

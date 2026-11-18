@@ -24,4 +24,8 @@ int getWiFiTxPower();
 bool setWiFiProtocol(int proto_bitmap);
 int getWiFiProtocol();
 
+bool setWiFiSimMode(int mode);
+int getWiFiSimMode();
+int getWiFiSignalQualityPct();
+
 void getWiFiDiagnosticsJson(char* buf, size_t max_len);

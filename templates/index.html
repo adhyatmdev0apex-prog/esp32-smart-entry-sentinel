@@ -2569,26 +2569,32 @@
 
             <div class="card" style="padding: 20px; margin-bottom: 20px;">
                 <div class="card-header" style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-                    <h2 style="margin:0;">🌀 Cooling Fan Speed &amp; Thermal Curve</h2>
+                    <h2 style="margin:0;">🌀 Cooling Fan, PID Thermal Governor &amp; Power Mega-Card</h2>
                     <span id="fanLiveBadge" style="font-size:0.8rem; padding:4px 10px; border-radius:999px; background:#0f172a; border:1px solid #334155; color:#94a3b8;">
                         Live: --%
                     </span>
                 </div>
                 <p style="color:#94a3b8; font-size:0.86rem; margin-bottom:14px;">
-                    Configure manual fan speed override or adaptive speeds for Low-Power Standby, Camera-ON mode, and temperature-based speed increases. Saved to <code>data/camera_defaults.json</code> and auto-applied on boot/reconnect.
+                    Unified thermal control: Stepped Curve, Closed-Loop PID Target Temperature, or Manual PWM Override, with configurable PWM frequency, kickstart pulse, and thermal runaway throttling.
                 </p>
-                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:12px; font-size:0.84rem;">
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(195px, 1fr)); gap:12px; font-size:0.84rem;">
                     <div>
-                        <label style="display:block; color:#94a3b8; margin-bottom:4px;">Fan Mode</label>
+                        <label style="display:block; color:#94a3b8; margin-bottom:4px;">Control Mode</label>
                         <select id="defFanMode" onchange="toggleFanManualInput()"
                             style="width:100%; padding:7px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
-                            <option value="auto">Auto (Adaptive Thermal Curve)</option>
+                            <option value="auto">Auto (Stepped Thermal Curve)</option>
+                            <option value="pid">Closed-Loop PID Target Temp</option>
                             <option value="manual">Manual Fixed Speed Override</option>
                         </select>
                     </div>
                     <div id="defFanManualWrap" style="display:none;">
                         <label style="display:block; color:#94a3b8; margin-bottom:4px;">Manual Speed (0–100%)</label>
-                        <input id="defFanManualPct" type="number" min="0" max="100" value="50"
+                        <input id="defFanManualPct" type="number" min="0" max="100" value="60"
+                            style="width:100%; padding:7px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+                    </div>
+                    <div id="defFanPidWrap" style="display:none;">
+                        <label style="display:block; color:#94a3b8; margin-bottom:4px;">PID Target Die Temp (35–85°C)</label>
+                        <input id="defFanPidTarget" type="number" min="35" max="85" value="58"
                             style="width:100%; padding:7px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
                     </div>
                     <div>
@@ -2616,10 +2622,33 @@
                         <input id="defFanStepPct" type="number" min="0" max="25" value="5"
                             style="width:100%; padding:7px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
                     </div>
+                    <div>
+                        <label style="display:block; color:#94a3b8; margin-bottom:4px;">PWM Frequency (100–40000 Hz)</label>
+                        <input id="defFanFreq" type="number" min="100" max="40000" step="100" value="25000"
+                            style="width:100%; padding:7px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+                    </div>
+                    <div>
+                        <label style="display:block; color:#94a3b8; margin-bottom:4px;">Kickstart Boost (0–1000 ms)</label>
+                        <input id="defFanKickMs" type="number" min="0" max="1000" step="50" value="250"
+                            style="width:100%; padding:7px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-top:12px;">
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.84rem; color:#cbd5e1;">
+                        <input type="checkbox" id="defFanThermalThrottle" checked> Thermal Runaway Guard (&gt;78°C → 100% Fan)
+                    </label>
+                    <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                        <button class="btn btn-secondary btn-sm" onclick="quickSetFanPct(0)">0%</button>
+                        <button class="btn btn-secondary btn-sm" onclick="quickSetFanPct(50)">50%</button>
+                        <button class="btn btn-secondary btn-sm" onclick="quickSetFanPct(60)">60%</button>
+                        <button class="btn btn-secondary btn-sm" onclick="quickSetFanPct(75)">75%</button>
+                        <button class="btn btn-secondary btn-sm" onclick="quickSetFanPct(100)">100% Blast</button>
+                        <button class="btn btn-secondary btn-sm" onclick="quickSetFanPct(-1)">Auto</button>
+                    </div>
                 </div>
                 <div style="margin-top:14px; display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap;">
                     <button class="btn btn-secondary btn-sm" onclick="resetFanDefaultsUI()">↺ Reset Defaults</button>
-                    <button class="btn btn-primary btn-sm" onclick="saveFanDefaults()">💾 Save &amp; Apply Fan Settings</button>
+                    <button class="btn btn-primary btn-sm" onclick="saveFanDefaults()">💾 Save &amp; Apply Fan &amp; PID Settings</button>
                 </div>
             </div>
 
@@ -2750,6 +2779,34 @@
                         <button class="btn btn-secondary btn-sm" onclick="runExecProfileSim('hybrid_90_10')">🎯 90:10 (NPU+GPU)</button>
                         <button class="btn btn-primary btn-sm" onclick="runExecProfileSim('all')">🌐 All (NPU+GPU+CPU)</button>
                         <button class="btn btn-secondary btn-sm" onclick="runSim('npu_stress_5s')">🔥 NPU Stress Benchmark (5s)</button>
+                    </div>
+                </div>
+
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px; margin-bottom: 16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+                        <h3 style="font-size: 0.92rem; margin: 0; color: #f1f5f9;">📡 Wi-Fi, SoftAP (192.168.4.1), ESP-NOW &amp; RF Chaos Lab</h3>
+                        <span id="testingRfLiveBadge" style="font-size:0.78rem; color:#38bdf8;">RF: Click Refresh RF</span>
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:8px; margin-bottom:10px;">
+                        <button class="btn btn-secondary btn-sm" onclick="runSim('wifi_sim_blackout')">📡 Simulate Router Blackout (Force AP + ESP-NOW)</button>
+                        <button class="btn btn-secondary btn-sm" onclick="runSim('wifi_sim_dual_ap')">🔀 Force Dual AP+STA Mode (192.168.4.1)</button>
+                        <button class="btn btn-primary btn-sm" onclick="runSim('wifi_sim_restore')">🌐 Restore Normal STA Mode</button>
+                        <button class="btn btn-secondary btn-sm" onclick="runSim('connect_fallback_ap')">💻 Connect Laptop to Fallback AP</button>
+                        <button class="btn btn-secondary btn-sm" onclick="runSim('restore_home_wifi')">🏠 Reconnect Laptop to Home Wi-Fi</button>
+                        <button class="btn btn-secondary btn-sm" onclick="runSim('wifi_tx_power_sweep')">📶 TX Power Sweep (2→20 dBm Curve)</button>
+                        <button class="btn btn-secondary btn-sm" onclick="runSim('espnow_fallback_sim')">📻 ESP-NOW Ch 1 Stress Burst (10x)</button>
+                        <button class="btn btn-secondary btn-sm" onclick="runSim('wroom_blackout_sim')">🚨 Simulate WROOM Blackout (10s MP4)</button>
+                        <button class="btn btn-secondary btn-sm" onclick="runSim('verify_ledger')">🔐 Verify SHA-256 Evidence Ledger</button>
+                        <button class="btn btn-secondary btn-sm" onclick="refreshRfChaosStatus()">🔄 Refresh Live RF Telemetry</button>
+                    </div>
+                    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; font-size:0.82rem; color:#cbd5e1; padding-top:8px; border-top:1px solid rgba(255,255,255,0.06);">
+                        <span>TX Power (dBm):</span>
+                        <input id="testingTxPwrRange" type="range" min="2" max="20" value="18" oninput="document.getElementById('testingTxPwrVal').textContent=this.value+' dBm'" onchange="setLiveRfParam('txpower', this.value)" />
+                        <strong id="testingTxPwrVal">18 dBm</strong>
+                        <span style="margin-left:10px;">Protocol Bench:</span>
+                        <button class="btn btn-secondary btn-sm" onclick="runWifiProtoBench(1)">802.11b</button>
+                        <button class="btn btn-secondary btn-sm" onclick="runWifiProtoBench(3)">802.11bg</button>
+                        <button class="btn btn-secondary btn-sm" onclick="runWifiProtoBench(7)">802.11bgn</button>
                     </div>
                 </div>
 
@@ -5493,14 +5550,19 @@
                 document.getElementById('defCamAwb').checked = d.awb !== 0;
                 document.getElementById('defCamAec').checked = d.aec !== 0;
 
+                const ctrlMode = d.fan_ctrl_mode !== undefined ? Number(d.fan_ctrl_mode) : (d.fan_manual_pct !== undefined && Number(d.fan_manual_pct) >= 0 ? 2 : 0);
                 const manualPct = d.fan_manual_pct !== undefined ? Number(d.fan_manual_pct) : -1;
-                document.getElementById('defFanMode').value = manualPct >= 0 ? 'manual' : 'auto';
-                document.getElementById('defFanManualPct').value = manualPct >= 0 ? manualPct : 50;
+                document.getElementById('defFanMode').value = ctrlMode === 2 ? 'manual' : (ctrlMode === 1 ? 'pid' : 'auto');
+                document.getElementById('defFanManualPct').value = manualPct >= 0 ? manualPct : 60;
+                if (d.fan_pid_target !== undefined) document.getElementById('defFanPidTarget').value = d.fan_pid_target;
                 if (d.fan_standby_pct !== undefined) document.getElementById('defFanStandbyPct').value = d.fan_standby_pct;
                 if (d.fan_min_pct !== undefined) document.getElementById('defFanMinPct').value = d.fan_min_pct;
                 if (d.fan_ref_temp !== undefined) document.getElementById('defFanRefTemp').value = d.fan_ref_temp;
                 if (d.fan_temp_step !== undefined) document.getElementById('defFanTempStep').value = d.fan_temp_step;
                 if (d.fan_step_pct !== undefined) document.getElementById('defFanStepPct').value = d.fan_step_pct;
+                if (d.fan_freq !== undefined) document.getElementById('defFanFreq').value = d.fan_freq;
+                if (d.fan_kick_ms !== undefined) document.getElementById('defFanKickMs').value = d.fan_kick_ms;
+                document.getElementById('defFanThermalThrottle').checked = d.fan_thermal_throttle !== 0;
                 toggleFanManualInput();
                 refreshFanLiveBadge();
             } catch (e) {
@@ -5511,17 +5573,23 @@
         function toggleFanManualInput() {
             const mode = document.getElementById('defFanMode')?.value || 'auto';
             const wrap = document.getElementById('defFanManualWrap');
+            const pidWrap = document.getElementById('defFanPidWrap');
             if (wrap) wrap.style.display = (mode === 'manual') ? 'block' : 'none';
+            if (pidWrap) pidWrap.style.display = (mode === 'pid') ? 'block' : 'none';
         }
 
         function resetFanDefaultsUI() {
             document.getElementById('defFanMode').value = 'auto';
-            document.getElementById('defFanManualPct').value = 50;
+            document.getElementById('defFanManualPct').value = 60;
+            document.getElementById('defFanPidTarget').value = 58;
             document.getElementById('defFanStandbyPct').value = 60;
             document.getElementById('defFanMinPct').value = 70;
             document.getElementById('defFanRefTemp').value = 60;
             document.getElementById('defFanTempStep').value = 5;
             document.getElementById('defFanStepPct').value = 5;
+            document.getElementById('defFanFreq').value = 25000;
+            document.getElementById('defFanKickMs').value = 250;
+            document.getElementById('defFanThermalThrottle').checked = true;
             toggleFanManualInput();
         }
 
@@ -5533,23 +5601,51 @@
                 const data = await res.json();
                 if (data.fan_pct !== undefined) {
                     const tempStr = (data.temp_c !== undefined) ? ` · ${Number(data.temp_c).toFixed(1)}°C` : '';
-                    const modeStr = (data.fan_manual_pct !== undefined && Number(data.fan_manual_pct) >= 0) ? 'Manual' : 'Auto';
-                    badge.textContent = `Live: ${data.fan_pct}% (${modeStr}${tempStr})`;
+                    const pwmStr = (data.fan_pwm !== undefined) ? ` · PWM ${data.fan_pwm}/255` : '';
+                    const cm = Number(data.fan_ctrl_mode || 0);
+                    const modeStr = cm === 2 ? 'Manual' : (cm === 1 ? 'PID' : 'Auto');
+                    badge.textContent = `Live: ${data.fan_pct}% (${modeStr}${pwmStr}${tempStr})`;
                     badge.style.color = '#38bdf8';
                 }
             } catch (_) {}
         }
 
+        async function quickSetFanPct(pct) {
+            const payload = pct < 0 ? { var: 'fan_ctrl_mode', val: 0 } : { var: 'fan_pct', val: pct };
+            try {
+                const res = await fetch('/api/camera/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                const data = await res.json();
+                if (data.status === 'ok') {
+                    showToast(pct < 0 ? 'Fan restored to Auto mode' : `Fan speed set to ${pct}%`, 'success');
+                    refreshFanLiveBadge();
+                } else {
+                    showToast('Fan update failed: ' + (data.error || 'unknown'), 'error');
+                }
+            } catch (e) {
+                showToast('Error updating fan: ' + e.message, 'error');
+            }
+        }
+
         async function saveFanDefaults() {
             const mode = document.getElementById('defFanMode').value;
+            const ctrlMode = mode === 'manual' ? 2 : (mode === 'pid' ? 1 : 0);
             const manualVal = mode === 'manual' ? parseInt(document.getElementById('defFanManualPct').value, 10) : -1;
             const payload = {
+                fan_ctrl_mode: ctrlMode,
                 fan_manual_pct: manualVal,
+                fan_pid_target: parseInt(document.getElementById('defFanPidTarget').value, 10),
                 fan_standby_pct: parseInt(document.getElementById('defFanStandbyPct').value, 10),
                 fan_min_pct: parseInt(document.getElementById('defFanMinPct').value, 10),
                 fan_ref_temp: parseInt(document.getElementById('defFanRefTemp').value, 10),
                 fan_temp_step: parseInt(document.getElementById('defFanTempStep').value, 10),
                 fan_step_pct: parseInt(document.getElementById('defFanStepPct').value, 10),
+                fan_freq: parseInt(document.getElementById('defFanFreq').value, 10),
+                fan_kick_ms: parseInt(document.getElementById('defFanKickMs').value, 10),
+                fan_thermal_throttle: document.getElementById('defFanThermalThrottle').checked ? 1 : 0,
             };
             try {
                 const res = await fetch('/api/camera/defaults', {
@@ -5559,13 +5655,67 @@
                 });
                 const data = await res.json();
                 if (data.ok) {
-                    showToast('Fan speed & thermal settings saved and applied!', 'success');
+                    showToast('Fan speed, PID & thermal settings saved and applied!', 'success');
                     refreshFanLiveBadge();
                 } else {
                     showToast('Failed to save fan settings: ' + (data.error || 'unknown'), 'error');
                 }
             } catch (e) {
                 showToast('Error saving fan settings: ' + e.message, 'error');
+            }
+        }
+
+        async function refreshRfChaosStatus() {
+            const badge = document.getElementById('testingRfLiveBadge');
+            try {
+                const res = await fetch('/api/camera/settings');
+                const d = await res.json();
+                if (badge) {
+                    const mode = d.ap_active && d.sta_connected ? 'AP+STA' : (d.ap_active ? 'SoftAP' : 'STA');
+                    badge.textContent = `RF: ${mode} | RSSI ${d.rssi ?? '--'} dBm (${d.signal_quality_pct ?? '--'}%) | Ch ${d.wifi_ch ?? '--'} | TX ${d.tx_pwr ?? '--'} dBm | AP Clients: ${d.ap_clients ?? 0}`;
+                }
+                if (typeof appendTestLog === 'function') {
+                    appendTestLog('INFO', 'WIFI_RF', JSON.stringify({
+                        ip: d.ip, ap_ip: d.ap_ip, ap_active: d.ap_active, sta_connected: d.sta_connected,
+                        rssi: d.rssi, quality_pct: d.signal_quality_pct, ch: d.wifi_ch, tx_pwr: d.tx_pwr,
+                        proto: d.wifi_proto, sim_mode: d.wifi_sim_mode, ap_clients: d.ap_clients, reconnects: d.reconnect_count
+                    }));
+                }
+            } catch (e) {
+                if (badge) badge.textContent = 'RF: Offline';
+            }
+        }
+
+        async function setLiveRfParam(varName, val) {
+            try {
+                const res = await fetch('/api/camera/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ var: varName, val: parseInt(val, 10) }),
+                });
+                const data = await res.json();
+                if (typeof appendTestLog === 'function') {
+                    appendTestLog(data.status === 'ok' ? 'INFO' : 'ERROR', 'WIFI_RF', `${varName}=${val} -> ${JSON.stringify(data)}`);
+                }
+                refreshRfChaosStatus();
+            } catch (e) {
+                showToast('RF update failed: ' + e.message, 'error');
+            }
+        }
+
+        async function runWifiProtoBench(proto) {
+            const consoleEl = document.getElementById('testingConsole');
+            try {
+                const res = await fetch('/api/testing/simulate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'wifi_proto_switch', proto }),
+                });
+                const data = await res.json();
+                if (consoleEl) consoleEl.textContent += `\n[PROTO_BENCH proto=${proto}] ${JSON.stringify(data, null, 2)}\n`;
+                refreshRfChaosStatus();
+            } catch (e) {
+                showToast('Protocol bench failed: ' + e.message, 'error');
             }
         }
 

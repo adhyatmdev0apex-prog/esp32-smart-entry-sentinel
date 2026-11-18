@@ -67,7 +67,7 @@ static esp_err_t status_handler(httpd_req_t* req) {
   static char sys_diag[224];
   getSystemDiagnosticsJson(sys_diag, sizeof(sys_diag));
 
-  static char wifi_diag[128];
+  static char wifi_diag[384];
   getWiFiDiagnosticsJson(wifi_diag, sizeof(wifi_diag));
 
   static char reed_diag[128];
@@ -83,11 +83,11 @@ static esp_err_t status_handler(httpd_req_t* req) {
   static char stream_diag[160];
   getStreamingDiagnosticsJson(stream_diag, sizeof(stream_diag));
 
-  static char cool_diag[256];
+  static char cool_diag[384];
   getCoolingDiagnostics(cool_diag, sizeof(cool_diag));
 
   sensor_t* s = esp_camera_sensor_get();
-  static char buf[1536];
+  static char buf[2048];
   int len = snprintf(buf, sizeof(buf),
     "{\"status\":\"ok\",\"schema\":1,\"fw_version\":\"%s\",\"device\":\"%s\",\"mode\":\"%s\",%s,%s,%s,%s,%s,%s,%s,"
     "\"framesize\":%d,\"quality\":%d,\"flash\":%u}",
@@ -181,6 +181,25 @@ static esp_err_t control_handler(httpd_req_t* req) {
     return httpd_resp_send(req, "OK", 2);
   }
 
+  if (!strcmp(variable, "wifi_sim_mode")) {
+    bool ok = setWiFiSimMode(val);
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    return ok ? httpd_resp_send(req, "OK", 2) : httpd_resp_send_500(req);
+  }
+
+  if (!strcmp(variable, "espnow_sim_burst")) {
+    Event ev;
+    ev.type = EVENT_CUSTOM;
+    ev.value = val;
+    snprintf(ev.source, sizeof(ev.source), "ESPNOW_SIM");
+    postEvent(EVENT_CUSTOM, "ESPNOW_SIM", val, "burst");
+#if HAS_WROOM_CAM_LINK
+    sendEventToPeer(ev);
+#endif
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    return httpd_resp_send(req, "OK", 2);
+  }
+
 #if HAS_CAMERA_FEATURE
   if (!strcmp(variable, "fan_ref_temp")) {
     setCoolingReferenceTemp((float)val);
@@ -226,6 +245,36 @@ static esp_err_t control_handler(httpd_req_t* req) {
 
   if (!strcmp(variable, "fan_step_pct")) {
     setCoolingStepDuty((uint8_t)val);
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    return httpd_resp_send(req, "OK", 2);
+  }
+
+  if (!strcmp(variable, "fan_ctrl_mode")) {
+    setCoolingControlMode((uint8_t)val);
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    return httpd_resp_send(req, "OK", 2);
+  }
+
+  if (!strcmp(variable, "fan_pid_target")) {
+    setCoolingPidTargetTemp((float)val);
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    return httpd_resp_send(req, "OK", 2);
+  }
+
+  if (!strcmp(variable, "fan_kick_ms")) {
+    setCoolingKickstartMs((uint16_t)val);
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    return httpd_resp_send(req, "OK", 2);
+  }
+
+  if (!strcmp(variable, "fan_thermal_throttle")) {
+    setCoolingThermalThrottle(val != 0);
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    return httpd_resp_send(req, "OK", 2);
+  }
+
+  if (!strcmp(variable, "fan_pct")) {
+    setCoolingManualDuty((int16_t)val);
     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
     return httpd_resp_send(req, "OK", 2);
   }
